@@ -1,0 +1,15 @@
+{
+  "crons": [
+    {
+      "path": "/api/sync-results",
+      "schedule": "*/20 * * * *"
+    },
+    {
+      "path": "/api/process-progression",
+      "schedule": "*/5 * * * *"
+    }
+  ],
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

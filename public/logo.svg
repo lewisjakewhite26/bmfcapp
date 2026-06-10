@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <circle cx="100" cy="100" r="95" fill="#0a0e1a" stroke="#f59e0b" stroke-width="4"/>
+  <text x="100" y="90" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="48" font-weight="900" fill="#f59e0b">BMFC</text>
+  <text x="100" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#fbbf24">2026</text>
+  <circle cx="100" cy="155" r="8" fill="#f59e0b" opacity="0.6"/>
+</svg>
