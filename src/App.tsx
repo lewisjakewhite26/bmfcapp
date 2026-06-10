@@ -24,6 +24,7 @@ import { PageBackground } from './components/ui/PageBackground'
 import { MobileBottomNav } from './components/ui/MobileBottomNav'
 import { isSupabaseConfigured } from './lib/supabase'
 import ConfigRequired from './pages/ConfigRequired'
+import NotFound from './pages/NotFound'
 
 const wantsSupabase = import.meta.env.VITE_CLUB_DATA_SOURCE === 'supabase'
 
@@ -199,7 +200,7 @@ function AppRoutes() {
       />
       <Route path="/admin/ops" element={<Navigate to="/admin" replace />} />
       <Route path="/admin/technical" element={<Navigate to="/admin" replace />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }
