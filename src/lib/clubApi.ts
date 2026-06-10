@@ -51,7 +51,7 @@ import type {
 export { getMockInvitePreview, completeMockInvite } from './mockData'
 
 /** Use mock data until the club hub Supabase project is wired up. */
-export function useMockData(): boolean {
+export function isMockDataMode(): boolean {
   return import.meta.env.VITE_CLUB_DATA_SOURCE !== 'supabase' || !isSupabaseConfigured
 }
 
@@ -60,7 +60,7 @@ function delay(ms = 120): Promise<void> {
 }
 
 export async function fetchFixturesWithResults(): Promise<FixtureWithResult[]> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     return getMockFixturesWithResults()
   }
@@ -87,7 +87,7 @@ export async function fetchFixturesWithResults(): Promise<FixtureWithResult[]> {
 }
 
 export async function fetchUpcomingFixtures(): Promise<FixtureWithResult[]> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     return getMockUpcomingFixtures()
   }
@@ -96,7 +96,7 @@ export async function fetchUpcomingFixtures(): Promise<FixtureWithResult[]> {
 }
 
 export async function fetchCompletedFixtures(): Promise<FixtureWithResult[]> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     return getMockCompletedFixtures()
   }
@@ -113,7 +113,7 @@ export async function fetchManualFixtures(): Promise<FixtureWithResult[]> {
 }
 
 export async function fetchLeagueTable(): Promise<LeagueTableRow[]> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     return getMockLeagueTable()
   }
@@ -129,7 +129,7 @@ export async function fetchLeagueTable(): Promise<LeagueTableRow[]> {
 }
 
 export async function fetchTrainingSessions(): Promise<TrainingSession[]> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     return getMockTrainingSessions()
   }
@@ -140,7 +140,7 @@ export async function fetchTrainingSessions(): Promise<TrainingSession[]> {
 }
 
 export async function fetchSquad(): Promise<SquadMember[]> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     return getMockSquad()
   }
@@ -164,7 +164,7 @@ export async function fetchSquad(): Promise<SquadMember[]> {
 }
 
 export async function fetchPlayerStats(): Promise<PlayerStats[]> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     return getMockPlayerStats()
   }
@@ -238,7 +238,7 @@ export async function fetchDashboardSummary(): Promise<DashboardSummary> {
 }
 
 export async function fetchAvailability(playerId: string): Promise<Availability[]> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay(60)
     return getMockAvailability(playerId)
   }
@@ -249,7 +249,7 @@ export async function fetchAvailability(playerId: string): Promise<Availability[
 }
 
 export async function fetchAllAvailability(): Promise<Availability[]> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay(60)
     return getMockAllAvailability()
   }
@@ -265,7 +265,7 @@ export async function saveAvailability(
   status: AvailabilityStatus,
   message?: string | null
 ): Promise<Availability> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay(80)
     return upsertMockAvailability(playerId, target, status, message)
   }
@@ -289,7 +289,7 @@ export async function saveAvailability(
 }
 
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     return getMockAdminUsers()
   }
@@ -309,7 +309,7 @@ export async function createInvite(
   displayName: string,
   position?: SquadPosition | null
 ): Promise<CreateInviteResult> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     const row = createMockInvite(displayName, position)
     return { ...row, invite_expires_at: null }
@@ -329,7 +329,7 @@ export async function createInvite(
 }
 
 export async function setUserCommittee(userId: string, isCommittee: boolean): Promise<void> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     setMockUserCommittee(userId, isCommittee)
     return
@@ -350,7 +350,7 @@ export async function setUserCommittee(userId: string, isCommittee: boolean): Pr
 export async function resetUserPasscode(userId: string, newPasscode: string): Promise<void> {
   if (!/^\d{4}$/.test(newPasscode)) throw new Error('Passcode must be 4 digits')
 
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     resetMockPasscode(userId, newPasscode)
     return
@@ -373,7 +373,7 @@ export async function upsertSquadMember(
   displayName: string,
   position: SquadPosition
 ): Promise<void> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     upsertMockSquad(playerId, displayName, position)
     return
@@ -393,7 +393,7 @@ export async function upsertSquadMember(
 }
 
 export async function removeSquadMember(playerId: string): Promise<void> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     removeMockSquad(playerId)
     return
@@ -418,7 +418,7 @@ export async function createFixture(input: {
   venue: string | null
   kickoff_time: string | null
 }): Promise<Fixture> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     return addMockFixture(input)
   }
@@ -451,7 +451,7 @@ export async function updateFixture(
     kickoff_time: string | null
   },
 ): Promise<Fixture> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     return updateMockFixture(fixtureId, input)
   }
@@ -475,7 +475,7 @@ export async function updateFixture(
 }
 
 export async function deleteFixture(fixtureId: string): Promise<void> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     removeMockFixture(fixtureId)
     return
@@ -493,7 +493,7 @@ export async function deleteFixture(fixtureId: string): Promise<void> {
 }
 
 export async function regenerateInvite(userId: string): Promise<CreateInviteResult> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     const row = regenerateMockInvite(userId)
     return { ...row, invite_expires_at: null }
@@ -512,7 +512,7 @@ export async function regenerateInvite(userId: string): Promise<CreateInviteResu
 }
 
 export async function approveUser(userId: string, approved: boolean): Promise<void> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     setMockUserApproved(userId, approved)
     return
@@ -537,7 +537,7 @@ export async function submitMatchResult(
   notes: string | null,
   events: Omit<MatchEvent, 'id' | 'created_at'>[]
 ): Promise<void> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay(150)
     saveMockResult(fixtureId, goalsFor, goalsAgainst, notes, events)
     return
@@ -565,7 +565,7 @@ export async function submitMatchResult(
 export async function createTrainingSession(
   session: Omit<TrainingSession, 'id' | 'created_at'>
 ): Promise<TrainingSession> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     return addMockTrainingSession(session)
   }
@@ -588,7 +588,7 @@ export async function updateTrainingSession(
   trainingId: string,
   session: Omit<TrainingSession, 'id' | 'created_at'>,
 ): Promise<TrainingSession> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     return updateMockTrainingSession(trainingId, session)
   }
@@ -609,7 +609,7 @@ export async function updateTrainingSession(
 }
 
 export async function deleteTrainingSession(trainingId: string): Promise<void> {
-  if (useMockData()) {
+  if (isMockDataMode()) {
     await delay()
     removeMockTrainingSession(trainingId)
     return

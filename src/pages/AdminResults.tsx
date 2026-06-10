@@ -66,7 +66,7 @@ export default function AdminResults() {
             >
               {list.map((f) => (
                 <option key={f.id} value={f.id}>
-                  {f.opponent} — {new Date(f.match_date).toLocaleDateString('en-GB')}
+                  {f.opponent} · {new Date(f.match_date).toLocaleDateString('en-GB')}
                 </option>
               ))}
             </select>

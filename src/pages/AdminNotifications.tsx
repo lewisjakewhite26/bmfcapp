@@ -5,7 +5,7 @@ import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { getClubSession } from '../lib/clubAuth'
 import { supabase } from '../lib/supabase'
-import { useMockData } from '../lib/clubApi'
+import { isMockDataMode } from '../lib/clubApi'
 
 export default function AdminNotifications() {
   const [title, setTitle] = useState('BMFC reminder')
@@ -14,7 +14,7 @@ export default function AdminNotifications() {
   const [sending, setSending] = useState(false)
 
   const handleSend = async () => {
-    if (useMockData()) {
+    if (isMockDataMode()) {
       toast.error('Connect Supabase to send push notifications.')
       return
     }

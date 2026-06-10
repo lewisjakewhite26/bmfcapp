@@ -7,10 +7,10 @@ import { LandingHeroBackdrop } from '../components/ui/LandingHeroBackdrop'
 import { CLUB_NAME, LEAGUE_NAME } from '../lib/mockData'
 
 const FEATURES = [
-  { icon: '📊', title: 'League table', body: 'Live standings from DDSFL — see where we are in the division.' },
-  { icon: '⚽', title: 'Results & fixtures', body: 'Every match, every score. Bishop Middleham FC\'s full season history.' },
-  { icon: '📅', title: 'Calendar & availability', body: 'Mark yourself in, out or maybe for matches and training. Works like TeamApp, no download needed.' },
-  { icon: '📈', title: 'Squad stats', body: 'Goals, assists, MOTM, cards and appearances for everyone in the squad.' },
+  { icon: '📊', title: 'League table', body: 'DDSFL standings for our division, updated when we sync.' },
+  { icon: '⚽', title: 'Results & fixtures', body: 'All our games and scores for the season.' },
+  { icon: '📅', title: 'Calendar & availability', body: 'Mark in, out or maybe for games and training.' },
+  { icon: '📈', title: 'Squad stats', body: 'Goals, assists, MOTM, cards and appearances.' },
 ]
 
 function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -66,7 +66,7 @@ export default function Landing() {
               className="text-[#6B7280] font-normal max-w-[500px] mx-auto mt-4 mb-8 leading-relaxed"
               style={{ fontSize: 'clamp(1rem, 2vw, 1.25rem)' }}
             >
-              Your squad app — fixtures, league table, stats, and availability in one place.
+              Fixtures, table, stats and availability for the squad.
             </p>
             <p className="text-sm text-gray-400 mb-8">{LEAGUE_NAME}</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -77,7 +77,7 @@ export default function Landing() {
                 Login
               </Link>
             </div>
-            <p className="mt-4 text-sm text-gray-400">New players — use the invite link from your admin.</p>
+            <p className="mt-4 text-sm text-gray-400">New player? Use the invite link from your admin.</p>
             <p className="mt-8 text-[0.8rem] text-[#9ca3af]">
               Est. 1984 · Bishop Middleham
             </p>
@@ -95,7 +95,7 @@ export default function Landing() {
 
         <section className="px-4 py-16 max-w-5xl mx-auto">
           <FadeUp>
-            <h2 className="font-display text-2xl text-brand-navy text-center mb-10">Everything the squad needs</h2>
+            <h2 className="font-display text-2xl text-brand-navy text-center mb-10">What you get</h2>
           </FadeUp>
           <div className="grid sm:grid-cols-2 gap-5">
             {FEATURES.map((f, i) => (

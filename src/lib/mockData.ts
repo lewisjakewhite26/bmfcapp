@@ -72,7 +72,7 @@ export const MOCK_TRAINING: TrainingSession[] = [
     id: 't1',
     session_date: daysFromNow(1, 19, 0),
     location: 'Bishop Middleham Recreation Ground',
-    notes: 'Tactical session — set pieces',
+    notes: 'Tactical session, set pieces',
     created_at: daysAgo(5),
   },
   {
@@ -320,8 +320,9 @@ export function setMockUserCommittee(userId: string, isCommittee: boolean) {
   if (user && !user.is_admin) user.is_committee = isCommittee
 }
 
-export function resetMockPasscode(_userId: string, _passcode: string) {
-  // Mock: no-op — player can still use Test login
+export function resetMockPasscode(userId: string, passcode: string) {
+  void userId
+  void passcode
 }
 
 export function upsertMockSquad(playerId: string, displayName: string, position: string) {

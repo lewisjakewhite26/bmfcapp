@@ -127,6 +127,20 @@ npm run build
 
 Deploy the `dist/` folder to any static host (Vercel, Netlify, Cloudflare Pages, etc.). Set the same `VITE_*` env vars in the host's build settings.
 
+### Vercel (bmfcapp)
+
+Vite bakes env vars in at **build time**. Add these in **Project → Settings → Environment Variables**, then **Redeploy** (a new build is required):
+
+| Variable | Value |
+|----------|--------|
+| `VITE_SUPABASE_URL` | From Supabase → Settings → API |
+| `VITE_SUPABASE_ANON_KEY` | `anon` `public` key (not service_role) |
+| `VITE_CLUB_DATA_SOURCE` | `supabase` |
+
+Optional: `VITE_VAPID_PUBLIC_KEY` for push notifications.
+
+Do **not** add `SUPABASE_SERVICE_ROLE_KEY` to Vercel.
+
 Ensure HTTPS is enabled for PWA install and push notifications.
 
 ---

@@ -18,6 +18,15 @@ export function LeagueTableView({ rows, loading }: LeagueTableViewProps) {
     )
   }
 
+  if (rows.length === 0) {
+    return (
+      <div className="glass-card p-8 text-center text-gray-500 space-y-1">
+        <p>No table data yet.</p>
+        <p className="text-sm">Run a DDSFL sync or check back after the league publishes standings.</p>
+      </div>
+    )
+  }
+
   return (
     <div className="glass-card overflow-hidden">
       <div className="overflow-x-auto">

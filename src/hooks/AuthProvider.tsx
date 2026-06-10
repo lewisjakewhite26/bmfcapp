@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { rpcCompleteInvite, rpcGetSessionUser, rpcLogin } from '../lib/clubAuth'
-import { useMockData } from '../lib/clubApi'
+import { isMockDataMode } from '../lib/clubApi'
 import { DEV_USER, DEV_ADMIN, DEV_PENDING, isDevBypassEnabled, isDevBypassSession } from '../lib/devBypass'
 import type { User } from '../types'
 import { AuthContext, loadSession, saveSession } from './authContext'
@@ -20,7 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    if (useMockData()) {
+    if (isMockDataMode()) {
       setUser(session)
       return
     }
@@ -47,11 +47,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshUser])
 
   const login = async (displayName: string, passcode: string) => {
-    if (useMockData()) {
+    if (isMockDataMode()) {
       throw new Error('Use dev preview login while mock data mode is active.')
     }
     if (!isSupabaseConfigured) {
-      throw new Error('Sign-in is unavailable — Supabase is not configured.')
+      throw new Error('Can\'t sign in. Supabase isn\'t set up.')
     }
 
     const profile = await rpcLogin(displayName.trim(), passcode)
@@ -60,11 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const completeInvite = async (token: string, passcode: string) => {
-    if (useMockData()) {
-      throw new Error('Invite setup requires Supabase — use dev preview for now.')
+    if (isMockDataMode()) {
+      throw new Error('Invites need Supabase. Use dev preview for now.')
     }
     if (!isSupabaseConfigured) {
-      throw new Error('Invite setup is unavailable — Supabase is not configured.')
+      throw new Error('Can\'t finish invite setup. Supabase isn\'t set up.')
     }
 
     const profile = await rpcCompleteInvite(token, passcode)
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const devBypassLogin = (asAdmin = false, asPending = false) => {
-    if (!isDevBypassEnabled() && !useMockData()) return
+    if (!isDevBypassEnabled() && !isMockDataMode()) return
     const devUser = asPending ? DEV_PENDING : asAdmin ? DEV_ADMIN : DEV_USER
     saveSession(devUser)
     setUser(devUser)

@@ -1,0 +1,273 @@
+{
+  "$schema": "bmfc-copy-rules/v1",
+  "source": "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing",
+  "sourceNote": "Adapted for BMFC Club Hub UI copy, June 2026",
+  "product": {
+    "name": "BMFC Club Hub",
+    "club": "Bishop Middleham FC",
+    "clubFormal": "Bishop Middleham Football Club",
+    "locale": "en-GB",
+    "audience": "grassroots Sunday league squad (~25 players)",
+    "tone": "plain, direct, matey committee — not marketing or encyclopedic"
+  },
+  "prefer": {
+    "voice": [
+      "Use is, are, has for simple statements",
+      "Use plain verbs (use, wrote, tried) not stiff synonyms (utilize, authored, attempted)",
+      "Name concrete facts: opponent, date, score, player, passcode",
+      "Short imperatives on buttons and toasts",
+      "British English spelling",
+      "Sentence case for headings and labels"
+    ],
+    "humanSignals": [
+      "Simple there is / it has constructions",
+      "Honest hedging when uncertain (maybe, about, roughly)",
+      "Specific error messages with a next step"
+    ]
+  },
+  "ukEnglish": {
+    "locale": "en-GB",
+    "spelling": {
+      "prefer": [
+        "colour",
+        "organise",
+        "recognise",
+        "synchronise",
+        "centre",
+        "grey",
+        "licence",
+        "defence",
+        "programme",
+        "practise",
+        "travelled",
+        "labelled",
+        "maths"
+      ],
+      "avoid": [
+        "color",
+        "organize",
+        "recognize",
+        "synchronize",
+        "center",
+        "gray",
+        "defense",
+        "program",
+        "traveled",
+        "labeled",
+        "math",
+        "gotten",
+        "normalcy"
+      ]
+    },
+    "footballTerms": {
+      "prefer": [
+        "match",
+        "game",
+        "fixture",
+        "league table",
+        "table",
+        "pitch",
+        "kit",
+        "clean sheet",
+        "squad",
+        "MOTM",
+        "appearance",
+        "cards"
+      ],
+      "avoid": [
+        "soccer",
+        "standings",
+        "shutout",
+        "uniform",
+        "field",
+        "MVP",
+        "coach"
+      ]
+    },
+    "americanismsToAvoid": [
+      "gotten",
+      "normalcy",
+      "reach out",
+      "touch base",
+      "you guys",
+      "vacation",
+      "sidewalk",
+      "cell phone",
+      "zip code",
+      "soccer",
+      "standings",
+      "shutout"
+    ],
+    "datesAndNumbers": {
+      "dateFormat": "day before month (e.g. 10 Aug 2025 or DD/MM/YYYY)",
+      "timeFormat": "24h or 10:30am, consistent with en-GB formatters in code",
+      "currency": "GBP (£) if money appears"
+    },
+    "contractions": {
+      "allowed": ["isn't", "can't", "you're", "haven't", "won't", "couldn't", "don't"],
+      "avoid": ["y'all", "gotten", "I guess"]
+    }
+  },
+  "avoid": {
+    "aiVocabulary": [
+      "additionally",
+      "align with",
+      "boasts",
+      "bolstered",
+      "crucial",
+      "delve",
+      "emphasizing",
+      "enduring",
+      "enhance",
+      "fostering",
+      "garner",
+      "highlight",
+      "interplay",
+      "intricate",
+      "key",
+      "landscape",
+      "meticulous",
+      "pivotal",
+      "robust",
+      "showcase",
+      "tapestry",
+      "testament",
+      "underscore",
+      "valuable",
+      "vibrant",
+      "seamless",
+      "comprehensive",
+      "leverage",
+      "utilize",
+      "facilitate",
+      "streamline",
+      "empower",
+      "elevate",
+      "cutting-edge",
+      "game-changer"
+    ],
+    "promotionalWords": [
+      "nestled",
+      "in the heart of",
+      "groundbreaking",
+      "renowned",
+      "diverse array",
+      "rich heritage",
+      "natural beauty",
+      "commitment to",
+      "exemplifies",
+      "dynamic hub",
+      "captivating",
+      "fascinating glimpse",
+      "worth visiting"
+    ],
+    "copulaReplacements": [
+      "serves as",
+      "stands as",
+      "marks",
+      "represents",
+      "features",
+      "maintains",
+      "offers",
+      "refers to"
+    ],
+    "chatbotPhrases": [
+      "I hope this helps",
+      "Of course!",
+      "Certainly!",
+      "You're absolutely right!",
+      "Would you like",
+      "Is there anything else",
+      "Let me know",
+      "Here's a",
+      "Feel free to",
+      "Happy to help",
+      "Great question"
+    ],
+    "didacticPhrases": [
+      "it's important to note",
+      "it's important to remember",
+      "it's crucial to",
+      "worth noting",
+      "keep in mind that"
+    ],
+    "vagueAttribution": [
+      "industry reports",
+      "observers have cited",
+      "experts argue",
+      "some critics argue",
+      "several sources",
+      "has been described as"
+    ],
+    "outlineClosers": [
+      "despite its",
+      "faces several challenges",
+      "despite these challenges",
+      "future outlook",
+      "going forward",
+      "continues to thrive",
+      "plays a vital role"
+    ],
+    "structures": [
+      "not just X but also Y",
+      "not only X but Y",
+      "it's not X it's Y",
+      "no X no Y just Z",
+      "rule of three adjective chains",
+      "trailing -ing significance phrases (reflecting, underscoring, emphasizing, showcasing)",
+      "negative parallelisms",
+      "elegant variation / synonym cycling",
+      "inline bold list items with colons",
+      "key takeaways sections"
+    ],
+    "formatting": [
+      "title case on all main words in headings",
+      "excessive boldface",
+      "overuse of em dashes",
+      "curly quotation marks",
+      "emoji as list bullets or section markers"
+    ]
+  },
+  "lengthLimits": {
+    "button": { "maxWords": 3 },
+    "toast": { "maxWords": 12 },
+    "emptyStateTitle": { "maxWords": 6 },
+    "emptyStateBody": { "maxSentences": 2 },
+    "pageSubtitle": { "maxSentences": 1 },
+    "adminHint": { "maxSentences": 1 }
+  },
+  "examples": [
+    {
+      "context": "login_error",
+      "bad": "Invalid credentials. Please ensure your details align with your registered profile.",
+      "good": "Wrong name or passcode."
+    },
+    {
+      "context": "empty_stats",
+      "bad": "No data yet — showcasing your journey awaits once match events are captured.",
+      "good": "No stats yet. Scorers appear after results are entered."
+    },
+    {
+      "context": "invite_setup",
+      "bad": "Complete your onboarding to unlock the full suite of club features.",
+      "good": "Pick a 4-digit passcode to finish setup."
+    },
+    {
+      "context": "ddsfl_sync",
+      "bad": "Fixtures successfully synchronized, underscoring live connectivity.",
+      "good": "Fixtures updated from DDSFL."
+    }
+  ],
+  "reviewChecklist": [
+    "Would a committee member say this on WhatsApp?",
+    "No clustered AI vocabulary words?",
+    "No not-just-but, rule-of-three, or despite-challenges patterns?",
+    "Uses is/has instead of serves as/features/boasts?",
+    "Sentence case headings?",
+    "Straight apostrophes in code strings?",
+    "Errors include a concrete next step?",
+    "UK English spelling (en-GB), not US?",
+    "Football words (match, table) not soccer/standings?",
+    "Dates day-first if written in copy?"
+  ]
+}

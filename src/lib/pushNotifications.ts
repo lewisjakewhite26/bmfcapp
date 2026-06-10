@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { useMockData } from './clubApi'
+import { isMockDataMode } from './clubApi'
 import { getClubSession } from './clubAuth'
 
 export type PushPermission = NotificationPermission | 'unsupported'
@@ -42,7 +42,7 @@ export async function subscribeToPush(playerId: string): Promise<{ ok: boolean; 
     return { ok: false, reason: 'Push is not configured yet (missing VAPID key).' }
   }
 
-  if (useMockData()) {
+  if (isMockDataMode()) {
     return { ok: false, reason: 'Connect Supabase and VAPID keys to enable push notifications.' }
   }
 
@@ -87,13 +87,14 @@ export async function subscribeToPush(playerId: string): Promise<{ ok: boolean; 
   return { ok: true }
 }
 
-export async function unsubscribeFromPush(_playerId: string): Promise<void> {
+export async function unsubscribeFromPush(playerId: string): Promise<void> {
+  void playerId
   const registration = await navigator.serviceWorker.ready
   const subscription = await registration.pushManager.getSubscription()
   if (subscription) {
     const endpoint = subscription.endpoint
     await subscription.unsubscribe()
-    if (!useMockData()) {
+    if (!isMockDataMode()) {
       const session = getClubSession()
       if (session) {
         await supabase.rpc('delete_push_subscription', {

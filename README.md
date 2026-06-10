@@ -23,6 +23,10 @@ To connect a real backend:
 2. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_CLUB_DATA_SOURCE=supabase`
 3. Follow **[docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md)** to run migrations, seed the admin, and deploy the push function
 
+### Deploy on Vercel
+
+Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_CLUB_DATA_SOURCE=supabase` under **Environment Variables**, then redeploy. See [docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md#vercel-bmfcapp).
+
 ## Scripts
 
 | Command | Description |

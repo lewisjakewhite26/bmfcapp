@@ -18,7 +18,7 @@ import type { AdminUserRow, SquadPosition } from '../types'
 function copyText(text: string) {
   navigator.clipboard.writeText(text).then(
     () => toast.success('Copied to clipboard'),
-    () => toast.error('Could not copy — select the link manually')
+    () => toast.error('Couldn\'t copy. Select the link manually.')
   )
 }
 
@@ -87,7 +87,7 @@ export default function AdminUsers() {
 
     try {
       await resetUserPasscode(resetTarget.id, newPasscode)
-      toast.success(`Passcode reset for ${resetTarget.display_name} — tell them the new code`)
+      toast.success(`Passcode reset for ${resetTarget.display_name}. Send them the new code.`)
       setResetTarget(null)
       setNewPasscode('')
     } catch (err) {
@@ -103,7 +103,7 @@ export default function AdminUsers() {
       <div className="max-w-4xl mx-auto px-4 py-5 sm:py-8 space-y-6 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
         <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         <h1 className="font-display text-2xl text-brand-navy">Squad members</h1>
-        <p className="text-sm text-gray-500">Create accounts and send invite links. Set a position so they show up in stats as soon as they accept.</p>
+        <p className="text-sm text-gray-500">Add players and send invite links. Set their position so they appear in stats.</p>
 
         <section className="glass-card p-5 space-y-4">
           <h2 className="font-semibold text-brand-navy">Add a player</h2>
@@ -144,7 +144,7 @@ export default function AdminUsers() {
 
         {resetTarget && (
           <form onSubmit={handleResetPasscode} className="glass-card p-5 space-y-3 border border-brand-gold/30">
-            <h2 className="font-semibold text-brand-navy">Reset passcode — {resetTarget.display_name}</h2>
+            <h2 className="font-semibold text-brand-navy">Reset passcode: {resetTarget.display_name}</h2>
             <p className="text-sm text-gray-500">Set a new 4-digit code and send it to them on WhatsApp.</p>
             <input
               type="password"

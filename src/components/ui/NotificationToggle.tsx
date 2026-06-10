@@ -17,7 +17,7 @@ export function NotificationToggle({ playerId }: NotificationToggleProps) {
   if (permission === 'denied') {
     return (
       <p className="px-3 py-2 text-sm text-gray-500">
-        Notifications blocked — enable them in your browser settings.
+        Notifications blocked. Turn them on in your browser settings.
       </p>
     )
   }

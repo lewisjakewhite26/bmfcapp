@@ -122,7 +122,7 @@ export default function AdminAvailability() {
               >
                 {events.map((e) => (
                   <option key={`${e.kind}:${e.id}`} value={`${e.kind}:${e.id}`}>
-                    {e.label} — {formatMatchDate(e.date)}
+                    {e.label} · {formatMatchDate(e.date)}
                     {e.kind === 'fixture' ? ` · ${formatMatchTime(e.date)}` : ''}
                   </option>
                 ))}

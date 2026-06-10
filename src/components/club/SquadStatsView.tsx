@@ -170,7 +170,12 @@ export function SquadStatsView({ stats, loading }: SquadStatsViewProps) {
   }
 
   if (stats.length === 0) {
-    return <div className="glass-card p-8 text-center text-gray-500">No stats recorded yet.</div>
+    return (
+      <div className="glass-card p-8 text-center text-gray-500 space-y-1">
+        <p>No stats yet.</p>
+        <p className="text-sm">They show up after admin enters goals and MOTM in results.</p>
+      </div>
+    )
   }
 
   const filters: { id: StatFilter; label: string }[] = [

@@ -6,12 +6,9 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
 if (!isSupabaseConfigured) {
-  const message =
-    'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (Vercel: add them before building).'
-  if (import.meta.env.PROD) {
-    throw new Error(message)
-  }
-  console.warn(message)
+  console.warn(
+    'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY before building (Vercel: Environment Variables, then redeploy).',
+  )
 }
 
 export const supabase = createClient(

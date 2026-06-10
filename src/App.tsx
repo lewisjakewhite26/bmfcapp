@@ -22,6 +22,10 @@ import AdminAvailability from './pages/AdminAvailability'
 import AdminNotifications from './pages/AdminNotifications'
 import { PageBackground } from './components/ui/PageBackground'
 import { MobileBottomNav } from './components/ui/MobileBottomNav'
+import { isSupabaseConfigured } from './lib/supabase'
+import ConfigRequired from './pages/ConfigRequired'
+
+const wantsSupabase = import.meta.env.VITE_CLUB_DATA_SOURCE === 'supabase'
 
 function ProtectedRoute({
   children,
@@ -201,6 +205,10 @@ function AppRoutes() {
 }
 
 export default function App() {
+  if (wantsSupabase && !isSupabaseConfigured) {
+    return <ConfigRequired />
+  }
+
   return (
     <BrowserRouter>
       <AuthProvider>

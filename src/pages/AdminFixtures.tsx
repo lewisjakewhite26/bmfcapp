@@ -403,7 +403,7 @@ function ManualFixtureRow({
         </p>
         <p className="font-semibold text-brand-navy mt-0.5">
           {fixture.home_away === 'home' ? 'vs' : '@'} {fixture.opponent.replace(/ FC$/, '')}
-          {fixture.result ? ` — ${fixture.result.goals_for}-${fixture.result.goals_against}` : ''}
+          {fixture.result ? ` · ${fixture.result.goals_for}-${fixture.result.goals_against}` : ''}
         </p>
         <p className="text-sm text-gray-500 mt-0.5">
           {formatMatchDate(fixture.match_date)} · {formatMatchTime(fixture.match_date, fixture.kickoff_time)}

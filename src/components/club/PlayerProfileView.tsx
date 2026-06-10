@@ -232,7 +232,7 @@ export function PlayerProfileView({
             <h2 className="font-display text-lg text-brand-navy">My calendar</h2>
             <Link to="/calendar" className="text-sm text-brand-blue font-medium">Full calendar →</Link>
           </div>
-          <p className="text-sm text-gray-500 mb-4">Mark your availability for upcoming matches and training.</p>
+          <p className="text-sm text-gray-500 mb-4">Mark in, out or maybe for upcoming games and training.</p>
           {calendarLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 2 }).map((_, i) => (

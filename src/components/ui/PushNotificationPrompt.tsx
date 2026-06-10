@@ -25,7 +25,7 @@ export function PushNotificationPrompt({ playerId }: PushNotificationPromptProps
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-brand-navy">Turn on notifications</p>
         <p className="text-sm text-gray-500 mt-1">
-          Get match and training reminders straight to your phone — no app needed.
+          Reminders for games and training on your phone.
           {!configured && (
             <span className="block mt-1 text-xs text-amber-700">
               Requires HTTPS and server setup (VAPID keys).

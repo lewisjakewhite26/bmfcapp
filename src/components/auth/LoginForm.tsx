@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
-import { useMockData } from '../../lib/clubApi'
+import { isMockDataMode } from '../../lib/clubApi'
 
 export function LoginForm() {
   const [displayName, setDisplayName] = useState('')
@@ -10,7 +10,7 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false)
   const { login, devBypassLogin } = useAuth()
   const navigate = useNavigate()
-  const mockMode = useMockData()
+  const mockMode = isMockDataMode()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,7 +47,7 @@ export function LoginForm() {
           onError={(e) => { (e.target as HTMLImageElement).src = '/logo.svg' }}
         />
         <h1 className="font-display text-2xl text-brand-navy">Welcome back</h1>
-        <p className="text-gray-500 text-sm mt-1">Sign in to BMFC Club Hub</p>
+        <p className="text-gray-500 text-sm mt-1">Your name and 4-digit passcode</p>
       </div>
 
       <div>

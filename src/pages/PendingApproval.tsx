@@ -12,10 +12,10 @@ export default function PendingApproval() {
           <div className="text-5xl">⏳</div>
           <h1 className="font-display text-2xl text-brand-navy">Awaiting approval</h1>
           <p className="text-gray-600">
-            Hi {user?.display_name ?? 'there'} — your account is waiting for approval. A committee member will sort it shortly.
+            Hi {user?.display_name ?? 'there'}. Your account is waiting for approval. A committee member will sort it soon.
           </p>
           <p className="text-sm text-gray-500">
-            Once approved you&apos;ll be able to see fixtures, mark your availability and view squad stats.
+            When you&apos;re approved you can see fixtures, mark availability and check stats.
           </p>
           <div className="flex flex-col gap-2 pt-2">
             <button type="button" onClick={() => logout()} className="btn-secondary w-full">

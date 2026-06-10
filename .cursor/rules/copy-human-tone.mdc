@@ -1,0 +1,28 @@
+---
+description: Human-sounding UI copy — avoid AI writing patterns (BMFC Club Hub)
+globs: src/**/*.{tsx,ts},docs/**/*.md,index.html
+alwaysApply: false
+---
+
+# Copy: sound human, not AI
+
+When writing or editing **user-facing strings** (labels, headings, toasts, empty states, meta descriptions), follow `docs/COPY-RULES.md` and `docs/copy-rules.json`.
+
+## Quick rules
+
+- **Locale:** UK English (`en-GB`) — organise not organize, grey not gray, match/table not soccer/standings, day-first dates (10 Aug 2025). See `ukEnglish` in `copy-rules.json`.
+- **Voice:** Plain British English. Matey committee tone — not marketing, brochure, or Wikipedia essay.
+- **Verbs:** Prefer *is / are / has*. Avoid *serves as, boasts, features, underscores, showcases*.
+- **Length:** Buttons ≤3 words. Toasts ≤12 words. One idea per line.
+- **Banned clusters:** AI vocab (delve, pivotal, vibrant, seamless, leverage…), promotional filler, chatbot phrases (*I hope this helps*, *Feel free to…*).
+- **Banned structures:** Rule of three, *not just X but Y*, *despite challenges*, trailing *-ing* significance (*reflecting our commitment*), vague attribution (*experts say*).
+- **Formatting:** Sentence case headings. Straight quotes in strings. Minimal bold. No emoji in labels.
+- **Avoid USisms:** gotten, reach out, touch base, cell phone, zip code, vacation, you guys.
+
+## BMFC specifics
+
+- Club: **Bishop Middleham FC** (UI) / Bishop Middleham Football Club (formal).
+- Be concrete: opponent names, dates, scores, passcodes, invite links.
+- Errors: say what went wrong + what to do next.
+
+Read full rules: `docs/COPY-RULES.md`

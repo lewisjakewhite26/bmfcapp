@@ -24,7 +24,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         this.props.fallback ?? (
           <div className="glass-card p-8 text-center">
-            <p className="text-gray-500 mb-4">There was a problem loading this section.</p>
+            <p className="text-gray-500 mb-4">Couldn&apos;t load this section.</p>
             <button
               onClick={() => this.setState({ hasError: false })}
               className="btn-secondary text-sm"

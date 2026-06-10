@@ -101,7 +101,7 @@ export function PlayerFormTimeline({ performances }: PlayerFormTimelineProps) {
           return (
             <div key={perf.fixtureId} className="flex items-center flex-1 min-w-0">
               {i > 0 && <div className="h-px flex-1 bg-brand-blue/15 min-w-[8px]" />}
-              <div className="flex flex-col items-center shrink-0" title={`${perf.opponent} — ${formatMatchDate(perf.date)}`}>
+              <div className="flex flex-col items-center shrink-0" title={`${perf.opponent} · ${formatMatchDate(perf.date)}`}>
                 <span className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${color}`}>
                   {rating}
                 </span>

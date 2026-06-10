@@ -16,7 +16,7 @@ export function AvailabilityNudge({ summary, availability }: AvailabilityNudgePr
       const opponent = summary.nextFixture.opponent.replace(/ FC$/, '')
       const prefix = summary.nextFixture.home_away === 'home' ? 'vs' : '@'
       const when = formatMatchDate(summary.nextFixture.match_date)
-      messages.push(`Haven't marked availability for ${when} ${prefix} ${opponent} yet. Tap to respond.`)
+      messages.push(`Not marked for ${when} ${prefix} ${opponent} yet.`)
     }
   }
 
@@ -25,7 +25,7 @@ export function AvailabilityNudge({ summary, availability }: AvailabilityNudgePr
     if (!hasResponse) {
       const when = formatMatchDate(summary.upcomingTraining.session_date)
       const time = formatMatchTime(summary.upcomingTraining.session_date)
-      messages.push(`Haven't marked availability for training on ${when} · ${time}. Tap to respond.`)
+      messages.push(`Not marked for training on ${when} · ${time}.`)
     }
   }
 
@@ -44,7 +44,7 @@ export function AvailabilityNudge({ summary, availability }: AvailabilityNudgePr
           </li>
         ))}
       </ul>
-      <p className="text-xs text-amber-800/80 mt-2 font-medium">Tap to respond on the calendar →</p>
+      <p className="text-xs text-amber-800/80 mt-2 font-medium">Open calendar to respond →</p>
     </Link>
   )
 }
