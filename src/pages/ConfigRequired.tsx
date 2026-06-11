@@ -7,9 +7,10 @@ export default function ConfigRequired() {
         <div className="glass-card p-8 max-w-lg w-full space-y-4">
           <h1 className="font-display text-2xl text-brand-navy">Setup needed</h1>
           <p className="text-gray-600 text-sm leading-relaxed">
-            This deploy expects Supabase, but the build did not get{' '}
+            This deploy expects Supabase, but the build did not get valid{' '}
             <code className="text-xs bg-brand-light px-1.5 py-0.5 rounded">VITE_SUPABASE_URL</code> and{' '}
             <code className="text-xs bg-brand-light px-1.5 py-0.5 rounded">VITE_SUPABASE_ANON_KEY</code>.
+            The URL must start with <code className="text-xs">https://</code> — no quotes or spaces.
           </p>
           <div className="text-sm text-gray-600 space-y-2">
             <p className="font-semibold text-brand-navy">On Vercel:</p>
