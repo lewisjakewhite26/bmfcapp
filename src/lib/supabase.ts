@@ -26,6 +26,29 @@ export const isSupabaseConfigured = Boolean(
   supabaseUrl && supabaseAnonKey && isValidSupabaseUrl(supabaseUrl),
 )
 
+/** Shown on ConfigRequired — reflects what was baked in at build time (no secrets). */
+export function getSupabaseConfigDiagnostic() {
+  const rawUrl = import.meta.env.VITE_SUPABASE_URL
+  const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  const url = trimEnv(rawUrl)
+  const key = trimEnv(rawKey)
+
+  let urlStatus: string
+  if (!url) urlStatus = rawUrl ? 'empty or whitespace only' : 'not set in this build'
+  else if (!isValidSupabaseUrl(url)) urlStatus = 'invalid — must be https://your-project.supabase.co'
+  else urlStatus = 'ok'
+
+  let keyStatus: string
+  if (!key) keyStatus = rawKey ? 'empty or whitespace only' : 'not set in this build'
+  else keyStatus = 'ok'
+
+  return {
+    dataSource: import.meta.env.VITE_CLUB_DATA_SOURCE ?? '(not set)',
+    urlStatus,
+    keyStatus,
+  }
+}
+
 if (!isSupabaseConfigured) {
   console.warn(
     'Supabase is not configured. Set VITE_SUPABASE_URL (full https://… URL) and VITE_SUPABASE_ANON_KEY, then redeploy on Vercel.',
