@@ -11,6 +11,7 @@ import { CLUB_NAME, LEAGUE_NAME } from '../lib/mockData'
 import { PushNotificationPrompt } from '../components/ui/PushNotificationPrompt'
 import { DataErrorBanner } from '../components/ui/DataErrorBanner'
 import { AvailabilityNudge } from '../components/club/AvailabilityNudge'
+import { pageContainerClass } from '../lib/layout'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -30,7 +31,7 @@ export default function Dashboard() {
   return (
     <PageShell>
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-5 sm:py-8 space-y-6 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
+      <div className={pageContainerClass()}>
         <PushNotificationPrompt playerId={user?.id} />
 
         {dashboardError && (

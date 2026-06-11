@@ -8,6 +8,7 @@ import { useCalendar } from '../hooks/useClubData'
 import { usePlayerProfile } from '../hooks/usePlayerProfile'
 import type { CalendarItem } from '../types'
 import { useMemo } from 'react'
+import { pageContainerClass } from '../lib/layout'
 
 export default function PlayerProfilePage() {
   const { playerId } = useParams<{ playerId: string }>()
@@ -43,7 +44,7 @@ export default function PlayerProfilePage() {
   return (
     <PageShell>
       <Navbar />
-      <div className="max-w-6xl mx-auto px-4 py-5 sm:py-8 space-y-6 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
+      <div className={pageContainerClass('max-w-6xl')}>
         <Link to="/stats" className="text-brand-blue text-sm font-medium">← Squad stats</Link>
 
         {profileError && (

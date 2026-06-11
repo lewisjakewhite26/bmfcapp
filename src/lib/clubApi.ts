@@ -23,8 +23,10 @@ import {
   removeMockFixture,
   createMockInvite,
   regenerateMockInvite,
+  getMockLineup,
   removeMockSquad,
   resetMockPasscode,
+  saveMockLineup,
   setMockUserApproved,
   setMockUserCommittee,
   upsertMockAvailability,
@@ -38,9 +40,13 @@ import type {
   FixtureWithResult,
   LeagueTableRow,
   MatchEvent,
+  AvailablePlayer,
   CreateInviteResult,
   Fixture,
+  FormationId,
   HomeAway,
+  Lineup,
+  LineupSlotAssignment,
   PlayerProfile,
   PlayerStats,
   SquadMember,
@@ -624,4 +630,65 @@ export async function deleteTrainingSession(trainingId: string): Promise<void> {
     p_training_id: trainingId,
   })
   if (error) throw error
+}
+
+export async function fetchAvailablePlayersForFixture(fixtureId: string): Promise<AvailablePlayer[]> {
+  const [allAvailability, squad] = await Promise.all([
+    fetchAllAvailability(),
+    fetchSquad(),
+  ])
+
+  const availableIds = new Set(
+    allAvailability
+      .filter((a) => a.fixture_id === fixtureId && a.status === 'yes')
+      .map((a) => a.player_id)
+  )
+
+  return squad
+    .filter((m) => availableIds.has(m.player_id))
+    .map((m) => ({ player_id: m.player_id, display_name: m.display_name }))
+    .sort((a, b) => a.display_name.localeCompare(b.display_name))
+}
+
+export async function fetchLineup(fixtureId: string): Promise<Lineup | null> {
+  if (isMockDataMode()) {
+    await delay(60)
+    return getMockLineup(fixtureId)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_get_lineup', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_fixture_id: fixtureId,
+  })
+  if (error) throw error
+  if (!data) return null
+  return data as Lineup
+}
+
+export async function saveLineup(
+  fixtureId: string,
+  formation: FormationId,
+  slots: LineupSlotAssignment[]
+): Promise<Lineup> {
+  if (isMockDataMode()) {
+    await delay(80)
+    return saveMockLineup(fixtureId, formation, slots)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_save_lineup', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_fixture_id: fixtureId,
+    p_formation: formation,
+    p_slots: slots,
+  })
+  if (error) throw error
+  return data as Lineup
 }

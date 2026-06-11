@@ -11,6 +11,7 @@ import {
 } from '../lib/clubApi'
 import { formatMatchDate, formatMatchTime } from '../lib/format'
 import type { TrainingSession } from '../types'
+import { pageContainerClass } from '../lib/layout'
 
 const DEFAULT_LOCATION = 'Bishop Middleham Recreation Ground'
 const DEFAULT_TIME = '19:00'
@@ -141,7 +142,7 @@ export default function AdminTraining() {
   return (
     <PageShell>
       <Navbar />
-      <div className="max-w-lg mx-auto px-4 py-5 sm:py-8 space-y-6 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
+      <div className={pageContainerClass('max-w-lg')}>
         <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         <div>
           <h1 className="font-display text-2xl text-brand-navy">

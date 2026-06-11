@@ -4,30 +4,44 @@
  * Run: npm run generate:pwa-icons
  */
 
+import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(__dirname, '..')
-const SRC = path.join(ROOT, 'public', 'logo.png')
 const OUT = path.join(ROOT, 'public')
-
+const SRC_PNG = path.join(OUT, 'logo.png')
+const SRC_SVG = path.join(OUT, 'logo.svg')
 const BG = { r: 0, g: 0, b: 0, alpha: 1 }
 
-async function writeIcon(name, size) {
-  await sharp(SRC)
+async function ensureLogoPng() {
+  if (fs.existsSync(SRC_PNG)) return SRC_PNG
+  if (!fs.existsSync(SRC_SVG)) {
+    throw new Error('Missing public/logo.png and public/logo.svg')
+  }
+  await sharp(SRC_SVG)
+    .resize(512, 512, { fit: 'contain', background: BG })
+    .png()
+    .toFile(SRC_PNG)
+  console.log('Wrote public/logo.png (from logo.svg)')
+  return SRC_PNG
+}
+
+async function writeIcon(src, name, size) {
+  await sharp(src)
     .resize(size, size, { fit: 'contain', background: BG })
     .png()
     .toFile(path.join(OUT, name))
   console.log(`Wrote public/${name} (${size}×${size})`)
 }
 
-async function writeMaskableIcon() {
+async function writeMaskableIcon(src) {
   const size = 512
   const inner = 384
   const padding = (size - inner) / 2
-  const innerBuf = await sharp(SRC)
+  const innerBuf = await sharp(src)
     .resize(inner, inner, { fit: 'contain', background: BG })
     .png()
     .toBuffer()
@@ -43,10 +57,11 @@ async function writeMaskableIcon() {
 }
 
 async function main() {
-  await writeIcon('pwa-192.png', 192)
-  await writeIcon('pwa-512.png', 512)
-  await writeIcon('apple-touch-icon.png', 180)
-  await writeMaskableIcon()
+  const src = await ensureLogoPng()
+  await writeIcon(src, 'pwa-192.png', 192)
+  await writeIcon(src, 'pwa-512.png', 512)
+  await writeIcon(src, 'apple-touch-icon.png', 180)
+  await writeMaskableIcon(src)
 }
 
 main().catch((err) => {

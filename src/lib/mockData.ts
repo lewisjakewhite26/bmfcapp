@@ -3,7 +3,10 @@ import type {
   Availability,
   Fixture,
   FixtureWithResult,
+  FormationId,
   LeagueTableRow,
+  Lineup,
+  LineupSlotAssignment,
   MatchEvent,
   PlayerStats,
   SquadMember,
@@ -124,8 +127,30 @@ let leagueTableRows = [...initialMock.leagueTableRows]
 let matchEvents = [...initialMock.matchEvents]
 let training = [...MOCK_TRAINING]
 let availability: Availability[] = []
+const mockLineups = new Map<string, Lineup>()
 let adminUsers = [...MOCK_ADMIN_USERS]
 let squad = [...MOCK_SQUAD]
+
+function seedMockFixtureAvailability() {
+  const next = [...fixtures]
+    .filter((f) => f.status === 'scheduled')
+    .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())[0]
+  if (!next) return
+
+  for (const member of squad.filter((s) => s.active)) {
+    availability.push({
+      id: crypto.randomUUID(),
+      player_id: member.player_id,
+      fixture_id: next.id,
+      training_id: null,
+      status: 'yes',
+      message: null,
+      created_at: new Date().toISOString(),
+    })
+  }
+}
+
+seedMockFixtureAvailability()
 const mockInviteTokens = new Map<string, string>()
 
 /** Stable token for dev previews and screenshot capture (/invite/demoinvite0001). */
@@ -530,6 +555,29 @@ export function removeMockTrainingSession(trainingId: string): void {
   availability = availability.filter((a) => a.training_id !== trainingId)
 }
 
+export function getMockLineup(fixtureId: string): Lineup | null {
+  return mockLineups.get(fixtureId) ?? null
+}
+
+export function saveMockLineup(
+  fixtureId: string,
+  formation: FormationId,
+  slots: LineupSlotAssignment[]
+): Lineup {
+  const existing = mockLineups.get(fixtureId)
+  const now = new Date().toISOString()
+  const row: Lineup = {
+    id: existing?.id ?? crypto.randomUUID(),
+    fixture_id: fixtureId,
+    formation,
+    slots: [...slots],
+    created_at: existing?.created_at ?? now,
+    updated_at: now,
+  }
+  mockLineups.set(fixtureId, row)
+  return row
+}
+
 export function resetMockData() {
   const reset = createInitialMockState()
   fixtures = [...reset.fixtures]
@@ -538,8 +586,10 @@ export function resetMockData() {
   matchEvents = [...reset.matchEvents]
   training = [...MOCK_TRAINING]
   availability = []
+  mockLineups.clear()
   adminUsers = [...MOCK_ADMIN_USERS]
   squad = [...MOCK_SQUAD]
   mockInviteTokens.clear()
   mockInviteTokens.set(MOCK_DEMO_INVITE_TOKEN, '00000000-0000-0000-0000-000000000003')
+  seedMockFixtureAvailability()
 }

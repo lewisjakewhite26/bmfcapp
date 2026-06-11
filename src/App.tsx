@@ -20,6 +20,7 @@ import AdminFixtures from './pages/AdminFixtures'
 import AdminTraining from './pages/AdminTraining'
 import AdminAvailability from './pages/AdminAvailability'
 import AdminNotifications from './pages/AdminNotifications'
+import AdminLineup from './pages/AdminLineup'
 import { PageBackground } from './components/ui/PageBackground'
 import { MobileBottomNav } from './components/ui/MobileBottomNav'
 import { isSupabaseConfigured } from './lib/supabase'
@@ -195,6 +196,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <AdminNotifications />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/lineup"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminLineup />
           </ProtectedRoute>
         }
       />

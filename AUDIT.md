@@ -1,6 +1,10 @@
 # BMFC World Cup Predictor — Pre-Launch Audit
 
-> **Current audit (v3)** — supersedes all earlier versions.  
+> **ARCHIVED** — This app has been replaced by **BMFC Club Hub**.  
+> **Current audit:** see [`AUDITNEW.md`](AUDITNEW.md) (Club Hub v1, 11 Jun 2026).  
+> Detailed category breakdown also in [`docs/PROJECT-AUDIT.md`](docs/PROJECT-AUDIT.md) (superseded by AUDITNEW.md).
+
+> **Historical audit (v3)** — World Cup predictor only.  
 > **Last updated:** 5 June 2026 · **Commit:** `bc95b62` on `main`
 
 **Scope:** Full codebase (read-only)  

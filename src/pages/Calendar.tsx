@@ -7,6 +7,7 @@ import { DataErrorBanner } from '../components/ui/DataErrorBanner'
 import { useAuth } from '../hooks/useAuth'
 import { useCalendar } from '../hooks/useClubData'
 import type { CalendarItem } from '../types'
+import { pageContainerClass } from '../lib/layout'
 
 type ViewMode = 'list' | 'calendar'
 
@@ -33,7 +34,7 @@ export default function CalendarPage() {
   return (
     <PageShell>
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-5 sm:py-8 space-y-6 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
+      <div className={pageContainerClass()}>
         <div>
           <h1 className="font-display text-2xl sm:text-3xl text-brand-navy">Calendar</h1>
           <p className="text-sm text-gray-500 mt-1">Matches, training & availability</p>

@@ -10,6 +10,7 @@ import {
   upsertSquadMember,
 } from '../lib/clubApi'
 import { SQUAD_POSITIONS } from '../lib/squadPositions'
+import { pageContainerClass } from '../lib/layout'
 import type { AdminUserRow, SquadMember, SquadPosition } from '../types'
 
 export default function AdminSquad() {
@@ -83,7 +84,7 @@ export default function AdminSquad() {
   return (
     <PageShell>
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-5 sm:py-8 space-y-6 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
+      <div className={pageContainerClass()}>
         <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         <h1 className="font-display text-2xl text-brand-navy">Squad list</h1>
         <p className="text-sm text-gray-500">

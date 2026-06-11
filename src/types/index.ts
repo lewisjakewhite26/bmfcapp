@@ -161,3 +161,24 @@ export interface DashboardSummary {
   leaguePoints: number | null
   upcomingTraining: TrainingSession | null
 }
+
+export type FormationId = '4-4-2' | '4-3-3' | '4-2-3-1' | '3-5-2' | '5-3-2'
+
+export interface LineupSlotAssignment {
+  position: string
+  player_id: string
+}
+
+export interface Lineup {
+  id: string
+  fixture_id: string
+  formation: FormationId
+  slots: LineupSlotAssignment[]
+  created_at: string
+  updated_at: string
+}
+
+export interface AvailablePlayer {
+  player_id: string
+  display_name: string
+}

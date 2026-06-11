@@ -4,6 +4,7 @@ import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { ResultEntryForm } from '../components/admin/ResultEntryForm'
 import { fetchSquad, fetchUpcomingFixtures, fetchCompletedFixtures } from '../lib/clubApi'
+import { pageContainerClass } from '../lib/layout'
 import type { FixtureWithResult, SquadMember } from '../types'
 
 export default function AdminResults() {
@@ -34,7 +35,7 @@ export default function AdminResults() {
   return (
     <PageShell>
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-5 sm:py-8 space-y-6 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
+      <div className={pageContainerClass()}>
         <div className="flex items-center gap-3">
           <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         </div>

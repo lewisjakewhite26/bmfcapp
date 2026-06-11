@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { useAuth } from '../hooks/useAuth'
+import { pageContainerClass } from '../lib/layout'
 
 const LINKS = [
   { to: '/admin/users', title: 'Squad members', desc: 'Create accounts, invite links & passcodes', adminOnly: true },
@@ -10,7 +11,8 @@ const LINKS = [
   { to: '/admin/results', title: 'Enter results', desc: 'Scores, goalscorers, MOTM & cards' },
   { to: '/admin/training', title: 'Training sessions', desc: 'Add, edit & remove training on the calendar' },
   { to: '/admin/availability', title: 'Availability overview', desc: 'See who\'s in for upcoming events' },
-  { to: '/admin/notifications', title: 'Send notification', desc: 'Push reminder to subscribed players' },
+  { to: '/admin/lineup', title: 'Pick a lineup', desc: 'Choose formation and select available players' },
+  { to: '/admin/notifications', title: 'Send notification', desc: 'Push to the whole squad or selected players' },
 ]
 
 export default function Admin() {
@@ -20,7 +22,7 @@ export default function Admin() {
   return (
     <PageShell>
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-5 sm:py-8 space-y-6 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
+      <div className={pageContainerClass()}>
         <div>
           <h1 className="font-display text-2xl sm:text-3xl text-brand-navy">Admin</h1>
           <p className="text-sm text-gray-500 mt-1">

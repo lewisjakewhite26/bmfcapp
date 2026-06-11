@@ -6,6 +6,7 @@ import { DataErrorBanner } from '../components/ui/DataErrorBanner'
 import { useAdminAvailability, useFixtures } from '../hooks/useClubData'
 import { fetchSquad, fetchTrainingSessions } from '../lib/clubApi'
 import { formatMatchDate, formatMatchTime } from '../lib/format'
+import { pageContainerClass } from '../lib/layout'
 import type { Availability, SquadMember, TrainingSession } from '../types'
 
 type EventOption =
@@ -90,7 +91,7 @@ export default function AdminAvailability() {
   return (
     <PageShell>
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-5 sm:py-8 space-y-6 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-8">
+      <div className={pageContainerClass()}>
         <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         <div>
           <h1 className="font-display text-2xl text-brand-navy">Availability</h1>
