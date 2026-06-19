@@ -87,7 +87,9 @@ Re-run during the season to pick up new results. For mock-only demos without Sup
 
 ### Automated sync (GitHub Actions)
 
-A workflow (`.github/workflows/sync-ddsfl.yml`) runs **`npm run sync:ddsfl` every Sunday at 20:00 UTC** and can be triggered manually from **Actions → Sync DDSFL to Supabase → Run workflow**.
+A workflow (`.github/workflows/sync-ddsfl.yml`) runs **`npm run sync:ddsfl` daily at 20:00 UTC** (~8pm GMT / ~9pm BST) and can be triggered manually from **Actions → Sync DDSFL to Supabase → Run workflow**.
+
+There is **no sync button in the app admin panel** — manual options are GitHub Actions (above) or `npm run sync:ddsfl` on your machine with `.env.local` set.
 
 Add these **repository secrets** (Settings → Secrets and variables → Actions):
 

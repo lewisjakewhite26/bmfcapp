@@ -2,8 +2,8 @@ name: Sync DDSFL to Supabase
 
 on:
   schedule:
-    # Sunday 20:00 UTC — after typical DDSFL Sunday fixtures (21:00 BST in summer)
-    - cron: '0 20 * * 0'
+    # Daily 20:00 UTC (~8pm GMT / ~9pm BST) — catches Sunday and midweek results
+    - cron: '0 20 * * *'
   workflow_dispatch:
 
 concurrency:

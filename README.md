@@ -40,7 +40,7 @@ Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_CLUB_DATA_SOURCE=su
 | `npm run lint` | ESLint |
 | `npm run scrape:ddsfl` | Fetch live DDSFL fixtures + table → `src/data/ddsfl-scrape.json` |
 | `npm run scrape:ddsfl:save` | Same, also writes `scraped.json` |
-| `npm run sync:ddsfl` | Scrape DDSFL and upsert into Supabase (needs `SUPABASE_SERVICE_ROLE_KEY`; also runs weekly via GitHub Actions) |
+| `npm run sync:ddsfl` | Scrape DDSFL and upsert into Supabase (local manual run; also runs daily via GitHub Actions) |
 | `npm run generate:vapid-keys` | Generate web push VAPID key pair |
 | `npm run generate:pwa-icons` | Build `logo.png` + PWA icons from `public/logo.svg` |
 | `npm run screenshots` | Capture mobile + desktop screenshots |
