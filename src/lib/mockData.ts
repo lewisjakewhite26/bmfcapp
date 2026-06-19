@@ -18,6 +18,7 @@ import type {
   FundraiserParticipationSummary,
 } from '../types'
 import { buildDdsflMockState } from './ddsflMockImport'
+import { isUpcomingScheduledFixture } from './fixtureFilters'
 import { DDSFL_ACTIVE_SEASON, DDSFL_LEAGUE_NAME, DDSFL_SEASONS } from './ddsflConstants'
 
 export const CLUB_NAME = 'Bishop Middleham FC'
@@ -43,33 +44,8 @@ function dateOnlyFromNow(days: number): string {
   return daysFromNow(days).slice(0, 10)
 }
 
-/** Manually added matches (friendlies, cups) — merged with DDSFL scrape data. */
-export const MANUAL_FIXTURES: Fixture[] = [
-  {
-    id: 'f5',
-    match_date: daysFromNow(21),
-    opponent: 'Crook Town Miners',
-    home_away: 'home',
-    competition: 'Alan Smith Memorial Trophy',
-    venue: 'Bishop Middleham Recreation Ground',
-    kickoff_time: '14:00:00',
-    ddsfl_fixture_id: null,
-    status: 'scheduled',
-    created_at: daysAgo(2),
-  },
-  {
-    id: 'f6',
-    match_date: daysFromNow(17),
-    opponent: 'Shildon Town',
-    home_away: 'away',
-    competition: 'Friendly',
-    venue: 'Shildon Recreation Ground',
-    kickoff_time: '10:30:00',
-    ddsfl_fixture_id: null,
-    status: 'scheduled',
-    created_at: daysAgo(1),
-  },
-]
+/** Admin-added fixtures in mock mode (friendlies, cups). Empty by default — add via Admin → Fixtures. */
+export const MANUAL_FIXTURES: Fixture[] = []
 
 export const MOCK_SQUAD: SquadMember[] = [
   { id: 's1', player_id: 'p1', display_name: 'Tom Harrison', squad_number: null, position: 'Goalkeeper', joined_date: '2023-08-01', active: true },
@@ -195,7 +171,7 @@ seedMockFundraiserParticipation()
 
 function seedMockFixtureAvailability() {
   const next = [...fixtures]
-    .filter((f) => f.status === 'scheduled')
+    .filter((f) => isUpcomingScheduledFixture(f))
     .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())[0]
   if (!next) return
 
@@ -241,7 +217,7 @@ export function getMockFixturesWithResults(): FixtureWithResult[] {
 
 export function getMockUpcomingFixtures(): FixtureWithResult[] {
   return getMockFixturesWithResults()
-    .filter((f) => f.status === 'scheduled')
+    .filter((f) => isUpcomingScheduledFixture(f))
     .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
 }
 

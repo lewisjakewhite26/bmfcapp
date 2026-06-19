@@ -1,3 +1,4 @@
+import { isUpcomingScheduledFixture } from './fixtureFilters'
 import { supabase, isSupabaseConfigured } from './supabase'
 import { findClubTableRow } from './clubTeams'
 import { aggregatePlayerStats } from './playerStats'
@@ -112,7 +113,9 @@ export async function fetchUpcomingFixtures(): Promise<FixtureWithResult[]> {
     return getMockUpcomingFixtures()
   }
   const all = await fetchFixturesWithResults()
-  return all.filter((f) => f.status === 'scheduled').sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
+  return all
+    .filter((f) => isUpcomingScheduledFixture(f))
+    .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
 }
 
 export async function fetchCompletedFixtures(): Promise<FixtureWithResult[]> {

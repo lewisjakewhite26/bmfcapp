@@ -24,7 +24,7 @@ const tabs = [
   },
   {
     path: '/results',
-    label: 'Results',
+    label: 'Matches',
     match: (p: string) => p === '/results',
     icon: (
       <NavIcon>

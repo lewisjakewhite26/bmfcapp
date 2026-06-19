@@ -1,3 +1,5 @@
+import { isUpcomingScheduledFixture } from './fixtureFilters'
+
 import type {
   CalendarItem,
   ClubEvent,
@@ -35,7 +37,7 @@ export function buildCalendarItems(input: {
 
   return [
     ...fixtures
-      .filter((f) => f.status === 'scheduled')
+      .filter((f) => isUpcomingScheduledFixture(f))
       .map((data) => ({ type: 'fixture' as const, data })),
     ...training.map((data) => ({ type: 'training' as const, data })),
     ...events.map((data) => ({ type: 'event' as const, data })),
