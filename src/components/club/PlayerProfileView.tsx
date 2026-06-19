@@ -135,7 +135,7 @@ export function PlayerProfileView({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="glass-card p-5 sm:p-6">
           <h2 className="font-display text-lg text-brand-navy mb-1">Player profile</h2>
-          <p className="text-sm text-gray-500 mb-4">Season attributes (0–100 scale)</p>
+          <p className="text-sm text-gray-500 mb-4">Season snapshot (0–100 scale)</p>
           <PlayerRadarChart axes={radarAxes} />
         </div>
 

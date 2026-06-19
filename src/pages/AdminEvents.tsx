@@ -66,7 +66,7 @@ export default function AdminEvents() {
     try {
       setEvents(await fetchClubEvents())
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load events')
+      toast.error(err instanceof Error ? err.message : "Couldn't load events")
     } finally {
       setLoadingList(false)
     }
@@ -127,7 +127,7 @@ export default function AdminEvents() {
       resetForm()
       await reloadList()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save event')
+      toast.error(err instanceof Error ? err.message : "Couldn't save event")
     } finally {
       setSaving(false)
     }
@@ -143,7 +143,7 @@ export default function AdminEvents() {
       toast.success('Event removed')
       await reloadList()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove event')
+      toast.error(err instanceof Error ? err.message : "Couldn't remove event")
     } finally {
       setDeletingId(null)
     }

@@ -60,7 +60,7 @@ export default function AdminUsers() {
       toast.success(`Invite created for ${result.display_name}`)
       reload()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create invite')
+      toast.error(err instanceof Error ? err.message : "Couldn't create invite")
     } finally {
       setCreating(false)
     }
@@ -74,7 +74,7 @@ export default function AdminUsers() {
       toast.success(`New link for ${displayName}`)
       reload()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to regenerate link')
+      toast.error(err instanceof Error ? err.message : "Couldn't regenerate link")
     }
   }
 
@@ -92,7 +92,7 @@ export default function AdminUsers() {
       setResetTarget(null)
       setNewPasscode('')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to reset passcode')
+      toast.error(err instanceof Error ? err.message : "Couldn't reset passcode")
     }
   }
 
@@ -105,7 +105,7 @@ export default function AdminUsers() {
       toast.success(`${displayName} approved`)
       reload()
     } catch {
-      toast.error('Failed to approve')
+      toast.error("Couldn't approve")
     }
   }
 
@@ -180,7 +180,7 @@ export default function AdminUsers() {
         {awaitingSetup.length > 0 && (
           <section className="space-y-3">
             <h2 className="font-semibold text-amber-700">Awaiting setup ({awaitingSetup.length})</h2>
-            <p className="text-sm text-gray-500 -mt-1">Invite sent — passcode not set yet</p>
+            <p className="text-sm text-gray-500 -mt-1">Invite sent. Passcode not set yet.</p>
             {awaitingSetup.map((u) => (
               <div key={u.id} className="glass-card p-4 flex items-center justify-between gap-3 border border-amber-200/60">
                 <div>
@@ -204,7 +204,7 @@ export default function AdminUsers() {
         {pendingApproval.length > 0 && (
           <section className="space-y-3">
             <h2 className="font-semibold text-sky-800">Pending approval ({pendingApproval.length})</h2>
-            <p className="text-sm text-gray-500 -mt-1">Passcode set — approve to grant squad access</p>
+            <p className="text-sm text-gray-500 -mt-1">Passcode set. Approve to grant squad access.</p>
             {pendingApproval.map((u) => (
               <div key={u.id} className="glass-card p-4 flex items-center justify-between gap-3 border border-sky-200/60">
                 <div>
@@ -283,7 +283,7 @@ export default function AdminUsers() {
                                     onChange={(e) => {
                                       setUserCommittee(u.id, e.target.checked)
                                         .then(() => { toast.success('Role updated'); reload() })
-                                        .catch(() => toast.error('Failed to update role'))
+                                        .catch(() => toast.error("Couldn't update role"))
                                     }}
                                   />
                                   Committee

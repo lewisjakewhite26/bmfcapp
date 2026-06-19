@@ -17,7 +17,7 @@ export function LeagueTableView({ rows, loading }: LeagueTableViewProps) {
       <div className="glass-card p-8 text-center space-y-3 border-t-2 border-brand-gold/40">
         <p className="font-display text-xl text-brand-navy">No league table yet</p>
         <p className="text-sm text-gray-600 leading-relaxed max-w-sm mx-auto">
-          Standings come from DDSFL. If it&apos;s mid-season and this looks wrong, ask admin to run a sync.
+          Table data comes from DDSFL. If it&apos;s mid-season and this looks wrong, ask admin to run a sync.
         </p>
       </div>
     )

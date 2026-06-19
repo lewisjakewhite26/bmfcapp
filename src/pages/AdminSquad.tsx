@@ -54,7 +54,7 @@ export default function AdminSquad() {
       setAddPlayerId('')
       reload()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update squad')
+      toast.error(err instanceof Error ? err.message : "Couldn't update squad")
     } finally {
       setSaving(false)
     }
@@ -66,7 +66,7 @@ export default function AdminSquad() {
       toast.success('Position updated')
       reload()
     } catch {
-      toast.error('Failed to update position')
+      toast.error("Couldn't update position")
     }
   }
 
@@ -77,7 +77,7 @@ export default function AdminSquad() {
       toast.success('Removed from squad')
       reload()
     } catch {
-      toast.error('Failed to remove')
+      toast.error("Couldn't remove")
     }
   }
 

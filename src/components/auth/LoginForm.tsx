@@ -81,7 +81,7 @@ export function LoginForm() {
         />
       </div>
       <button type="submit" disabled={loading} className="btn-primary w-full">
-        {loading ? 'Signing in...' : 'Login'}
+        {loading ? 'Signing in...' : 'Log in'}
       </button>
 
       {mockMode && (

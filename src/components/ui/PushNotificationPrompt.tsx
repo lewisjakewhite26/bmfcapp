@@ -39,7 +39,7 @@ export function PushNotificationPrompt({ playerId }: PushNotificationPromptProps
             onClick={async () => {
               const result = await enable()
               if (result.ok) toast.success('Notifications enabled')
-              else toast.error(result.reason ?? 'Could not enable notifications')
+              else toast.error(result.reason ?? "Couldn't enable notifications")
             }}
             className="btn-primary text-sm py-2 px-4 min-h-0"
           >

@@ -85,7 +85,7 @@ export default function AdminFixtures() {
     try {
       setManualFixtures(await fetchManualFixtures())
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load fixtures')
+      toast.error(err instanceof Error ? err.message : "Couldn't load fixtures")
     } finally {
       setLoadingList(false)
     }
@@ -164,7 +164,7 @@ export default function AdminFixtures() {
       resetForm()
       await reloadList()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save match')
+      toast.error(err instanceof Error ? err.message : "Couldn't save match")
     } finally {
       setSaving(false)
     }
@@ -181,7 +181,7 @@ export default function AdminFixtures() {
       toast.success('Match removed')
       await reloadList()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove match')
+      toast.error(err instanceof Error ? err.message : "Couldn't remove match")
     } finally {
       setDeletingId(null)
     }

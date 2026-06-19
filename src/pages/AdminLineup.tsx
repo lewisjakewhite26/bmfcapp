@@ -193,7 +193,7 @@ export default function AdminLineup() {
           if (rows.length > 0) setFixtureId((prev) => prev || rows[0].id)
         }
       } catch {
-        if (!cancelled) toast.error('Could not load fixtures')
+        if (!cancelled) toast.error("Couldn't load fixtures")
       } finally {
         if (!cancelled) setLoadingFixtures(false)
       }
@@ -226,7 +226,7 @@ export default function AdminLineup() {
         setAssignments({})
       }
     } catch {
-      toast.error('Could not load lineup data')
+      toast.error("Couldn't load lineup data")
       setAssignments({})
       setAvailablePlayers([])
       setSquadPlayers([])
@@ -298,7 +298,7 @@ export default function AdminLineup() {
       await saveLineup(fixtureId, formation, slots)
       toast.success('Lineup saved')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save lineup')
+      toast.error(err instanceof Error ? err.message : "Couldn't save lineup")
     } finally {
       setSaving(false)
     }

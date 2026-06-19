@@ -26,7 +26,7 @@ export function usePlayerProfile(playerId?: string) {
       setProfile(data)
       setNotFound(!data)
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to load player profile'))
+      setError(getErrorMessage(err, "Couldn't load player profile"))
       setProfile(null)
       setNotFound(false)
     } finally {

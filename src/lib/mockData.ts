@@ -102,7 +102,7 @@ export const MOCK_FUNDRAISERS: Fundraiser[] = [
     id: 'fr1',
     name: 'Bag pack at Tesco',
     date: dateOnlyFromNow(21),
-    notes: 'Morning shift — all hands welcome',
+    notes: 'Morning shift. All hands welcome',
     created_at: daysAgo(2),
   },
   {

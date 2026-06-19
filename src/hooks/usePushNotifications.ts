@@ -37,7 +37,7 @@ export function usePushNotifications(playerId?: string) {
         error: err,
       })
       await refresh()
-      return { ok: false, reason: err instanceof Error ? err.message : 'Could not enable notifications' }
+      return { ok: false, reason: err instanceof Error ? err.message : "Couldn't enable notifications" }
     } finally {
       setLoading(false)
     }

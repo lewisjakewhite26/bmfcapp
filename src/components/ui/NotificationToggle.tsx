@@ -33,7 +33,7 @@ export function NotificationToggle({ playerId }: NotificationToggleProps) {
         } else {
           const result = await enable()
           if (result.ok) toast.success('Notifications turned on')
-          else toast.error(result.reason ?? 'Could not enable notifications')
+          else toast.error(result.reason ?? "Couldn't enable notifications")
         }
       }}
       className="w-full flex items-center justify-between min-h-[48px] px-3 rounded-xl text-brand-navy font-medium active:bg-brand-blue/5"

@@ -55,7 +55,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
       toast.success('Result saved')
       onSaved()
     } catch {
-      toast.error('Failed to save result')
+      toast.error("Couldn't save result")
     } finally {
       setSaving(false)
     }

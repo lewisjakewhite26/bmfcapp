@@ -16,7 +16,7 @@ Machine-readable version: [`copy-rules.json`](./copy-rules.json)
 | Name concrete things (opponent, date, passcode, invite link) | Vague authorities (“experts say”, “industry reports”) |
 | Use **is** / **has** / **are** | Replace with “serves as”, “boasts”, “features”, “underscores” |
 
-**Club names:** Bishop Middleham FC (app), Bishop Middleham Football Club (formal/DDSFL). League: DDSFL Third Division when relevant.
+**Club names:** Bishop Middleham FC (app), Bishop Middleham Football Club (formal/DDSFL). League: DDSFL Second Division when relevant (Swinburne Maddison Second Division).
 
 ---
 

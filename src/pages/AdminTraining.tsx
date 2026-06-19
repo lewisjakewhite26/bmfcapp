@@ -55,7 +55,7 @@ export default function AdminTraining() {
     try {
       setSessions(await fetchTrainingSessions())
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load sessions')
+      toast.error(err instanceof Error ? err.message : "Couldn't load sessions")
     } finally {
       setLoadingList(false)
     }
@@ -110,7 +110,7 @@ export default function AdminTraining() {
       resetForm()
       await reloadList()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save session')
+      toast.error(err instanceof Error ? err.message : "Couldn't save session")
     } finally {
       setSaving(false)
     }
@@ -129,7 +129,7 @@ export default function AdminTraining() {
       toast.success('Training session removed')
       await reloadList()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove session')
+      toast.error(err instanceof Error ? err.message : "Couldn't remove session")
     } finally {
       setDeletingId(null)
     }

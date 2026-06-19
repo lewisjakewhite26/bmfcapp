@@ -10,7 +10,7 @@ Complete UI copy for every screen and shared component.
 | Field | Copy |
 |-------|------|
 | Page title | BMFC Club Hub |
-| Meta description | BMFC Club Hub — fixtures, league table, stats and availability for Bishop Middleham FC. |
+| Meta description | BMFC Club Hub: fixtures, league table, stats and availability for Bishop Middleham FC. |
 | Apple web app title | BMFC |
 | Logo alt text | BMFC |
 
@@ -21,8 +21,8 @@ Complete UI copy for every screen and shared component.
 | Constant | Value |
 |----------|-------|
 | Club name | Bishop Middleham FC |
-| League name | Swinburne Maddison Third Division |
-| Current season | 2025/26 |
+| League name | Swinburne Maddison Second Division |
+| Current season | 2026/27 |
 | Default home venue | Bishop Middleham Recreation Ground |
 | Default match kick-off | 10:30 |
 | Default training time | 19:00 |
@@ -62,7 +62,7 @@ Complete UI copy for every screen and shared component.
 
 ### Navbar (signed out)
 
-- Login
+- Log in
 
 ### Mobile bottom nav
 
@@ -110,9 +110,9 @@ Accessibility labels:
 ### Availability nudge (dashboard banner)
 
 - Availability
-- Haven't marked availability for {date} {vs or @} {opponent} yet. Tap to respond.
-- Haven't marked availability for training on {date} · {time}. Tap to respond.
-- Tap to respond on the calendar →
+- Not marked for {date} {vs or @} {opponent} yet.
+- Not marked for training on {date} · {time}.
+- Open calendar to respond →
 
 ### Fixture card
 
@@ -144,10 +144,17 @@ Footer:
 
 Club row marker: ★
 
+Empty state:
+
+- No league table yet
+- Table data comes from DDSFL. If it's mid-season and this looks wrong, ask admin to run a sync.
+
 ### Calendar list
 
 - Nothing scheduled yet.
 - Training
+- Team social / AGM / Committee meeting / Other event *(event type labels)*
+- Fundraiser
 
 ### Calendar month view
 
@@ -159,6 +166,8 @@ Legend:
 
 - Match
 - Training
+- Event
+- Fundraiser
 
 Selected day empty state:
 
@@ -229,7 +238,7 @@ Performance section:
 Player profile (radar):
 
 - Player profile
-- Season attributes (0–100 scale)
+- Season snapshot (0–100 scale)
 
 Radar axis labels *(outfield)*:
 
@@ -292,7 +301,7 @@ Own profile calendar:
 
 - 🔔
 - Turn on notifications
-- Get match and training reminders straight to your phone — no app needed.
+- Reminders for games and training on your phone.
 - Requires HTTPS and server setup (VAPID keys). *(when not configured)*
 - Enable / Enabling...
 - Not now
@@ -300,7 +309,7 @@ Own profile calendar:
 ### Notification toggle
 
 - Notifications not supported on this device.
-- Notifications blocked — enable them in your browser settings.
+- Notifications blocked. Turn them on in your browser settings.
 - Push notifications
 - On / Off / ...
 
@@ -311,7 +320,7 @@ Own profile calendar:
 
 ### Error boundary
 
-- There was a problem loading this section.
+- Couldn't load this section.
 - Try again
 
 ---
@@ -322,10 +331,10 @@ Own profile calendar:
 
 - BMFC Club Hub
 - {CLUB_NAME} — Bishop Middleham FC
-- Your squad app — fixtures, league table, stats, and availability in one place.
-- {LEAGUE_NAME} — Swinburne Maddison Third Division
-- Login
-- New players — use the invite link from your admin.
+- Fixtures, table, stats and availability for the squad.
+- {LEAGUE_NAME}
+- Log in
+- New player? Use the invite link from your admin.
 - Est. 1984 · Bishop Middleham
 
 ### Features section
@@ -334,7 +343,7 @@ Own profile calendar:
 
 **League table**
 
-- Live standings from DDSFL — see where we are in the division.
+- Live league table from DDSFL. Updated when we sync.
 
 **Results & fixtures**
 
@@ -360,7 +369,7 @@ Own profile calendar:
 - Placeholder: Chris Lee
 - Passcode
 - Placeholder: ••••
-- Login / Signing in...
+- Log in / Signing in...
 - Test *(mock mode only)*
 - Test as admin *(mock mode only)*
 - New player? Use the invite link your admin sent you.
@@ -475,7 +484,7 @@ Empty states:
 ## `/calendar` — Calendar
 
 - Calendar
-- Matches, training & availability
+- Matches, training, events & availability
 
 View tabs:
 
@@ -520,6 +529,14 @@ View tabs:
 **Training sessions**
 
 - Add, edit & remove training on the calendar
+
+**Other events**
+
+- Socials, AGM, committee meetings & more
+
+**Fundraisers**
+
+- Track squad participation in fundraising events
 
 **Availability overview**
 
@@ -738,6 +755,34 @@ Confirm dialog:
 
 ---
 
+## `/admin/events` — Other calendar events
+
+- ← Admin
+- Other calendar events / Edit event
+- Socials, AGM, committee meetings and more. Fundraisers added under Admin → Fundraisers appear on the calendar automatically.
+
+### Form
+
+- Event type *(Team social, AGM, Committee meeting, Other event)*
+- Title
+- Placeholder: e.g. End of season social
+- Date
+- Time
+- Location
+- Notes
+- Cancel
+- Add to calendar / Save changes / Saving...
+
+### List
+
+- Scheduled events
+- No other events yet.
+- Past
+- Edit
+- Remove / Removing...
+
+---
+
 ## `/admin/availability` — Availability overview
 
 - ← Admin
@@ -780,7 +825,7 @@ Groups:
 Form defaults:
 
 - Title: BMFC reminder
-- Message: Please mark your availability for this weekend.
+- Message: Mark availability for this weekend's game.
 - Link (when tapped): /calendar
 
 Labels:
@@ -808,79 +853,79 @@ Labels:
 ### Availability
 
 - Availability saved
-- Could not save availability
+- Couldn't save availability
 
 ### Data loading
 
-- Failed to load dashboard
-- Failed to load league table
-- Failed to load fixtures
-- Failed to load stats
-- Failed to load calendar
-- Failed to load player profile
-- Failed to load availability
+- Couldn't load dashboard
+- Couldn't load league table
+- Couldn't load fixtures
+- Couldn't load stats
+- Couldn't load calendar
+- Couldn't load player profile
+- Couldn't load availability
 
 ### Notifications
 
 - Notifications enabled
-- Could not enable notifications
+- Couldn't enable notifications
 - Notifications turned off
 - Notifications turned on
 - Connect Supabase to send push notifications.
 - Not signed in
 - Sent to {n} device(s)
-- Failed to send
+- Couldn't send
 
 ### Admin — users
 
 - Copied to clipboard
-- Could not copy — select the link manually
+- Couldn't copy. Select the link manually.
 - Enter the player's name
 - Invite created for {name}
-- Failed to create invite
+- Couldn't create invite
 - New link for {name}
-- Failed to regenerate link
-- Passcode reset for {name} — tell them the new code
-- Failed to reset passcode
+- Couldn't regenerate link
+- Passcode reset for {name}. Send them the new code.
+- Couldn't reset passcode
 - Role updated
-- Failed to update role
+- Couldn't update role
 
 ### Admin — squad
 
 - Pick a player
 - {name} added to squad
-- Failed to update squad
+- Couldn't update squad
 - Position updated
-- Failed to update position
+- Couldn't update position
 - Removed from squad
-- Failed to remove
+- Couldn't remove
 
 ### Admin — fixtures
 
-- Failed to load fixtures
+- Couldn't load fixtures
 - Date and opponent are required
 - Competition name is required
 - Match updated
 - Match added
-- Failed to save match
+- Couldn't save match
 - Match removed
-- Failed to remove match
+- Couldn't remove match
 
 ### Admin — training
 
-- Failed to load sessions
+- Couldn't load sessions
 - Pick a date
 - Training session updated
 - Training session added
-- Failed to save session
+- Couldn't save session
 - Training session removed
-- Failed to remove session
+- Couldn't remove session
 
 ### Admin — results
 
 - Enter valid scores
 - Result saved
-- Failed to save result
+- Couldn't save result
 
 ---
 

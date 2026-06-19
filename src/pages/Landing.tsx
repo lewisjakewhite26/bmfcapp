@@ -7,10 +7,10 @@ import { LandingHeroBackdrop } from '../components/ui/LandingHeroBackdrop'
 import { CLUB_NAME, LEAGUE_NAME } from '../lib/mockData'
 
 const FEATURES = [
-  { icon: '📊', title: 'League table', body: 'DDSFL standings for our division, updated when we sync.' },
-  { icon: '⚽', title: 'Results & fixtures', body: 'All our games and scores for the season.' },
-  { icon: '📅', title: 'Calendar & availability', body: 'Matches, training, socials, fundraisers — mark in, out or maybe for games and training.' },
-  { icon: '📈', title: 'Squad stats', body: 'Goals, assists, MOTM, cards and appearances.' },
+  { title: 'League table', body: 'DDSFL league table for our division, updated when we sync.' },
+  { title: 'Results & fixtures', body: 'All our games and scores for the season.' },
+  { title: 'Calendar & availability', body: 'Matches, training, socials and fundraisers. Mark in, out or maybe for games and training.' },
+  { title: 'Squad stats', body: 'Goals, assists, MOTM, cards and appearances.' },
 ]
 
 function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -74,7 +74,7 @@ export default function Landing() {
                 to="/login"
                 className="inline-flex items-center justify-center px-8 py-3 rounded-pill font-semibold text-white bg-brand-blue shadow-[0_4px_16px_rgba(43,95,192,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(43,95,192,0.3)] min-w-[140px]"
               >
-                Login
+                Log in
               </Link>
             </div>
             <p className="mt-4 text-sm text-gray-400">New player? Use the invite link from your admin.</p>
@@ -101,8 +101,7 @@ export default function Landing() {
             {FEATURES.map((f, i) => (
               <FadeUp key={f.title} delay={i * 0.08}>
                 <div className="glass-card p-6 h-full">
-                  <span className="text-3xl" aria-hidden>{f.icon}</span>
-                  <h3 className="font-bold text-brand-navy mt-3 mb-2">{f.title}</h3>
+                  <h3 className="font-bold text-brand-navy mb-2">{f.title}</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">{f.body}</p>
                 </div>
               </FadeUp>

@@ -13,7 +13,7 @@ type SendMode = 'all' | 'selected'
 
 export default function AdminNotifications() {
   const [title, setTitle] = useState('BMFC reminder')
-  const [body, setBody] = useState('Please mark your availability for this weekend.')
+  const [body, setBody] = useState('Mark availability for this weekend\'s game.')
   const [url, setUrl] = useState('/calendar')
   const [sending, setSending] = useState(false)
   const [sendMode, setSendMode] = useState<SendMode>('all')
@@ -31,7 +31,7 @@ export default function AdminNotifications() {
         const rows = await fetchAdminUsers()
         if (!cancelled) setUsers(rows)
       } catch {
-        if (!cancelled) toast.error('Could not load squad list')
+        if (!cancelled) toast.error("Couldn't load squad list")
       } finally {
         if (!cancelled) setLoadingUsers(false)
       }
@@ -81,7 +81,7 @@ export default function AdminNotifications() {
       if (error) throw error
       toast.success(`Sent to ${data?.sent ?? 0} device(s)`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to send')
+      toast.error(err instanceof Error ? err.message : "Couldn't send")
     } finally {
       setSending(false)
     }

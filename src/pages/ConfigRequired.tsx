@@ -39,7 +39,7 @@ export default function ConfigRequired() {
             <ol className="list-decimal list-inside space-y-1">
               <li>Settings → Environment Variables</li>
               <li>
-                Add all three — tick <strong>Production</strong> (and Preview if you use preview URLs)
+                Add all three. Tick <strong>Production</strong> (and Preview if you use preview URLs).
               </li>
               <li>
                 <code className="text-xs">VITE_SUPABASE_URL</code> = your Club Hub project URL from Supabase → Settings → API
@@ -51,7 +51,7 @@ export default function ConfigRequired() {
                 <code className="text-xs">VITE_CLUB_DATA_SOURCE</code> = <code className="text-xs">supabase</code>
               </li>
               <li>
-                Deployments → ⋯ on latest → <strong>Redeploy</strong> (not just save vars — must rebuild)
+                Deployments → ⋯ on latest → <strong>Redeploy</strong> (save vars first, then rebuild).
               </li>
             </ol>
           </div>

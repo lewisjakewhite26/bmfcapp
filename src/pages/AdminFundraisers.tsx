@@ -53,7 +53,7 @@ export default function AdminFundraisers() {
     try {
       setFundraisers(await fetchFundraisers())
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load fundraisers')
+      toast.error(err instanceof Error ? err.message : "Couldn't load fundraisers")
     } finally {
       setLoadingList(false)
     }
@@ -64,7 +64,7 @@ export default function AdminFundraisers() {
     try {
       setSummary(await fetchFundraiserParticipationSummary())
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load participation overview')
+      toast.error(err instanceof Error ? err.message : "Couldn't load participation overview")
     } finally {
       setLoadingSummary(false)
     }
@@ -89,7 +89,7 @@ export default function AdminFundraisers() {
       const detail = await fetchFundraiserDetail(fundraiserId)
       setParticipants(detail.participants)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load participation')
+      toast.error(err instanceof Error ? err.message : "Couldn't load participation")
       setSelectedId(null)
       setParticipants([])
     } finally {
@@ -128,7 +128,7 @@ export default function AdminFundraisers() {
       await reloadList()
       openFundraiser(created.id)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create fundraiser')
+      toast.error(err instanceof Error ? err.message : "Couldn't create fundraiser")
     } finally {
       setCreating(false)
     }
@@ -157,7 +157,7 @@ export default function AdminFundraisers() {
       toast.success('Participation saved')
       if (tab === 'overview') await reloadSummary()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save participation')
+      toast.error(err instanceof Error ? err.message : "Couldn't save participation")
     } finally {
       setSaving(false)
     }
@@ -236,7 +236,7 @@ export default function AdminFundraisers() {
                 <div className="glass-card h-32 animate-pulse" />
               ) : fundraisers.length === 0 ? (
                 <div className="glass-card p-8 text-center text-gray-500">
-                  No fundraisers yet — add one above.
+                  No fundraisers yet. Add one above.
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -322,7 +322,7 @@ export default function AdminFundraisers() {
             <div>
               <h2 className="font-semibold text-brand-navy">Squad participation</h2>
               <p className="text-sm text-gray-500 mt-1">
-                Sorted by fewest events attended — spot who may need a nudge
+                Sorted by fewest events attended. Spot who may need a nudge.
                 {totalFundraisers > 0 && ` · ${totalFundraisers} fundraiser${totalFundraisers === 1 ? '' : 's'} recorded`}
               </p>
             </div>
@@ -332,7 +332,7 @@ export default function AdminFundraisers() {
             ) : !summary || summary.members.length === 0 ? (
               <div className="glass-card p-8 text-center text-gray-500">
                 {totalFundraisers === 0
-                  ? 'No fundraisers yet — add events on the Events tab first.'
+                  ? 'No fundraisers yet. Add events on the Events tab first.'
                   : 'No active squad members to show.'}
               </div>
             ) : (

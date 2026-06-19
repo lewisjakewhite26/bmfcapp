@@ -39,7 +39,7 @@ export function useDashboard() {
     try {
       setSummary(await fetchDashboardSummary())
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to load dashboard'))
+      setError(getErrorMessage(err, "Couldn't load dashboard"))
     } finally {
       setLoading(false)
     }
@@ -61,7 +61,7 @@ export function useLeagueTable() {
     try {
       setRows(await fetchLeagueTable())
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to load league table'))
+      setError(getErrorMessage(err, "Couldn't load league table"))
     } finally {
       setLoading(false)
     }
@@ -86,7 +86,7 @@ export function useFixtures() {
       setUpcoming(u)
       setCompleted(c)
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to load fixtures'))
+      setError(getErrorMessage(err, "Couldn't load fixtures"))
     } finally {
       setLoading(false)
     }
@@ -108,7 +108,7 @@ export function usePlayerStats() {
     try {
       setStats(await fetchPlayerStats())
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to load stats'))
+      setError(getErrorMessage(err, "Couldn't load stats"))
     } finally {
       setLoading(false)
     }
@@ -156,7 +156,7 @@ export function useCalendar(playerId?: string) {
       })
       setAvailability(avail)
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to load calendar'))
+      setError(getErrorMessage(err, "Couldn't load calendar"))
     } finally {
       setLoading(false)
     }
@@ -191,7 +191,7 @@ export function useCalendar(playerId?: string) {
       })
       toast.success('Availability saved')
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Could not save availability'))
+      toast.error(getErrorMessage(err, "Couldn't save availability"))
     } finally {
       setAvailabilitySaving(false)
     }
@@ -211,7 +211,7 @@ export function useAdminAvailability() {
     try {
       setRows(await fetchAllAvailability())
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to load availability'))
+      setError(getErrorMessage(err, "Couldn't load availability"))
     } finally {
       setLoading(false)
     }

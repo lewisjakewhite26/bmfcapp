@@ -51,7 +51,7 @@ export function pushEnableFailureMessage(
   if (reason?.toLowerCase().includes('denied')) {
     return 'Notifications blocked. Turn them on in your browser settings.'
   }
-  return reason ?? 'Could not enable notifications'
+  return reason ?? "Couldn't enable notifications"
 }
 
 export async function subscribeToPush(playerId: string): Promise<{ ok: boolean; reason?: string }> {

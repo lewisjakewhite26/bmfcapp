@@ -57,7 +57,7 @@ export function Navbar() {
           <button onClick={logout} className="text-sm text-gray-500 min-h-[44px] px-2">Logout</button>
         ) : (
           <div className="flex items-center gap-2 sm:gap-3">
-            <Link to="/login" className="btn-primary text-sm py-2.5 px-5 min-h-[44px]">Login</Link>
+            <Link to="/login" className="btn-primary text-sm py-2.5 px-5 min-h-[44px]">Log in</Link>
           </div>
         )}
       </div>

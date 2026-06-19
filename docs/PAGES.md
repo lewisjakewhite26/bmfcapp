@@ -1,6 +1,6 @@
 # BMFC Club Hub — Pages & How They Connect
 
-**22 routed pages** (+ 6 legacy redirects). All routes live in `src/App.tsx`.
+**24 routed pages** (+ 6 legacy redirects). Admin routes are lazy-loaded. All routes live in `src/App.tsx`.
 
 ---
 
@@ -27,10 +27,10 @@
 | Route | File | Guard | Purpose |
 |-------|------|-------|---------|
 | `/dashboard` | `Dashboard.tsx` | `ProtectedRoute` | Home — league position, next match, mark availability |
-| `/table` | `LeagueTable.tsx` | `ProtectedRoute` | DDSFL league standings |
+| `/table` | `LeagueTable.tsx` | `ProtectedRoute` | DDSFL league table |
 | `/results` | `Results.tsx` | `ProtectedRoute` | Upcoming fixtures + completed results |
 | `/stats` | `Stats.tsx` | `ProtectedRoute` | Squad stats (goals, assists, MOTM, etc.) |
-| `/calendar` | `Calendar.tsx` | `ProtectedRoute` | Fixtures/training list or month view + availability |
+| `/calendar` | `Calendar.tsx` | `ProtectedRoute` | Matches, training, events, fundraisers + availability |
 | `/player/:playerId` | `PlayerProfile.tsx` | `ProtectedRoute` | Individual player stats + own availability |
 
 ### Admin (committee or admin)
@@ -42,7 +42,9 @@
 | `/admin/fixtures` | `AdminFixtures.tsx` | `adminOnly` | Admin + committee — add/edit matches |
 | `/admin/results` | `AdminResults.tsx` | `adminOnly` | Admin + committee — enter scores, goals, MOTM |
 | `/admin/training` | `AdminTraining.tsx` | `adminOnly` | Admin + committee — training sessions |
-| `/admin/availability` | `AdminAvailability.tsx` | `adminOnly` | Admin + committee — who’s in/out per event |
+| `/admin/events` | `AdminEvents.tsx` | `adminOnly` | Admin + committee — socials, AGM, committee meetings |
+| `/admin/fundraisers` | `AdminFundraisers.tsx` | `adminOnly` | Admin + committee — fundraiser participation |
+| `/admin/availability` | `AdminAvailability.tsx` | `adminOnly` | Admin + committee — who's in/out per event |
 | `/admin/lineup` | `AdminLineup.tsx` | `adminOnly` | Admin + committee — pick formation & XI |
 | `/admin/notifications` | `AdminNotifications.tsx` | `adminOnly` | Admin + committee — push notifications |
 | `/admin/users` | `AdminUsers.tsx` | `adminOnly` + `requireAdmin` | **Admin only** — invites, approval, passcodes |
