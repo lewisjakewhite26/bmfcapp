@@ -11,6 +11,7 @@ const LINKS = [
   { to: '/admin/fixtures', title: 'Add match', desc: 'Friendlies, cups & pre-season games' },
   { to: '/admin/results', title: 'Enter results', desc: 'Scores, goalscorers, MOTM & cards' },
   { to: '/admin/training', title: 'Training sessions', desc: 'Add, edit & remove training on the calendar' },
+  { to: '/admin/events', title: 'Other events', desc: 'Socials, AGM, committee meetings & more' },
   { to: '/admin/availability', title: 'Availability overview', desc: 'See who\'s in for upcoming events' },
   { to: '/admin/lineup', title: 'Pick a lineup', desc: 'Choose formation and select available players' },
   { to: '/admin/notifications', title: 'Send notification', desc: 'Push to the whole squad or selected players' },

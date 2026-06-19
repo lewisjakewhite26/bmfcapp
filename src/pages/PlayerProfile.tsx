@@ -6,8 +6,6 @@ import { DataErrorBanner } from '../components/ui/DataErrorBanner'
 import { useAuth } from '../hooks/useAuth'
 import { useCalendar } from '../hooks/useClubData'
 import { usePlayerProfile } from '../hooks/usePlayerProfile'
-import type { CalendarItem } from '../types'
-import { useMemo } from 'react'
 import { pageContainerClass } from '../lib/layout'
 import { PlayerProfileSkeleton } from '../components/ui/Skeleton'
 
@@ -18,7 +16,7 @@ export default function PlayerProfilePage() {
   const isOwnProfile = Boolean(user && playerId && user.id === playerId)
 
   const {
-    items,
+    calendarItems,
     availability,
     loading: calendarLoading,
     error: calendarError,
@@ -26,21 +24,6 @@ export default function PlayerProfilePage() {
     setAvailabilityFor,
     availabilitySaving,
   } = useCalendar(isOwnProfile ? playerId : undefined)
-
-  const calendarItems: CalendarItem[] = useMemo(
-    () =>
-      [
-        ...items.fixtures
-          .filter((f) => f.status === 'scheduled')
-          .map((data) => ({ type: 'fixture' as const, data })),
-        ...items.training.map((data) => ({ type: 'training' as const, data })),
-      ].sort((a, b) => {
-        const dateA = a.type === 'fixture' ? a.data.match_date : a.data.session_date
-        const dateB = b.type === 'fixture' ? b.data.match_date : b.data.session_date
-        return new Date(dateA).getTime() - new Date(dateB).getTime()
-      }),
-    [items]
-  )
 
   return (
     <PageShell>

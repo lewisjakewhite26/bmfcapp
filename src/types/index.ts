@@ -86,6 +86,18 @@ export interface TrainingSession {
   created_at: string
 }
 
+export type ClubEventType = 'social' | 'agm' | 'committee' | 'other'
+
+export interface ClubEvent {
+  id: string
+  title: string
+  event_type: ClubEventType
+  event_date: string
+  location: string | null
+  notes: string | null
+  created_at: string
+}
+
 export interface Availability {
   id: string
   player_id: string
@@ -139,6 +151,8 @@ export interface PlayerStats {
 export type CalendarItem =
   | { type: 'fixture'; data: FixtureWithResult }
   | { type: 'training'; data: TrainingSession }
+  | { type: 'event'; data: ClubEvent }
+  | { type: 'fundraiser'; data: Fundraiser }
 
 export interface PlayerMatchRecord {
   fixture: FixtureWithResult

@@ -1,23 +1,28 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   fetchAllAvailability,
   fetchAvailability,
+  fetchClubEvents,
   fetchCompletedFixtures,
   fetchDashboardSummary,
   fetchFixturesWithResults,
+  fetchFundraisers,
   fetchLeagueTable,
   fetchPlayerStats,
   fetchTrainingSessions,
   fetchUpcomingFixtures,
   saveAvailability,
 } from '../lib/clubApi'
+import { buildCalendarItems } from '../lib/calendarItems'
 import { getErrorMessage } from '../lib/errors'
 import type {
   Availability,
   AvailabilityStatus,
+  ClubEvent,
   DashboardSummary,
   FixtureWithResult,
+  Fundraiser,
   LeagueTableRow,
   PlayerStats,
   TrainingSession,
@@ -115,9 +120,16 @@ export function usePlayerStats() {
 }
 
 export function useCalendar(playerId?: string) {
-  const [items, setItems] = useState<{ fixtures: FixtureWithResult[]; training: TrainingSession[] }>({
+  const [items, setItems] = useState<{
+    fixtures: FixtureWithResult[]
+    training: TrainingSession[]
+    events: ClubEvent[]
+    fundraisers: Fundraiser[]
+  }>({
     fixtures: [],
     training: [],
+    events: [],
+    fundraisers: [],
   })
   const [availability, setAvailability] = useState<Availability[]>([])
   const [loading, setLoading] = useState(true)
@@ -128,15 +140,19 @@ export function useCalendar(playerId?: string) {
     setLoading(true)
     setError(null)
     try {
-      const [fixtures, training, avail] = await Promise.all([
+      const [fixtures, training, events, fundraisers, avail] = await Promise.all([
         fetchFixturesWithResults(),
         fetchTrainingSessions(),
+        fetchClubEvents(),
+        fetchFundraisers(),
         playerId ? fetchAvailability(playerId) : Promise.resolve([]),
       ])
       const now = Date.now()
       setItems({
         fixtures: fixtures.filter((f) => f.status !== 'completed' || new Date(f.match_date).getTime() > now - 7 * 86400000),
         training: training.filter((t) => new Date(t.session_date).getTime() > now - 86400000),
+        events: events.filter((e) => new Date(e.event_date).getTime() > now - 86400000),
+        fundraisers: fundraisers.filter((f) => new Date(`${f.date}T23:59:59`).getTime() > now - 86400000),
       })
       setAvailability(avail)
     } catch (err) {
@@ -145,6 +161,8 @@ export function useCalendar(playerId?: string) {
       setLoading(false)
     }
   }, [playerId])
+
+  const calendarItems = useMemo(() => buildCalendarItems(items), [items])
 
   useEffect(() => { reload() }, [reload])
 
@@ -179,7 +197,7 @@ export function useCalendar(playerId?: string) {
     }
   }
 
-  return { items, availability, loading, error, reload, setAvailabilityFor, availabilitySaving }
+  return { items, availability, loading, error, reload, setAvailabilityFor, availabilitySaving, calendarItems }
 }
 
 export function useAdminAvailability() {

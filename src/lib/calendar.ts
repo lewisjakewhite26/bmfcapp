@@ -1,4 +1,5 @@
 import type { CalendarItem } from '../types'
+import { getCalendarItemDate } from './calendarItems'
 
 export function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1)
@@ -17,7 +18,7 @@ export function isSameDay(a: Date, b: Date): boolean {
 }
 
 export function getItemDate(item: CalendarItem): Date {
-  return new Date(item.type === 'fixture' ? item.data.match_date : item.data.session_date)
+  return getCalendarItemDate(item)
 }
 
 export function itemsOnDay(items: CalendarItem[], day: Date): CalendarItem[] {

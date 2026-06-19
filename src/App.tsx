@@ -25,6 +25,7 @@ const AdminUsers = lazy(() => import('./pages/AdminUsers'))
 const AdminSquad = lazy(() => import('./pages/AdminSquad'))
 const AdminFixtures = lazy(() => import('./pages/AdminFixtures'))
 const AdminTraining = lazy(() => import('./pages/AdminTraining'))
+const AdminEvents = lazy(() => import('./pages/AdminEvents'))
 const AdminAvailability = lazy(() => import('./pages/AdminAvailability'))
 const AdminNotifications = lazy(() => import('./pages/AdminNotifications'))
 const AdminLineup = lazy(() => import('./pages/AdminLineup'))
@@ -204,6 +205,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <AdminTraining />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/events"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminEvents />
           </ProtectedRoute>
         }
       />

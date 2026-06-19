@@ -6,6 +6,10 @@ import {
   addMockTrainingSession,
   updateMockTrainingSession,
   removeMockTrainingSession,
+  getMockClubEvents,
+  addMockClubEvent,
+  updateMockClubEvent,
+  removeMockClubEvent,
   CURRENT_SEASON,
   getMockAdminUsers,
   getMockAllAvailability,
@@ -61,6 +65,7 @@ import type {
   SquadMember,
   SquadPosition,
   TrainingSession,
+  ClubEvent,
 } from '../types'
 
 export { getMockInvitePreview, completeMockInvite } from './mockData'
@@ -637,6 +642,89 @@ export async function deleteTrainingSession(trainingId: string): Promise<void> {
     p_admin_id: clubSession.userId,
     p_session_token: clubSession.sessionToken,
     p_training_id: trainingId,
+  })
+  if (error) throw error
+}
+
+export async function fetchClubEvents(): Promise<ClubEvent[]> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockClubEvents()
+  }
+
+  const { data, error } = await supabase
+    .from('club_events')
+    .select('*')
+    .order('event_date')
+
+  if (error) throw error
+  return (data ?? []) as ClubEvent[]
+}
+
+export async function createClubEvent(
+  input: Omit<ClubEvent, 'id' | 'created_at'>,
+): Promise<ClubEvent> {
+  if (isMockDataMode()) {
+    await delay()
+    return addMockClubEvent(input)
+  }
+
+  const clubSession = getClubSession()
+  if (!clubSession) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_create_club_event', {
+    p_admin_id: clubSession.userId,
+    p_session_token: clubSession.sessionToken,
+    p_title: input.title,
+    p_event_type: input.event_type,
+    p_event_date: input.event_date,
+    p_location: input.location,
+    p_notes: input.notes,
+  })
+  if (error) throw error
+  return data as ClubEvent
+}
+
+export async function updateClubEvent(
+  eventId: string,
+  input: Omit<ClubEvent, 'id' | 'created_at'>,
+): Promise<ClubEvent> {
+  if (isMockDataMode()) {
+    await delay()
+    return updateMockClubEvent(eventId, input)
+  }
+
+  const clubSession = getClubSession()
+  if (!clubSession) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_update_club_event', {
+    p_admin_id: clubSession.userId,
+    p_session_token: clubSession.sessionToken,
+    p_event_id: eventId,
+    p_title: input.title,
+    p_event_type: input.event_type,
+    p_event_date: input.event_date,
+    p_location: input.location,
+    p_notes: input.notes,
+  })
+  if (error) throw error
+  return data as ClubEvent
+}
+
+export async function deleteClubEvent(eventId: string): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    removeMockClubEvent(eventId)
+    return
+  }
+
+  const clubSession = getClubSession()
+  if (!clubSession) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_delete_club_event', {
+    p_admin_id: clubSession.userId,
+    p_session_token: clubSession.sessionToken,
+    p_event_id: eventId,
   })
   if (error) throw error
 }

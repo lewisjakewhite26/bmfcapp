@@ -1,6 +1,7 @@
 import type {
   AdminUserRow,
   Availability,
+  ClubEvent,
   Fixture,
   FixtureWithResult,
   FormationId,
@@ -36,6 +37,10 @@ function daysFromNow(days: number, hour = 10, minute = 30): string {
 
 function daysAgo(days: number, hour = 10, minute = 30): string {
   return daysFromNow(-days, hour, minute)
+}
+
+function dateOnlyFromNow(days: number): string {
+  return daysFromNow(days).slice(0, 10)
 }
 
 /** Manually added matches (friendlies, cups) — merged with DDSFL scrape data. */
@@ -96,16 +101,37 @@ export const MOCK_FUNDRAISERS: Fundraiser[] = [
   {
     id: 'fr1',
     name: 'Bag pack at Tesco',
-    date: '2025-11-02',
-    notes: 'Morning shift',
-    created_at: daysAgo(30),
+    date: dateOnlyFromNow(21),
+    notes: 'Morning shift — all hands welcome',
+    created_at: daysAgo(2),
   },
   {
     id: 'fr2',
     name: 'Race night',
-    date: '2026-01-15',
+    date: dateOnlyFromNow(42),
     notes: null,
-    created_at: daysAgo(10),
+    created_at: daysAgo(1),
+  },
+]
+
+export const MOCK_CLUB_EVENTS: ClubEvent[] = [
+  {
+    id: 'ev1',
+    title: 'Pre-season social',
+    event_type: 'social',
+    event_date: daysFromNow(12, 19, 30),
+    location: 'The Crown, Bishop Middleham',
+    notes: 'All squad welcome',
+    created_at: daysAgo(3),
+  },
+  {
+    id: 'ev2',
+    title: 'Annual general meeting',
+    event_type: 'agm',
+    event_date: daysFromNow(35, 18, 0),
+    location: 'Community Centre',
+    notes: null,
+    created_at: daysAgo(1),
   },
 ]
 
@@ -148,6 +174,7 @@ let results = [...initialMock.results]
 let leagueTableRows = [...initialMock.leagueTableRows]
 let matchEvents = [...initialMock.matchEvents]
 let training = [...MOCK_TRAINING]
+let clubEvents = [...MOCK_CLUB_EVENTS]
 let fundraisers = [...MOCK_FUNDRAISERS]
 const fundraiserParticipation = new Map<string, Map<string, boolean>>()
 let availability: Availability[] = []
@@ -590,6 +617,44 @@ export function removeMockTrainingSession(trainingId: string): void {
   availability = availability.filter((a) => a.training_id !== trainingId)
 }
 
+export function getMockClubEvents(): ClubEvent[] {
+  return [...clubEvents].sort(
+    (a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime(),
+  )
+}
+
+export function addMockClubEvent(
+  input: Omit<ClubEvent, 'id' | 'created_at'>,
+): ClubEvent {
+  const row: ClubEvent = {
+    ...input,
+    id: crypto.randomUUID(),
+    created_at: new Date().toISOString(),
+  }
+  clubEvents.push(row)
+  return row
+}
+
+export function updateMockClubEvent(
+  eventId: string,
+  input: Omit<ClubEvent, 'id' | 'created_at'>,
+): ClubEvent {
+  const row = clubEvents.find((e) => e.id === eventId)
+  if (!row) throw new Error('Event not found')
+  row.title = input.title
+  row.event_type = input.event_type
+  row.event_date = input.event_date
+  row.location = input.location
+  row.notes = input.notes
+  return row
+}
+
+export function removeMockClubEvent(eventId: string): void {
+  const exists = clubEvents.some((e) => e.id === eventId)
+  if (!exists) throw new Error('Event not found')
+  clubEvents = clubEvents.filter((e) => e.id !== eventId)
+}
+
 export function getMockFundraisers(): Fundraiser[] {
   return [...fundraisers].sort((a, b) => {
     const byDate = b.date.localeCompare(a.date)
@@ -705,6 +770,7 @@ export function resetMockData() {
   leagueTableRows = [...reset.leagueTableRows]
   matchEvents = [...reset.matchEvents]
   training = [...MOCK_TRAINING]
+  clubEvents = [...MOCK_CLUB_EVENTS]
   fundraisers = [...MOCK_FUNDRAISERS]
   seedMockFundraiserParticipation()
   availability = []

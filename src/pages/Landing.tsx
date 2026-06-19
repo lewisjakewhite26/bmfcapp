@@ -9,7 +9,7 @@ import { CLUB_NAME, LEAGUE_NAME } from '../lib/mockData'
 const FEATURES = [
   { icon: '📊', title: 'League table', body: 'DDSFL standings for our division, updated when we sync.' },
   { icon: '⚽', title: 'Results & fixtures', body: 'All our games and scores for the season.' },
-  { icon: '📅', title: 'Calendar & availability', body: 'Mark in, out or maybe for games and training.' },
+  { icon: '📅', title: 'Calendar & availability', body: 'Matches, training, socials, fundraisers — mark in, out or maybe for games and training.' },
   { icon: '📈', title: 'Squad stats', body: 'Goals, assists, MOTM, cards and appearances.' },
 ]
 
