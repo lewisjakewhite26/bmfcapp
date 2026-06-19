@@ -157,6 +157,7 @@ let availability: Availability[] = []
 const mockLineups = new Map<string, Lineup>()
 let adminUsers = [...MOCK_ADMIN_USERS]
 let squad = [...MOCK_SQUAD]
+const mockPlayerPhotoUrls = new Map<string, string>()
 
 function seedMockFundraiserParticipation() {
   fundraiserParticipation.clear()
@@ -234,7 +235,30 @@ export function getMockTrainingSessions(): TrainingSession[] {
 }
 
 export function getMockSquad(): SquadMember[] {
-  return squad.filter((s) => s.active)
+  return squad
+    .filter((s) => s.active)
+    .map((s) => ({
+      ...s,
+      photo_url: mockPlayerPhotoUrls.get(s.player_id) ?? null,
+    }))
+}
+
+export function uploadMockPlayerPhoto(playerId: string, file: File): string {
+  const existing = mockPlayerPhotoUrls.get(playerId)
+  if (existing?.startsWith('blob:')) {
+    URL.revokeObjectURL(existing)
+  }
+  const url = URL.createObjectURL(file)
+  mockPlayerPhotoUrls.set(playerId, url)
+  return url
+}
+
+export function deleteMockPlayerPhoto(playerId: string): void {
+  const existing = mockPlayerPhotoUrls.get(playerId)
+  if (existing?.startsWith('blob:')) {
+    URL.revokeObjectURL(existing)
+  }
+  mockPlayerPhotoUrls.delete(playerId)
 }
 
 export function getMockPlayerStats(): PlayerStats[] {

@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import type { PlayerProfile } from '../../types'
-import { formatMatchDate, playerInitials, resultColor, resultLabel } from '../../lib/format'
+import { formatMatchDate, resultColor, resultLabel } from '../../lib/format'
+import { PlayerPhotoAvatar } from './PlayerPhotoAvatar'
 import {
   getDetailedStatRows,
   getMatchPerformances,
@@ -67,9 +68,12 @@ export function PlayerProfileView({
               <p className="font-display text-3xl font-bold text-brand-gold">{seasonPoints}</p>
               <p className="text-[10px] uppercase tracking-widest text-white/60">season pts</p>
             </div>
-            <div className="w-24 h-24 rounded-2xl bg-white/15 backdrop-blur border border-white/20 flex items-center justify-center font-display font-bold text-3xl text-white shadow-lg">
-              {playerInitials(profile.display_name)}
-            </div>
+            <PlayerPhotoAvatar
+              displayName={profile.display_name}
+              photoUrl={profile.photo_url}
+              size="lg"
+              variant="hero"
+            />
             <h1 className="font-display text-2xl font-bold mt-5 text-white">{profile.display_name}</h1>
             {profile.position && (
               <p className="text-brand-gold font-semibold mt-1">{profile.position}</p>

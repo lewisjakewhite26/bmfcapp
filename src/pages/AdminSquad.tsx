@@ -1,17 +1,100 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
+import { PlayerPhotoAvatar } from '../components/club/PlayerPhotoAvatar'
 import {
+  deletePlayerPhoto,
   fetchAdminUsers,
   fetchSquad,
   removeSquadMember,
+  uploadPlayerPhoto,
   upsertSquadMember,
 } from '../lib/clubApi'
 import { SQUAD_POSITIONS } from '../lib/squadPositions'
 import { pageContainerClass } from '../lib/layout'
+import { PLAYER_PHOTO_ACCEPT } from '../lib/playerPhotos'
 import type { AdminUserRow, SquadMember, SquadPosition } from '../types'
+
+function SquadPhotoControl({
+  member,
+  onUpdated,
+}: {
+  member: SquadMember
+  onUpdated: () => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return
+    setUploading(true)
+    try {
+      await uploadPlayerPhoto(member.player_id, file)
+      toast.success('Photo updated')
+      onUpdated()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't upload photo")
+    } finally {
+      setUploading(false)
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }
+
+  const handleRemove = async () => {
+    if (!confirm(`Remove photo for ${member.display_name}?`)) return
+    setUploading(true)
+    try {
+      await deletePlayerPhoto(member.player_id)
+      toast.success('Photo removed')
+      onUpdated()
+    } catch {
+      toast.error("Couldn't remove photo")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-2 shrink-0">
+      <PlayerPhotoAvatar
+        displayName={member.display_name}
+        photoUrl={member.photo_url}
+        size="sm"
+        variant="admin"
+      />
+      <input
+        ref={inputRef}
+        type="file"
+        accept={PLAYER_PHOTO_ACCEPT}
+        className="hidden"
+        disabled={uploading}
+        onChange={(e) => void handleFile(e.target.files?.[0])}
+      />
+      <div className="flex flex-wrap justify-center gap-2">
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+          className="text-xs font-medium text-brand-blue disabled:opacity-50"
+        >
+          {uploading ? 'Saving…' : member.photo_url ? 'Replace' : 'Upload photo'}
+        </button>
+        {member.photo_url && (
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => void handleRemove()}
+            className="text-xs font-medium text-red-600 disabled:opacity-50"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function AdminSquad() {
   const [squad, setSquad] = useState<SquadMember[]>([])
@@ -88,7 +171,7 @@ export default function AdminSquad() {
         <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         <h1 className="font-display text-2xl text-brand-navy">Squad list</h1>
         <p className="text-sm text-gray-500">
-          Players on the squad list appear in stats and result entry. Link their account once they&apos;ve accepted their invite.
+          Manage squad positions and profile photos. Players cannot change these themselves.
         </p>
 
         {notInSquad.length > 0 && (
@@ -129,8 +212,9 @@ export default function AdminSquad() {
             <div className="glass-card p-8 text-center text-gray-500">No squad members yet.</div>
           ) : (
             squad.map((member) => (
-              <div key={member.id} className="glass-card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex-1">
+              <div key={member.id} className="glass-card p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+                <SquadPhotoControl member={member} onUpdated={reload} />
+                <div className="flex-1 min-w-0">
                   <p className="font-semibold text-brand-navy">{member.display_name}</p>
                   {member.joined_date && (
                     <p className="text-xs text-gray-500">
@@ -142,6 +226,7 @@ export default function AdminSquad() {
                   value={member.position ?? 'Midfielder'}
                   onChange={(e) => handlePositionChange(member, e.target.value as SquadPosition)}
                   className="input-field sm:w-40"
+                  aria-label={`Position for ${member.display_name}`}
                 >
                   {SQUAD_POSITIONS.map((p) => (
                     <option key={p} value={p}>{p}</option>

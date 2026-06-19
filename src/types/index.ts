@@ -132,6 +132,7 @@ export interface SquadMember {
   position: string | null
   joined_date: string | null
   active: boolean
+  photo_url?: string | null
 }
 
 export interface PlayerStats {
@@ -164,6 +165,7 @@ export interface PlayerProfile {
   display_name: string
   position: string | null
   joined_date: string | null
+  photo_url?: string | null
   stats: PlayerStats
   matchHistory: PlayerMatchRecord[]
 }

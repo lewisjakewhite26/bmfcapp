@@ -41,7 +41,10 @@ import {
   getMockFundraiserDetail,
   saveMockFundraiserParticipation,
   getMockFundraiserParticipationSummary,
+  uploadMockPlayerPhoto,
+  deleteMockPlayerPhoto,
 } from './mockData'
+import { playerPhotoFileExt, validatePlayerPhotoFile } from './playerPhotos'
 import type {
   AdminUserRow,
   Availability,
@@ -170,7 +173,7 @@ export async function fetchSquad(): Promise<SquadMember[]> {
 
   const { data, error } = await supabase
     .from('squad')
-    .select('*, profiles(display_name)')
+    .select('*, profiles(display_name, photo_url)')
     .eq('active', true)
 
   if (error) throw error
@@ -183,6 +186,7 @@ export async function fetchSquad(): Promise<SquadMember[]> {
     position: row.position,
     joined_date: row.joined_date,
     active: row.active,
+    photo_url: (row as { profiles: { photo_url: string | null } }).profiles.photo_url ?? null,
   }))
 }
 
@@ -235,6 +239,7 @@ export async function fetchPlayerProfile(playerId: string): Promise<PlayerProfil
     display_name: member.display_name,
     position: member.position,
     joined_date: member.joined_date,
+    photo_url: member.photo_url ?? null,
     stats,
     matchHistory,
   }
@@ -887,4 +892,61 @@ export async function fetchFundraiserParticipationSummary(): Promise<FundraiserP
   })
   if (error) throw error
   return data as FundraiserParticipationSummary
+}
+
+export async function uploadPlayerPhoto(playerId: string, file: File): Promise<string> {
+  validatePlayerPhotoFile(file)
+
+  if (isMockDataMode()) {
+    await delay()
+    return uploadMockPlayerPhoto(playerId, file)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const ext = playerPhotoFileExt(file)
+
+  const { data: prep, error: prepErr } = await supabase.rpc('admin_prepare_player_photo_upload', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_player_id: playerId,
+    p_file_ext: ext,
+  })
+  if (prepErr) throw prepErr
+
+  const path = (prep as { path: string }).path
+
+  const { error: uploadErr } = await supabase.storage
+    .from('player-photos')
+    .upload(path, file, { upsert: true, contentType: file.type })
+  if (uploadErr) throw uploadErr
+
+  const { data: confirmed, error: confirmErr } = await supabase.rpc('admin_confirm_player_photo_upload', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_player_id: playerId,
+    p_storage_path: path,
+  })
+  if (confirmErr) throw confirmErr
+
+  return (confirmed as { photo_url: string }).photo_url
+}
+
+export async function deletePlayerPhoto(playerId: string): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    deleteMockPlayerPhoto(playerId)
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_delete_player_photo', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_player_id: playerId,
+  })
+  if (error) throw error
 }
