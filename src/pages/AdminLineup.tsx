@@ -13,10 +13,8 @@ import {
 } from '../lib/clubApi'
 import { formatMatchDate, formatMatchTime } from '../lib/format'
 import { FORMATION_IDS, FORMATION_SLOTS } from '../lib/lineupFormations'
+import { LINEUP_NAV_CLEARANCE, pageContainerClass } from '../lib/layout'
 import type { AvailablePlayer, FixtureWithResult, FormationId } from '../types'
-
-const PAGE_CLASS =
-  'max-w-4xl mx-auto px-4 py-5 sm:py-8 space-y-6 pb-[calc(10rem+env(safe-area-inset-bottom))]'
 
 const SPRING = { type: 'spring' as const, stiffness: 300, damping: 30 }
 
@@ -309,7 +307,7 @@ export default function AdminLineup() {
   return (
     <PageShell>
       <Navbar />
-      <div className={PAGE_CLASS}>
+      <div className={pageContainerClass('max-w-4xl', LINEUP_NAV_CLEARANCE)}>
         <FadeUp>
           <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         </FadeUp>
