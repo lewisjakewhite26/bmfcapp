@@ -2,11 +2,12 @@
 /**
  * Scrape DDSFL and upsert fixtures, results, and league table into Supabase.
  *
- * Requires in .env.local:
+ * Requires (`.env.local` locally, or environment variables in CI):
  *   VITE_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY  (Dashboard → Settings → API → service_role)
  *
  * Run: npm run sync:ddsfl
+ * Scheduled: `.github/workflows/sync-ddsfl.yml` (Sundays 20:00 UTC + manual)
  */
 
 import fs from 'fs'
@@ -62,15 +63,24 @@ async function fetchHtml(url) {
   return res.text()
 }
 
+function resolveEnv() {
+  const file = loadEnv(ENV_PATH)
+  return {
+    VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL?.trim() || file.VITE_SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY:
+      process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || file.SUPABASE_SERVICE_ROLE_KEY,
+  }
+}
+
 async function main() {
-  const env = loadEnv(ENV_PATH)
-  const url = env.VITE_SUPABASE_URL
-  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY
+  const { VITE_SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: serviceKey } = resolveEnv()
 
   if (!url || !serviceKey) {
     console.error(
-      'Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local\n' +
-        'Get the service role key from Supabase Dashboard → Settings → API → service_role',
+      'Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.\n' +
+        'Local: add both to .env.local\n' +
+        'CI: add as GitHub Actions secrets (see docs/SUPABASE-SETUP.md)\n' +
+        'Service role key: Supabase Dashboard → Settings → API → service_role',
     )
     process.exit(1)
   }

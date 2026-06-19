@@ -85,6 +85,19 @@ This scrapes DDSFL, upserts BMFC fixtures and results, and refreshes the league 
 
 Re-run during the season to pick up new results. For mock-only demos without Supabase, `npm run scrape:ddsfl` still updates `src/data/ddsfl-scrape.json`.
 
+### Automated sync (GitHub Actions)
+
+A workflow (`.github/workflows/sync-ddsfl.yml`) runs **`npm run sync:ddsfl` every Sunday at 20:00 UTC** and can be triggered manually from **Actions → Sync DDSFL to Supabase → Run workflow**.
+
+Add these **repository secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|--------|--------|
+| `VITE_SUPABASE_URL` | Club Hub project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | `service_role` key (not anon) |
+
+The app reads cached data from Supabase — it does not scrape on each page load. After the workflow runs, players see the updated table on next visit (timestamp shown on `/table`).
+
 ---
 
 ## 6. Web push notifications (optional)
