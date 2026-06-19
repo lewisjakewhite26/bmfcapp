@@ -480,7 +480,7 @@ export function completeMockInvite(token: string, passcode: string): import('../
     display_name: user.display_name,
     is_admin: user.is_admin,
     is_committee: user.is_committee,
-    is_approved: true,
+    is_approved: false,
     session_token: 'mock-invite-session',
   }
 }

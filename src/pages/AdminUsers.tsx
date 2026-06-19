@@ -97,6 +97,17 @@ export default function AdminUsers() {
   }
 
   const awaitingSetup = users.filter((u) => u.invite_pending)
+  const pendingApproval = users.filter((u) => !u.invite_pending && !u.is_approved && !u.is_admin)
+
+  const handleApprove = async (userId: string, displayName: string) => {
+    try {
+      await approveUser(userId, true)
+      toast.success(`${displayName} approved`)
+      reload()
+    } catch {
+      toast.error('Failed to approve')
+    }
+  }
 
   return (
     <PageShell>
@@ -169,12 +180,13 @@ export default function AdminUsers() {
         {awaitingSetup.length > 0 && (
           <section className="space-y-3">
             <h2 className="font-semibold text-amber-700">Awaiting setup ({awaitingSetup.length})</h2>
+            <p className="text-sm text-gray-500 -mt-1">Invite sent — passcode not set yet</p>
             {awaitingSetup.map((u) => (
-              <div key={u.id} className="glass-card p-4 flex items-center justify-between gap-3">
+              <div key={u.id} className="glass-card p-4 flex items-center justify-between gap-3 border border-amber-200/60">
                 <div>
                   <p className="font-semibold text-brand-navy">{u.display_name}</p>
                   <p className="text-sm text-gray-500">
-                    Invite not used{u.squad_position ? ` · ${u.squad_position}` : ''}
+                    Waiting for invite link{u.squad_position ? ` · ${u.squad_position}` : ''}
                   </p>
                 </div>
                 <button
@@ -183,6 +195,30 @@ export default function AdminUsers() {
                   className="btn-secondary text-sm py-2 px-4"
                 >
                   New link
+                </button>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {pendingApproval.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="font-semibold text-sky-800">Pending approval ({pendingApproval.length})</h2>
+            <p className="text-sm text-gray-500 -mt-1">Passcode set — approve to grant squad access</p>
+            {pendingApproval.map((u) => (
+              <div key={u.id} className="glass-card p-4 flex items-center justify-between gap-3 border border-sky-200/60">
+                <div>
+                  <p className="font-semibold text-brand-navy">{u.display_name}</p>
+                  <p className="text-sm text-gray-500">
+                    Ready for approval{u.squad_position ? ` · ${u.squad_position}` : ''}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleApprove(u.id, u.display_name)}
+                  className="btn-primary text-sm py-2 px-4"
+                >
+                  Approve
                 </button>
               </div>
             ))}
@@ -222,9 +258,9 @@ export default function AdminUsers() {
                             ? 'bg-amber-100 text-amber-800'
                             : u.is_approved
                               ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-gray-100 text-gray-700'
+                              : 'bg-sky-100 text-sky-800'
                         }`}>
-                          {u.invite_pending ? 'Invite sent' : u.is_approved ? 'Active' : 'Inactive'}
+                          {u.invite_pending ? 'Awaiting setup' : u.is_approved ? 'Active' : 'Pending approval'}
                         </span>
                       </td>
                       <td className="px-4 py-3">

@@ -62,14 +62,14 @@ export function InviteForm({ token }: InviteFormProps) {
         if (!user) throw new Error('Invalid invite link')
         saveSession(user)
         await refreshUser()
-        toast.success('You\'re in')
-        navigate('/dashboard')
+        toast.success('Passcode saved — awaiting approval')
+        navigate('/pending')
         return
       }
 
       await completeInvite(token, passcode)
-      toast.success('You\'re in')
-      navigate('/dashboard')
+      toast.success('Passcode saved — awaiting approval')
+      navigate('/pending')
     } catch (err) {
       toast.error(getAuthErrorMessage(err, 'Setup failed'))
     } finally {
