@@ -1,8 +1,8 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './hooks/AuthProvider'
 import { useAuth } from './hooks/useAuth'
-import Landing from './pages/Landing'
 import Login from './pages/Login'
 import InvitePage from './pages/Invite'
 import Dashboard from './pages/Dashboard'
@@ -12,34 +12,40 @@ import StatsPage from './pages/Stats'
 import CalendarPage from './pages/Calendar'
 import PlayerProfilePage from './pages/PlayerProfile'
 import PendingApproval from './pages/PendingApproval'
-import Admin from './pages/Admin'
-import AdminResults from './pages/AdminResults'
-import AdminUsers from './pages/AdminUsers'
-import AdminSquad from './pages/AdminSquad'
-import AdminFixtures from './pages/AdminFixtures'
-import AdminTraining from './pages/AdminTraining'
-import AdminAvailability from './pages/AdminAvailability'
-import AdminNotifications from './pages/AdminNotifications'
-import AdminLineup from './pages/AdminLineup'
-import AdminFundraisers from './pages/AdminFundraisers'
 import { PageBackground } from './components/ui/PageBackground'
 import { MobileBottomNav } from './components/ui/MobileBottomNav'
 import { isSupabaseConfigured } from './lib/supabase'
 import ConfigRequired from './pages/ConfigRequired'
 import NotFound from './pages/NotFound'
 
+const Landing = lazy(() => import('./pages/Landing'))
+const Admin = lazy(() => import('./pages/Admin'))
+const AdminResults = lazy(() => import('./pages/AdminResults'))
+const AdminUsers = lazy(() => import('./pages/AdminUsers'))
+const AdminSquad = lazy(() => import('./pages/AdminSquad'))
+const AdminFixtures = lazy(() => import('./pages/AdminFixtures'))
+const AdminTraining = lazy(() => import('./pages/AdminTraining'))
+const AdminAvailability = lazy(() => import('./pages/AdminAvailability'))
+const AdminNotifications = lazy(() => import('./pages/AdminNotifications'))
+const AdminLineup = lazy(() => import('./pages/AdminLineup'))
+const AdminFundraisers = lazy(() => import('./pages/AdminFundraisers'))
+
 const wantsSupabase = import.meta.env.VITE_CLUB_DATA_SOURCE === 'supabase'
+
+function RouteFallback() {
+  return (
+    <div className="min-h-screen relative flex items-center justify-center">
+      <PageBackground />
+      <div className="w-8 h-8 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
 
 function GuestRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="min-h-screen relative flex items-center justify-center">
-        <PageBackground />
-        <div className="w-8 h-8 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
+    return <RouteFallback />
   }
 
   if (user?.is_approved) return <Navigate to="/dashboard" replace />
@@ -63,12 +69,7 @@ function ProtectedRoute({
   const { user, loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="min-h-screen relative flex items-center justify-center">
-        <PageBackground />
-        <div className="w-8 h-8 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
+    return <RouteFallback />
   }
 
   if (!user) return <Navigate to="/login" replace />
@@ -90,7 +91,8 @@ function ProtectedRoute({
 
 function AppRoutes() {
   return (
-    <Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
       <Route path="/invite/:token" element={<InvitePage />} />
@@ -238,7 +240,8 @@ function AppRoutes() {
         }
       />
       <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   )
 }
 
