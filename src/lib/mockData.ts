@@ -17,6 +17,8 @@ import type {
   FundraiserParticipationRow,
   FundraiserParticipationSummary,
 } from '../types'
+import type { LiveMatchDraft } from './liveMatchEvents'
+import { clearLocalLiveDraft, readLocalLiveDraft, writeLocalLiveDraft } from './liveMatchDraftStorage'
 import { buildDdsflMockState } from './ddsflMockImport'
 import { isUpcomingScheduledFixture } from './fixtureFilters'
 import { DDSFL_ACTIVE_SEASON, DDSFL_LEAGUE_NAME, DDSFL_SEASONS } from './ddsflConstants'
@@ -158,6 +160,7 @@ const mockLineups = new Map<string, Lineup>()
 let adminUsers = [...MOCK_ADMIN_USERS]
 let squad = [...MOCK_SQUAD]
 const mockPlayerPhotoUrls = new Map<string, string>()
+const mockLiveDrafts = new Map<string, LiveMatchDraft>()
 
 function seedMockFundraiserParticipation() {
   fundraiserParticipation.clear()
@@ -451,6 +454,22 @@ export function startMockLiveMatch(fixtureId: string) {
   fixture.status = 'in_progress'
 }
 
+export function getMockLiveMatchDraft(fixtureId: string): LiveMatchDraft {
+  const stored = mockLiveDrafts.get(fixtureId) ?? readLocalLiveDraft(fixtureId)
+  if (stored) return stored
+  return { fixture_id: fixtureId, entries: [], goals_for: 0, goals_against: 0 }
+}
+
+export function saveMockLiveMatchDraft(draft: LiveMatchDraft): void {
+  mockLiveDrafts.set(draft.fixture_id, draft)
+  writeLocalLiveDraft(draft)
+}
+
+export function clearMockLiveMatchDraft(fixtureId: string): void {
+  mockLiveDrafts.delete(fixtureId)
+  clearLocalLiveDraft(fixtureId)
+}
+
 export function removeMockSquad(playerId: string) {
   const row = squad.find((s) => s.player_id === playerId)
   if (row) row.active = false
@@ -604,6 +623,8 @@ export function saveMockResult(
       created_at: new Date().toISOString(),
     })
   }
+
+  clearMockLiveMatchDraft(fixtureId)
 }
 
 export function addMockTrainingSession(session: Omit<TrainingSession, 'id' | 'created_at'>) {

@@ -6,6 +6,9 @@ import { PageShell } from '../components/ui/PageBackground'
 import {
   fetchLiveMatchFixtures,
   fetchSquad,
+  getLiveMatchDraft,
+  saveLiveMatchDraft,
+  clearLiveMatchDraft,
   startLiveMatch,
   submitMatchResult,
 } from '../lib/clubApi'
@@ -78,6 +81,7 @@ function LiveMatchLogger({
   const navigate = useNavigate()
   const [tab, setTab] = useState<LogTab>('goal')
   const [entries, setEntries] = useState<LiveLogEntry[]>([])
+  const [draftLoaded, setDraftLoaded] = useState(false)
   const [minute, setMinute] = useState(() => estimateMatchMinute(fixture).toString())
   const [goalsFor, setGoalsFor] = useState('0')
   const [goalsAgainst, setGoalsAgainst] = useState('0')
@@ -88,15 +92,64 @@ function LiveMatchLogger({
   const [playerOffId, setPlayerOffId] = useState(squad[0]?.player_id ?? '')
   const [playerOnId, setPlayerOnId] = useState(squad[1]?.player_id ?? squad[0]?.player_id ?? '')
   const [ending, setEnding] = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const draft = await getLiveMatchDraft(fixture.id)
+        if (cancelled) return
+        setEntries(draft.entries)
+        setGoalsFor(String(draft.goals_for))
+        setGoalsAgainst(String(draft.goals_against))
+        if (draft.entries.length > 0) {
+          toast.success('Restored live match log')
+        }
+      } catch {
+        if (!cancelled) toast.error("Couldn't load saved log")
+      } finally {
+        if (!cancelled) setDraftLoaded(true)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [fixture.id])
 
   const nameFor = useCallback(
     (playerId: string) => formatSquadPlayerLabel(squadMemberById(squad, playerId) ?? { display_name: 'Unknown', squad_number: null }),
     [squad],
   )
 
+  const persistDraft = async (next: {
+    entries: LiveLogEntry[]
+    goals_for: number
+    goals_against: number
+  }) => {
+    setSavingDraft(true)
+    try {
+      await saveLiveMatchDraft({
+        fixture_id: fixture.id,
+        entries: next.entries,
+        goals_for: next.goals_for,
+        goals_against: next.goals_against,
+      })
+    } catch {
+      toast.error("Couldn't save — check your connection")
+      throw new Error('draft save failed')
+    } finally {
+      setSavingDraft(false)
+    }
+  }
+
   const parsedMinute = parseInt(minute, 10)
 
-  const addGoal = () => {
+  const parseScores = () => {
+    const gf = parseInt(goalsFor, 10)
+    const ga = parseInt(goalsAgainst, 10)
+    return { gf, ga }
+  }
+
+  const addGoal = async () => {
     if (!scorerId) {
       toast.error('Pick a scorer')
       return
@@ -105,7 +158,7 @@ function LiveMatchLogger({
       toast.error('Enter a valid minute (0–200)')
       return
     }
-    setEntries((prev) => [
+    const nextEntries: LiveLogEntry[] = [
       {
         id: crypto.randomUUID(),
         kind: 'goal',
@@ -113,16 +166,23 @@ function LiveMatchLogger({
         scorer_id: scorerId,
         assist_id: assistId || null,
       },
-      ...prev,
-    ])
-    const gf = parseInt(goalsFor, 10) + 1
-    setGoalsFor(String(gf))
-    const ga = parseInt(goalsAgainst, 10) || 0
-    void sendGoalPushNotification(nameFor(scorerId), gf, ga)
-    toast.success('Goal logged')
+      ...entries,
+    ]
+    const { gf, ga } = parseScores()
+    const nextGf = (isNaN(gf) ? 0 : gf) + 1
+    const nextGa = isNaN(ga) ? 0 : ga
+    setEntries(nextEntries)
+    setGoalsFor(String(nextGf))
+    try {
+      await persistDraft({ entries: nextEntries, goals_for: nextGf, goals_against: nextGa })
+      void sendGoalPushNotification(nameFor(scorerId), nextGf, nextGa)
+      toast.success('Goal logged')
+    } catch {
+      /* toast shown in persistDraft */
+    }
   }
 
-  const addCard = () => {
+  const addCard = async () => {
     if (!cardPlayerId) {
       toast.error('Pick a player')
       return
@@ -131,7 +191,7 @@ function LiveMatchLogger({
       toast.error('Enter a valid minute (0–200)')
       return
     }
-    setEntries((prev) => [
+    const nextEntries: LiveLogEntry[] = [
       {
         id: crypto.randomUUID(),
         kind: 'card',
@@ -139,12 +199,23 @@ function LiveMatchLogger({
         player_id: cardPlayerId,
         card_type: cardType,
       },
-      ...prev,
-    ])
-    toast.success('Card logged')
+      ...entries,
+    ]
+    const { gf, ga } = parseScores()
+    setEntries(nextEntries)
+    try {
+      await persistDraft({
+        entries: nextEntries,
+        goals_for: isNaN(gf) ? 0 : gf,
+        goals_against: isNaN(ga) ? 0 : ga,
+      })
+      toast.success('Card logged')
+    } catch {
+      /* toast shown in persistDraft */
+    }
   }
 
-  const addSubstitution = () => {
+  const addSubstitution = async () => {
     if (!playerOffId || !playerOnId) {
       toast.error('Pick both players')
       return
@@ -157,7 +228,7 @@ function LiveMatchLogger({
       toast.error('Enter a valid minute (0–200)')
       return
     }
-    setEntries((prev) => [
+    const nextEntries: LiveLogEntry[] = [
       {
         id: crypto.randomUUID(),
         kind: 'substitution',
@@ -165,18 +236,51 @@ function LiveMatchLogger({
         player_off_id: playerOffId,
         player_on_id: playerOnId,
       },
-      ...prev,
-    ])
-    toast.success('Substitution logged')
+      ...entries,
+    ]
+    const { gf, ga } = parseScores()
+    setEntries(nextEntries)
+    try {
+      await persistDraft({
+        entries: nextEntries,
+        goals_for: isNaN(gf) ? 0 : gf,
+        goals_against: isNaN(ga) ? 0 : ga,
+      })
+      toast.success('Substitution logged')
+    } catch {
+      /* toast shown in persistDraft */
+    }
   }
 
-  const removeEntry = (id: string) => {
+  const removeEntry = async (id: string) => {
     const entry = entries.find((e) => e.id === id)
-    if (entry?.kind === 'goal') {
-      const gf = parseInt(goalsFor, 10)
-      if (!isNaN(gf) && gf > 0) setGoalsFor(String(gf - 1))
+    const nextEntries = entries.filter((e) => e.id !== id)
+    const { gf, ga } = parseScores()
+    let nextGf = isNaN(gf) ? 0 : gf
+    if (entry?.kind === 'goal' && nextGf > 0) {
+      nextGf -= 1
+      setGoalsFor(String(nextGf))
     }
-    setEntries((prev) => prev.filter((e) => e.id !== id))
+    setEntries(nextEntries)
+    try {
+      await persistDraft({
+        entries: nextEntries,
+        goals_for: nextGf,
+        goals_against: isNaN(ga) ? 0 : ga,
+      })
+    } catch {
+      /* toast shown in persistDraft */
+    }
+  }
+
+  const persistScores = async () => {
+    const { gf, ga } = parseScores()
+    if (isNaN(gf) || isNaN(ga) || gf < 0 || ga < 0) return
+    try {
+      await persistDraft({ entries, goals_for: gf, goals_against: ga })
+    } catch {
+      /* toast shown in persistDraft */
+    }
   }
 
   const handleEndMatch = async () => {
@@ -192,6 +296,7 @@ function LiveMatchLogger({
     try {
       const events = liveEntriesToMatchEvents(fixture.id, [...entries].reverse())
       await submitMatchResult(fixture.id, gf, ga, null, events)
+      await clearLiveMatchDraft(fixture.id)
       toast.success('Match saved')
       navigate(`/admin/results?fixture=${fixture.id}&tab=completed`)
     } catch (err) {
@@ -213,6 +318,10 @@ function LiveMatchLogger({
 
   return (
     <div className="space-y-5">
+      {!draftLoaded ? (
+        <div className="glass-card h-24 animate-pulse" />
+      ) : (
+        <>
       <div className="glass-card p-4">
         <p className="font-display text-xl font-bold text-brand-navy">
           {fixture.home_away === 'home' ? 'vs' : '@'} {fixture.opponent}
@@ -221,9 +330,14 @@ function LiveMatchLogger({
           {new Date(fixture.match_date).toLocaleDateString('en-GB')}
           {fixture.competition ? ` · ${fixture.competition}` : ''}
         </p>
-        <span className="inline-block mt-2 text-[10px] font-bold uppercase tracking-widest text-red-600 animate-pulse">
-          Live
-        </span>
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-red-600 animate-pulse">
+            Live
+          </span>
+          {savingDraft && (
+            <span className="text-[10px] text-gray-500">Saving…</span>
+          )}
+        </div>
       </div>
 
       <div className="glass-card p-4 space-y-3">
@@ -278,7 +392,7 @@ function LiveMatchLogger({
                 {playerOptions}
               </select>
             </div>
-            <button type="button" onClick={addGoal} className="btn-primary w-full">
+            <button type="button" onClick={() => void addGoal()} className="btn-primary w-full">
               Log goal
             </button>
           </>
@@ -306,7 +420,7 @@ function LiveMatchLogger({
                 </button>
               ))}
             </div>
-            <button type="button" onClick={addCard} className="btn-primary w-full">
+            <button type="button" onClick={() => void addCard()} className="btn-primary w-full">
               Log card
             </button>
           </>
@@ -326,7 +440,7 @@ function LiveMatchLogger({
                 {playerOptions}
               </select>
             </div>
-            <button type="button" onClick={addSubstitution} className="btn-primary w-full">
+            <button type="button" onClick={() => void addSubstitution()} className="btn-primary w-full">
               Log substitution
             </button>
           </>
@@ -344,7 +458,7 @@ function LiveMatchLogger({
                 <span className="text-brand-navy">{describeLiveEntry(entry, nameFor)}</span>
                 <button
                   type="button"
-                  onClick={() => removeEntry(entry.id)}
+                  onClick={() => void removeEntry(entry.id)}
                   className="text-red-600 font-medium shrink-0"
                 >
                   Undo
@@ -360,17 +474,19 @@ function LiveMatchLogger({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-gray-500">BMFC</label>
-            <input type="number" min={0} value={goalsFor} onChange={(e) => setGoalsFor(e.target.value)} className="input-field mt-1" />
+            <input type="number" min={0} value={goalsFor} onChange={(e) => setGoalsFor(e.target.value)} onBlur={() => void persistScores()} className="input-field mt-1" />
           </div>
           <div>
             <label className="text-xs text-gray-500">Opponent</label>
-            <input type="number" min={0} value={goalsAgainst} onChange={(e) => setGoalsAgainst(e.target.value)} className="input-field mt-1" />
+            <input type="number" min={0} value={goalsAgainst} onChange={(e) => setGoalsAgainst(e.target.value)} onBlur={() => void persistScores()} className="input-field mt-1" />
           </div>
         </div>
         <button type="button" onClick={() => void handleEndMatch()} disabled={ending} className="btn-primary w-full">
           {ending ? 'Saving…' : 'End match'}
         </button>
       </div>
+        </>
+      )}
     </div>
   )
 }
@@ -428,7 +544,7 @@ export default function AdminLive() {
         <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         <h1 className="font-display text-2xl text-brand-navy">Live matchday</h1>
         <p className="text-sm text-gray-500">
-          Log goals, cards and subs during the game. Events save when you end the match.
+          Log goals, cards and subs during the game. Progress saves automatically while live.
         </p>
 
         {loading ? (

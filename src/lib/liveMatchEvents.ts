@@ -14,6 +14,14 @@ export interface LiveLogEntry {
   player_on_id?: string
 }
 
+export interface LiveMatchDraft {
+  fixture_id: string
+  entries: LiveLogEntry[]
+  goals_for: number
+  goals_against: number
+  updated_at?: string
+}
+
 export interface MatchEventInput {
   fixture_id: string
   player_id: string

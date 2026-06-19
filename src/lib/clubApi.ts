@@ -44,7 +44,12 @@ import {
   uploadMockPlayerPhoto,
   deleteMockPlayerPhoto,
   startMockLiveMatch,
+  getMockLiveMatchDraft,
+  saveMockLiveMatchDraft,
+  clearMockLiveMatchDraft,
 } from './mockData'
+import { parseLiveDraftEntries } from './liveMatchDraftStorage'
+import type { LiveMatchDraft } from './liveMatchEvents'
 import { playerPhotoFileExt, validatePlayerPhotoFile } from './playerPhotos'
 import type {
   AdminUserRow,
@@ -614,6 +619,82 @@ export async function submitMatchResult(
       minute: e.minute,
       ...(e.related_player_id ? { related_player_id: e.related_player_id } : {}),
     })),
+  })
+  if (error) throw error
+}
+
+export async function getLiveMatchDraft(fixtureId: string): Promise<LiveMatchDraft> {
+  if (isMockDataMode()) {
+    await delay(60)
+    return getMockLiveMatchDraft(fixtureId)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_get_live_match_draft', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_fixture_id: fixtureId,
+  })
+  if (error) throw error
+
+  const row = data as {
+    fixture_id: string
+    entries: unknown
+    goals_for: number
+    goals_against: number
+    updated_at?: string
+  } | null
+
+  if (!row) {
+    return { fixture_id: fixtureId, entries: [], goals_for: 0, goals_against: 0 }
+  }
+
+  return {
+    fixture_id: row.fixture_id,
+    entries: parseLiveDraftEntries(row.entries),
+    goals_for: row.goals_for,
+    goals_against: row.goals_against,
+    updated_at: row.updated_at,
+  }
+}
+
+export async function saveLiveMatchDraft(draft: LiveMatchDraft): Promise<void> {
+  if (isMockDataMode()) {
+    await delay(40)
+    saveMockLiveMatchDraft(draft)
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_save_live_match_draft', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_fixture_id: draft.fixture_id,
+    p_entries: draft.entries,
+    p_goals_for: draft.goals_for,
+    p_goals_against: draft.goals_against,
+  })
+  if (error) throw error
+}
+
+export async function clearLiveMatchDraft(fixtureId: string): Promise<void> {
+  if (isMockDataMode()) {
+    await delay(40)
+    clearMockLiveMatchDraft(fixtureId)
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_clear_live_match_draft', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_fixture_id: fixtureId,
   })
   if (error) throw error
 }
