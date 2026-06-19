@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import type { PlayerStats } from '../../types'
 import { playerInitials } from '../../lib/format'
 import { useAuth } from '../../hooks/useAuth'
+import { StatsSkeleton } from '../ui/Skeleton'
 
 type StatFilter = 'all' | 'goals' | 'assists' | 'discipline'
 
@@ -179,16 +180,7 @@ export function SquadStatsView({ stats, loading }: SquadStatsViewProps) {
   }, [stats])
 
   if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="glass-card h-20 animate-pulse" />
-          ))}
-        </div>
-        <div className="glass-card h-48 animate-pulse" />
-      </div>
-    )
+    return <StatsSkeleton />
   }
 
   if (stats.length === 0 || !hasActivity) {

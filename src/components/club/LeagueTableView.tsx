@@ -1,5 +1,6 @@
 import type { LeagueTableRow } from '../../types'
 import { isClubTeam } from '../../lib/clubTeams'
+import { LeagueTableSkeleton } from '../ui/Skeleton'
 
 interface LeagueTableViewProps {
   rows: LeagueTableRow[]
@@ -8,14 +9,7 @@ interface LeagueTableViewProps {
 
 export function LeagueTableView({ rows, loading }: LeagueTableViewProps) {
   if (loading) {
-    return (
-      <div className="glass-card overflow-hidden animate-pulse">
-        <div className="h-10 bg-brand-blue/5" />
-        {Array.from({ length: 7 }).map((_, i) => (
-          <div key={i} className="h-12 border-t border-brand-blue/5 bg-white/40" />
-        ))}
-      </div>
-    )
+    return <LeagueTableSkeleton />
   }
 
   if (rows.length === 0) {

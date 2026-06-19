@@ -9,6 +9,7 @@ import { usePlayerProfile } from '../hooks/usePlayerProfile'
 import type { CalendarItem } from '../types'
 import { useMemo } from 'react'
 import { pageContainerClass } from '../lib/layout'
+import { PlayerProfileSkeleton } from '../components/ui/Skeleton'
 
 export default function PlayerProfilePage() {
   const { playerId } = useParams<{ playerId: string }>()
@@ -55,10 +56,7 @@ export default function PlayerProfilePage() {
         )}
 
         {loading ? (
-          <div className="space-y-4">
-            <div className="glass-card h-48 animate-pulse" />
-            <div className="glass-card h-32 animate-pulse" />
-          </div>
+          <PlayerProfileSkeleton />
         ) : notFound || !profile ? (
           <div className="glass-card p-8 text-center text-gray-500">Player not found.</div>
         ) : (

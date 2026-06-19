@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useCalendar } from '../hooks/useClubData'
 import type { CalendarItem } from '../types'
 import { pageContainerClass } from '../lib/layout'
+import { CalendarSkeleton } from '../components/ui/Skeleton'
 
 type ViewMode = 'list' | 'calendar'
 
@@ -64,11 +65,7 @@ export default function CalendarPage() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
-            {Array.from({ length: view === 'list' ? 4 : 1 }).map((_, i) => (
-              <div key={i} className={`glass-card animate-pulse ${view === 'calendar' ? 'h-80' : 'h-28'}`} />
-            ))}
-          </div>
+          <CalendarSkeleton mode={view} />
         ) : view === 'list' ? (
           <CalendarList
             items={calendarItems}

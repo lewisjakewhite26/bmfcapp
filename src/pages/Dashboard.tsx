@@ -12,6 +12,7 @@ import { PushNotificationPrompt } from '../components/ui/PushNotificationPrompt'
 import { DataErrorBanner } from '../components/ui/DataErrorBanner'
 import { AvailabilityNudge } from '../components/club/AvailabilityNudge'
 import { pageContainerClass } from '../lib/layout'
+import { DashboardSkeleton } from '../components/ui/Skeleton'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -53,11 +54,7 @@ export default function Dashboard() {
         )}
 
         {loading ? (
-          <div className="grid gap-4 sm:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="glass-card h-28 animate-pulse" />
-            ))}
-          </div>
+          <DashboardSkeleton />
         ) : (
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="glass-card p-4 text-center">
