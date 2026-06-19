@@ -42,8 +42,7 @@ export default function ConfigRequired() {
                 Add all three — tick <strong>Production</strong> (and Preview if you use preview URLs)
               </li>
               <li>
-                <code className="text-xs">VITE_SUPABASE_URL</code> ={' '}
-                <code className="text-xs">https://kqxsbbkedhidsfojapny.supabase.co</code>
+                <code className="text-xs">VITE_SUPABASE_URL</code> = your Club Hub project URL from Supabase → Settings → API
               </li>
               <li>
                 <code className="text-xs">VITE_SUPABASE_ANON_KEY</code> = anon key from Supabase → Settings → API

@@ -20,8 +20,10 @@ On the login screen, use **Test** (player) or **Test as admin** to explore the a
 To connect a real backend:
 
 1. Copy `.env.example` to `.env.local`
-2. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_CLUB_DATA_SOURCE=supabase`
+2. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_CLUB_DATA_SOURCE=supabase`  
+   Use the **Club Hub** Supabase project (not the World Cup predictor). Keys are under **Settings → API**.
 3. Follow **[docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md)** to run migrations, seed the admin, and deploy the push function
+4. Restart `npm run dev` after changing env vars
 
 ### Deploy on Vercel
 

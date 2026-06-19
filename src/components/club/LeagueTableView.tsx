@@ -20,9 +20,11 @@ export function LeagueTableView({ rows, loading }: LeagueTableViewProps) {
 
   if (rows.length === 0) {
     return (
-      <div className="glass-card p-8 text-center text-gray-500 space-y-1">
-        <p>No table data yet.</p>
-        <p className="text-sm">Run a DDSFL sync or check back after the league publishes standings.</p>
+      <div className="glass-card p-8 text-center space-y-3 border-t-2 border-brand-gold/40">
+        <p className="font-display text-xl text-brand-navy">No league table yet</p>
+        <p className="text-sm text-gray-600 leading-relaxed max-w-sm mx-auto">
+          Standings come from DDSFL. If it&apos;s mid-season and this looks wrong, ask admin to run a sync.
+        </p>
       </div>
     )
   }

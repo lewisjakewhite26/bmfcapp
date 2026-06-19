@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { PlayerStats } from '../../types'
 import { playerInitials } from '../../lib/format'
+import { useAuth } from '../../hooks/useAuth'
 
 type StatFilter = 'all' | 'goals' | 'assists' | 'discipline'
 
@@ -119,6 +120,25 @@ function PlayerStatCard({ player, maxGoals, filter }: { player: PlayerStats; max
   )
 }
 
+function StatsEmptyState() {
+  const { user } = useAuth()
+  const isAdmin = user?.is_admin || user?.is_committee
+
+  return (
+    <div className="glass-card p-8 text-center space-y-3 border-t-2 border-brand-gold/40">
+      <p className="font-display text-xl text-brand-navy">No stats yet</p>
+      <p className="text-sm text-gray-600 leading-relaxed max-w-sm mx-auto">
+        Goals, assists and appearances show up when match events are logged in Admin → Results.
+      </p>
+      {isAdmin && (
+        <Link to="/admin/results" className="btn-primary inline-block mt-2">
+          Log a result
+        </Link>
+      )}
+    </div>
+  )
+}
+
 export function SquadStatsView({ stats, loading }: SquadStatsViewProps) {
   const [filter, setFilter] = useState<StatFilter>('all')
 
@@ -131,6 +151,8 @@ export function SquadStatsView({ stats, loading }: SquadStatsViewProps) {
     }),
     [stats]
   )
+
+  const hasActivity = totals.goals + totals.assists + totals.appearances + totals.motm > 0
 
   const topScorers = useMemo(
     () => [...stats].sort((a, b) => b.goals - a.goals || b.assists - a.assists).slice(0, 3),
@@ -169,13 +191,8 @@ export function SquadStatsView({ stats, loading }: SquadStatsViewProps) {
     )
   }
 
-  if (stats.length === 0) {
-    return (
-      <div className="glass-card p-8 text-center text-gray-500 space-y-1">
-        <p>No stats yet.</p>
-        <p className="text-sm">They show up after admin enters goals and MOTM in results.</p>
-      </div>
-    )
+  if (stats.length === 0 || !hasActivity) {
+    return <StatsEmptyState />
   }
 
   const filters: { id: StatFilter; label: string }[] = [
