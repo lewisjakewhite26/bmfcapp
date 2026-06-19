@@ -35,6 +35,7 @@ import {
   addMockFundraiser,
   getMockFundraiserDetail,
   saveMockFundraiserParticipation,
+  getMockFundraiserParticipationSummary,
 } from './mockData'
 import type {
   AdminUserRow,
@@ -51,6 +52,7 @@ import type {
   Fundraiser,
   FundraiserDetail,
   FundraiserParticipationRow,
+  FundraiserParticipationSummary,
   HomeAway,
   Lineup,
   LineupSlotAssignment,
@@ -777,4 +779,21 @@ export async function saveFundraiserParticipation(
     p_entries: entries,
   })
   if (error) throw error
+}
+
+export async function fetchFundraiserParticipationSummary(): Promise<FundraiserParticipationSummary> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockFundraiserParticipationSummary()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_fundraiser_participation_summary', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return data as FundraiserParticipationSummary
 }

@@ -201,3 +201,15 @@ export interface FundraiserDetail {
   fundraiser: Fundraiser
   participants: FundraiserParticipationRow[]
 }
+
+export interface FundraiserParticipationSummaryRow {
+  profile_id: string
+  display_name: string
+  participated_count: number
+  total_fundraisers: number
+}
+
+export interface FundraiserParticipationSummary {
+  total_fundraisers: number
+  members: FundraiserParticipationSummaryRow[]
+}

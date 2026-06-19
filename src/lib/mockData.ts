@@ -14,6 +14,7 @@ import type {
   Fundraiser,
   FundraiserDetail,
   FundraiserParticipationRow,
+  FundraiserParticipationSummary,
 } from '../types'
 import { buildDdsflMockState } from './ddsflMockImport'
 
@@ -644,6 +645,33 @@ export function saveMockFundraiserParticipation(
     map.set(entry.profile_id, entry.participated)
   }
   fundraiserParticipation.set(fundraiserId, map)
+}
+
+export function getMockFundraiserParticipationSummary(): FundraiserParticipationSummary {
+  const total = fundraisers.length
+  const members = squad
+    .filter((m) => m.active)
+    .map((m) => {
+      let participated_count = 0
+      for (const f of fundraisers) {
+        const map = fundraiserParticipation.get(f.id)
+        if (map?.get(m.player_id)) participated_count += 1
+      }
+      return {
+        profile_id: m.player_id,
+        display_name: m.display_name,
+        participated_count,
+        total_fundraisers: total,
+      }
+    })
+    .sort((a, b) => {
+      if (a.participated_count !== b.participated_count) {
+        return a.participated_count - b.participated_count
+      }
+      return a.display_name.localeCompare(b.display_name)
+    })
+
+  return { total_fundraisers: total, members }
 }
 
 export function getMockLineup(fixtureId: string): Lineup | null {
