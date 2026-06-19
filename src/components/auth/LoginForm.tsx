@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
 import { isMockDataMode } from '../../lib/clubApi'
+import { getAuthErrorMessage } from '../../lib/authErrors'
 
 export function LoginForm() {
   const [displayName, setDisplayName] = useState('')
@@ -26,7 +27,7 @@ export function LoginForm() {
       toast.success('Signed in')
       navigate('/dashboard')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Sign in failed')
+      toast.error(getAuthErrorMessage(err, 'Sign in failed'))
     } finally {
       setLoading(false)
     }

@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { saveSession } from '../../hooks/authContext'
 import { rpcGetInvitePreview } from '../../lib/clubAuth'
 import { completeMockInvite, getMockInvitePreview, isMockDataMode } from '../../lib/clubApi'
+import { getAuthErrorMessage } from '../../lib/authErrors'
 import type { InvitePreview } from '../../types'
 
 interface InviteFormProps {
@@ -33,7 +34,7 @@ export function InviteForm({ token }: InviteFormProps) {
         if (!cancelled) setPreview(data)
       } catch (err) {
         if (!cancelled) {
-          setPreviewError(err instanceof Error ? err.message : 'Invalid invite link')
+          setPreviewError(getAuthErrorMessage(err, 'Invalid invite link'))
         }
       } finally {
         if (!cancelled) setLoadingPreview(false)
@@ -70,7 +71,7 @@ export function InviteForm({ token }: InviteFormProps) {
       toast.success('You\'re in')
       navigate('/dashboard')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Setup failed')
+      toast.error(getAuthErrorMessage(err, 'Setup failed'))
     } finally {
       setLoading(false)
     }
