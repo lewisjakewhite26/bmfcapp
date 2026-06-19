@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate PWA / Apple touch icons from public/logo.png (club crest).
+ * Generate PWA / Apple touch icons from public/logo.svg (via logo.png).
  * Run: npm run generate:pwa-icons
  */
 
