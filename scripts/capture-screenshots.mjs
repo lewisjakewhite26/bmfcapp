@@ -5,7 +5,7 @@
  *   npm run dev          (in another terminal)
  *   npm run screenshots
  *
- * Output folder: screenshots-club-hub/ (club hub only — not the old WC predictor)
+ * Output folder: screenshots-club-hub/
  * Optional base URL: npm run screenshots -- http://localhost:5173
  */
 import { chromium } from 'playwright'

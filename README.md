@@ -71,20 +71,22 @@ src/
   lib/            # API, auth, scraper, mock data
   data/           # Committed DDSFL scrape JSON
 supabase-club/
-  migrations/     # Database schema (001–008)
+  migrations/     # Database schema (001–011)
   functions/      # Edge functions (send-push)
   seed.sql        # Initial admin account
 docs/
   PAGE-COPY.md    # All UI copy
   SUPABASE-SETUP.md
-  PROJECT-AUDIT.md
+  ROADMAP-90.md   # Roadmap to 90+ audit score
+AUDITNEW.md         # Current project audit
 ```
 
 ## Documentation
 
 - [UI copy reference](docs/PAGE-COPY.md)
 - [Supabase setup guide](docs/SUPABASE-SETUP.md)
-- [Project audit](docs/PROJECT-AUDIT.md)
+- [Project audit](AUDITNEW.md)
+- [Roadmap to 90+](docs/ROADMAP-90.md)
 
 ## Tech stack
 

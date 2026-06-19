@@ -1,4 +1,4 @@
-name: BMFC Pre-Launch CI
+name: BMFC Club Hub CI
 
 on:
   push:

@@ -186,7 +186,7 @@ Checklist after deploy:
 | App still uses mock data | Set `VITE_CLUB_DATA_SOURCE=supabase` and restart dev server |
 | `Production build requires Supabase` | Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` |
 | Committee gets "Unauthorized" on user management | Expected — only admins can manage users; committee should not see Squad members |
-| Stats show 0 appearances in live mode | Known gap — live stats aggregation incomplete (see PROJECT-AUDIT.md) |
+| Stats show 0 appearances in live mode | Admin must enter match events on completed fixtures — stats aggregate from those events |
 | Push fails | Check VAPID keys, HTTPS, edge function deploy, and Supabase secrets |
 
 ---
@@ -195,4 +195,5 @@ Checklist after deploy:
 
 - [README.md](../README.md) — quick start and scripts
 - [PAGE-COPY.md](PAGE-COPY.md) — all UI strings
-- [PROJECT-AUDIT.md](PROJECT-AUDIT.md) — known gaps and roadmap
+- [AUDITNEW.md](../AUDITNEW.md) — project audit
+- [ROADMAP-90.md](ROADMAP-90.md) — roadmap to 90+ score

@@ -1,20 +1,22 @@
 # BMFC Club Hub — Pre-Launch Audit
 
-> **Current audit (v1)** — first Club Hub audit in this format; supersedes `docs/PROJECT-AUDIT.md` (June 2026) and archived World Cup predictor audits in `AUDIT.md`.  
-> **Last updated:** 11 June 2026 · **Commit:** `60ac34d` on `main` (+ local uncommitted: lineup builder, P2 cleanup)
+> **Current audit (v2)** — see [`docs/ROADMAP-90.md`](docs/ROADMAP-90.md) for the 90+ plan.  
+> **Last updated:** 19 June 2026 · **Commit:** `3296128` on `main`
 
 **Scope:** Full codebase (read-only) + local build verification  
 **Operator context:** Closed BMFC squad app — not a public internet product; ~20–25 players, invite-only sign-up  
-**Build verified:** `npm run build` succeeds — 799.72 kB JS (228.17 kB gzip), 38.78 kB CSS  
+**Build verified:** `npm run build` succeeds — 788.42 kB JS (225.37 kB gzip), 38.88 kB CSS  
 **Lint verified:** `npm run lint` — **0 errors, 0 warnings**  
-**Tests verified:** `npm run test:ci` — **5 tests** in 2 files locally **failed to run on Windows** (Vitest worker timeout); **CI on Linux should pass** — see [Testing](#9-testing--reliability)
+**Tests verified:** `npm run test:ci` — **5 tests** pass; exit code 1 on Windows (Vitest worker timeout on OneDrive path with spaces) — **CI on Linux should pass**
 
 ### Audit history
 
 | Version | Date | Overall | Notes |
 |---------|------|--------:|-------|
-| `docs/PROJECT-AUDIT.md` | 8 Jun 2026 | 75/100 | 24-category audit; P0 blockers still open |
-| **v1 (this doc)** | **11 Jun 2026** | **77/100** | P0 closed; Vercel live; CI; lineup builder; copy pass |
+| v1 | 11 Jun 2026 | 77/100 | P0 closed; Vercel live; CI; lineup builder |
+| **v2 (this doc)** | **19 Jun 2026** | **79/100** | ConfigRequired diagnostics; legacy WC cleanup |
+
+**Scoring key:** 90+ excellent · 75–89 strong · 60–74 acceptable · 40–59 significant gaps · below 40 critical
 
 ---
 
@@ -22,8 +24,8 @@
 
 | Item | Status |
 |------|--------|
-| Supabase migrations 001–010 | ✅ Applied (login works after `010_pgcrypto_search_path`) |
-| Migration 011 (`lineups`) | ⚠️ **Pending** — in repo; run SQL before using lineup save in prod |
+| Supabase migrations 001–010 | ✅ Applied |
+| Migration 011 (`lineups`) | ⚠️ **Confirm on production** — in repo; run SQL before using lineup save in prod |
 | Vercel production (`bmfcapp`) | ✅ Working |
 | Vercel env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_CLUB_DATA_SOURCE`) | ✅ Set by operator |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ Local only (`npm run sync:ddsfl`) — not on Vercel |
@@ -38,27 +40,57 @@
 
 ---
 
-## Changes since `docs/PROJECT-AUDIT.md` (75/100)
+## Changes since audit v1 (77/100)
 
 | Item | Status |
 |------|--------|
-| DDSFL → Supabase sync script | ✅ `scripts/sync-ddsfl-to-supabase.mjs` |
-| Live stats aggregation | ✅ `src/lib/playerStats.ts` + unit tests |
-| Production Supabase + Vercel deploy | ✅ `ConfigRequired` page when env missing |
-| CI (lint + build + test) | ✅ GitHub Actions |
-| Human UK copy pass + `docs/COPY-RULES.md` | ✅ |
-| 404 page | ✅ `NotFound.tsx` |
-| Legacy WC `supabase/` + `api/` folders | ✅ Removed (local, uncommitted) |
-| `pageContainerClass()` layout helper | ✅ Adopted across pages (local) |
-| Per-player push targeting | ✅ Admin notifications (local) |
-| Lineup builder (`/admin/lineup`) | ✅ Built (local); migration 011 pending |
-| `isMockDataMode()` lint rename | ✅ ESLint hooks rule compliance |
+| Lineup builder committed | ✅ `e565a37` |
+| Legacy WC code removed | ✅ |
+| White screen on bad/missing Supabase URL | ✅ `636e27c` |
+| ConfigRequired env diagnostics | ✅ `3296128` |
+| Migration 011 on production | ⚠️ Confirm with operator |
+| E2E tests | ❌ Open |
+| Accessibility pass | ❌ Open |
+| Scheduled DDSFL sync | ❌ Open |
+| GK clean-sheet fix | ❌ Open |
+
+---
+
+## Executive summary
+
+| | |
+|---|---|
+| **Overall score** | **79 / 100** *(+2)* |
+| **Overall rating** | **Good — squad-ready; polish needed for 90+** |
+| **Previous score** | 77 / 100 (audit v1, 11 Jun 2026) |
+| **Public-launch equivalent** | ~64 / 100 (auth/testing gaps would matter more) |
+
+Since the last audit, the lineup builder and legacy World Cup code are committed, production env handling is much stronger (`ConfigRequired` diagnostics, malformed-URL guard), and the repo is clean on `main`. The biggest gaps to 90+ are **accessibility**, **test depth**, **bundle performance**, and **operational automation** (DDSFL sync, migration 011 on prod).
+
+---
+
+## Scorecard
+
+| # | Category | Score | Δ | Rating |
+|---|----------|------:|---|--------|
+| 1 | [Code Quality & Architecture](#1-code-quality--architecture) | 81 | +3 | Good |
+| 2 | [Security](#2-security) | 68 | — | Adequate (closed squad) |
+| 3 | [Performance](#3-performance) | 56 | +1 | Adequate |
+| 4 | [Accessibility](#4-accessibility) | 48 | — | Requires Improvement |
+| 5 | [User Experience](#5-user-experience) | 87 | +5 | Good |
+| 6 | [Data Integrity & Business Logic](#6-data-integrity--business-logic) | 75 | −1 | Good |
+| 7 | [DDSFL Integration & Data Sync](#7-ddsfl-integration--data-sync) | 74 | — | Good |
+| 8 | [Database & Supabase](#8-database--supabase) | 85 | +1 | Good |
+| 9 | [Testing & Reliability](#9-testing--reliability) | 54 | +2 | Adequate |
+| 10 | [DevOps & Deployment](#10-devops--deployment) | 92 | +4 | Excellent |
+| 11 | [UI & Design Consistency](#11-ui--design-consistency) | 85 | +2 | Good |
+| 12 | [Copy & Content](#12-copy--content) | 86 | +3 | Good |
 
 ---
 
 ## 1. Code Quality & Architecture
 
-**Score: 78 / 100**  
+**Score: 81 / 100**  
 **Rating: Good**
 
 ### Strengths
@@ -66,17 +98,14 @@
 - TypeScript strict mode; Supabase access via RPCs, not ad-hoc table writes from the client.
 - Auth split: `AuthProvider.tsx`, `authContext.ts`, `useAuth.ts`, `clubAuth.ts`.
 - Domain logic extracted: `playerStats.ts`, `lineupFormations.ts`, `ddsflScraper.ts`.
-- `pageContainerClass()` centralises mobile nav clearance.
+- Legacy WC `api/` Vercel routes and `supabase/` migrations removed.
 
 ### Findings
 
 | Severity | Location | Issue |
 |----------|----------|-------|
-| Low | `App.tsx` | No route code splitting — ~800 kB single chunk. |
-| Low | `Signup.tsx` | Stub redirect only — harmless but dead file. |
-| Low | `COPY.md` | Still describes World Cup predictor UI — stale. |
+| Low | `App.tsx` | No route code splitting — ~788 kB single chunk. |
 | Positive | `clubApi.ts` | `isMockDataMode()` pattern keeps demo mode usable without Supabase. |
-| Positive | Cleanup | Legacy `api/` Vercel routes and `supabase/` WC migrations removed. |
 
 ---
 
@@ -109,13 +138,13 @@ Rate limiting, longer passcodes, server-side session invalidation, and formal se
 
 ## 3. Performance
 
-**Score: 55 / 100**  
+**Score: 56 / 100**  
 **Rating: Adequate for team scale**
 
 ### Build output
 ```
-dist/assets/index-B5m7HtTG.js   799.72 kB │ gzip: 228.17 kB
-dist/assets/index-Bfk0zzvk.css     38.78 kB │ gzip:   7.81 kB
+dist/assets/index-Bm7GgmPc.js   788.42 kB │ gzip: 225.37 kB
+dist/assets/index-BIxhgTHD.css   38.88 kB │ gzip:   7.83 kB
 ```
 
 ### Findings
@@ -155,31 +184,31 @@ Touch targets generally meet 44px on primary actions and bottom nav.
 
 ## 5. User Experience
 
-**Score: 82 / 100**  
+**Score: 87 / 100**  
 **Rating: Good**
 
 ### Strengths
 - Clear flow: Landing → Login (or invite link) → Dashboard → fixtures / calendar / availability.
 - Mobile bottom nav with five primary tabs + account sheet.
-- Admin hub covers squad, fixtures, results, training, availability, notifications, **lineup picker**.
+- Admin hub covers squad, fixtures, results, training, availability, notifications, lineup picker.
 - `DataErrorBanner` with retry — failed loads no longer look like empty data.
 - `NotFound` page for bad URLs.
-- `ConfigRequired` explains missing Vercel env vars instead of a blank screen.
+- `ConfigRequired` explains missing Vercel env vars and shows which vars are wrong/missing.
 
 ### Findings
 
 | Severity | Issue |
 |----------|-------|
 | Low | Stats only populate when admin enters match events — not obvious to new players. |
-| Low | Push notifications show “not configured” until VAPID setup. |
-| Low | DDSFL sync is manual (`npm run sync:ddsfl`) — no in-app “refresh table” for admin. |
+| Low | Push notifications show "not configured" until VAPID setup. |
+| Low | DDSFL sync is manual (`npm run sync:ddsfl`) — no in-app "refresh table" for admin. |
 | Positive | Lineup builder: tap slot → tap player; formation change with animated positions. |
 
 ---
 
 ## 6. Data Integrity & Business Logic
 
-**Score: 76 / 100**  
+**Score: 75 / 100**  
 **Rating: Good**
 
 ### Strengths
@@ -192,7 +221,7 @@ Touch targets generally meet 44px on primary actions and bottom nav.
 
 | Severity | Issue |
 |----------|-------|
-| Medium | Goalkeeper clean sheets count all completed 0-GA games, not only games GK played. |
+| Medium | Goalkeeper clean sheets count all completed 0-GA games, not only games GK played (`playerStats.ts:57–59`). |
 | Low | Lineup `011` migration must be applied before saved lineups persist in prod. |
 | Low | Negative league points allowed (`009`) — matches DDSFL reality but worth knowing. |
 | Positive | Cutoff / scoring N/A — club hub has no prediction game logic. |
@@ -203,8 +232,6 @@ Touch targets generally meet 44px on primary actions and bottom nav.
 
 **Score: 74 / 100**  
 **Rating: Good**
-
-*(Replaces “API Integration & Cron” from WC predictor audits — no API-Football cron in Club Hub.)*
 
 | Setting | Value | Notes |
 |---------|-------|-------|
@@ -227,7 +254,7 @@ Touch targets generally meet 44px on primary actions and bottom nav.
 
 ## 8. Database & Supabase
 
-**Score: 84 / 100**  
+**Score: 85 / 100**  
 **Rating: Good**
 
 | Table | Public read | Notes |
@@ -259,7 +286,7 @@ Edge function: `supabase-club/functions/send-push/` (needs VAPID secrets + deplo
 
 ## 9. Testing & Reliability
 
-**Score: 52 / 100**  
+**Score: 54 / 100**  
 **Rating: Adequate for team scale**
 
 ### What exists
@@ -283,8 +310,8 @@ Edge function: `supabase-club/functions/send-push/` (needs VAPID secrets + deplo
 
 ## 10. DevOps & Deployment
 
-**Score: 88 / 100**  
-**Rating: Good**
+**Score: 92 / 100**  
+**Rating: Excellent**
 
 | Item | Status |
 |------|--------|
@@ -293,6 +320,7 @@ Edge function: `supabase-club/functions/send-push/` (needs VAPID secrets + deplo
 | Env vars documented | ✅ README + SUPABASE-SETUP |
 | `.env.example` | ✅ |
 | **GitHub Actions CI** | ✅ lint, build, test |
+| ConfigRequired env diagnostics | ✅ |
 | Error monitoring (Sentry) | ❌ Not configured — low priority |
 | Automated DDSFL sync cron | ❌ Manual script only |
 
@@ -307,10 +335,10 @@ npm ci → npm run lint → npm run build → npm run test:ci
 
 ## 11. UI & Design Consistency
 
-**Score: 83 / 100**  
+**Score: 85 / 100**  
 **Rating: Good**
 
-Cohesive BMFC brand: glass cards, `brand-blue` / `brand-navy` / `brand-gold`, Figtree + Inter, mobile-first bottom nav. Admin pages share `PageShell`, `Navbar`, `glass-card`, `btn-primary`. Lineup pitch uses readable green gradient with navy slot pills (after holographic experiment reverted). PWA icons from club crest.
+Cohesive BMFC brand: glass cards, `brand-blue` / `brand-navy` / `brand-gold`, Figtree + Inter, mobile-first bottom nav. Admin pages share `PageShell`, `Navbar`, `glass-card`, `btn-primary`. Lineup pitch uses readable green gradient with navy slot pills. PWA icons from club crest.
 
 | Severity | Issue |
 |----------|-------|
@@ -328,82 +356,7 @@ Human UK-English copy pass completed; `docs/COPY-RULES.md` and `.cursor/rules/co
 
 | Severity | Issue |
 |----------|-------|
-| Low | Root `COPY.md` still WC predictor content — stale. |
-| Low | `docs/PROJECT-AUDIT.md` roadmap partially outdated (P0 done). |
-
----
-
-## Overall Assessment
-
-| Metric | Value |
-|--------|-------|
-| **Overall score** | **77 / 100** |
-| **Overall rating** | **Good — ready for BMFC squad rollout** |
-| **Previous score** | 75 / 100 (`docs/PROJECT-AUDIT.md`, 8 Jun) |
-| **Public-launch equivalent** | ~62 / 100 (auth/testing gaps would matter more) |
-
-### Category summary
-
-| # | Category | Score | Δ vs PROJECT-AUDIT | Rating |
-|---|----------|------:|-------------------|--------|
-| 1 | Code Quality & Architecture | 78 | +1 | Good |
-| 2 | Security | 68 | +10* | Adequate (closed squad) |
-| 3 | Performance | 55 | — | Adequate |
-| 4 | Accessibility | 48 | −8 | Requires Improvement |
-| 5 | User Experience | 82 | +6 | Good |
-| 6 | Data Integrity & Business Logic | 76 | +6 | Good |
-| 7 | DDSFL Integration & Data Sync | 74 | new | Good |
-| 8 | Database & Supabase | 84 | +2 | Good |
-| 9 | Testing & Reliability | 52 | +36 | Adequate |
-| 10 | DevOps & Deployment | 88 | +26 | Good |
-| 11 | UI & Design Consistency | 83 | +1 | Good |
-| 12 | Copy & Content | 86 | +4 | Good |
-
-*\*Security re-scored with closed-squad operator context (same framing as WC audits).*
-
----
-
-## Prioritised Action List
-
-### P0 — Before live season
-
-*All complete.*
-
-- ~~DDSFL scrape → Supabase upsert~~
-- ~~Live stats aggregation~~
-- ~~Migrations + seed on production Supabase~~
-- ~~Vercel deploy + env vars~~
-
-### P1 — Quality (optional)
-
-| # | Task | Status |
-|---|------|--------|
-| 1 | Apply migration **011** (`lineups`) on production Supabase | ⚠️ Pending |
-| 2 | Commit + push lineup builder and P2 cleanup (local changes) | ⚠️ Pending |
-| 3 | E2E tests: login, availability, admin result entry | Open |
-| 4 | Accessibility pass (if ever needed) | Deprioritised by operator |
-
-### P2 — When you have time
-
-1. Admin audit log for invite/result/fixture changes.
-2. Scheduled DDSFL sync (GitHub Action or Supabase cron) — weekly is enough.
-3. Empty-state copy on league table / stats when no events entered.
-4. Deploy `send-push` + VAPID keys if squad wants notifications.
-5. Delete or archive stale `COPY.md` (WC predictor).
-
-### P3 — Nice to have
-
-1. Route code splitting (Admin routes, Landing).
-2. In-app “Sync league data” button for admin (calls edge function or documents script).
-3. Fix GK clean-sheet logic to only count games goalkeeper played.
-4. Error monitoring if app grows beyond core squad.
-
-### Explicitly not required (operator decision)
-
-- Login rate limiting / longer passcodes
-- Server-side session invalidation on logout
-- Full accessibility audit
-- Automated DDSFL sync more than weekly
+| Low | README migration list was outdated (001–008 vs 001–011) — fixed in repo cleanup. |
 
 ---
 
@@ -411,13 +364,9 @@ Human UK-English copy pass completed; `docs/COPY-RULES.md` and `.cursor/rules/co
 
 | # | Severity | Issue | Status |
 |---|----------|-------|--------|
-| 1 | ~~High~~ | Live stats always 0 in Supabase mode | ✅ Fixed (`playerStats.ts`) |
-| 2 | ~~High~~ | Vercel blank page (missing env) | ✅ Fixed (`ConfigRequired`) |
-| 3 | ~~Medium~~ | ESLint `useMockData` hooks violation | ✅ Renamed `isMockDataMode()` |
-| 4 | Low | Migration 011 not applied on prod | Open |
-| 5 | Low | Vitest timeout on Windows local path | Open (CI OK) |
-| 6 | Low | `COPY.md` stale | Open |
-| 7 | Low | GK clean sheets over-count | Open |
+| 1 | Medium | Migration 011 not confirmed on prod | Open |
+| 2 | Medium | GK clean sheets over-count | Open |
+| 3 | Low | Vitest worker timeout on Windows (OneDrive path) | Open — CI OK |
 
 ---
 
@@ -437,14 +386,55 @@ Human UK-English copy pass completed; `docs/COPY-RULES.md` and `.cursor/rules/co
 
 ---
 
+## Prioritised action list
+
+### P0 — Before live season
+
+*All complete.*
+
+### P1 — Quality (recommended for 90+)
+
+See full phased plan in [`docs/ROADMAP-90.md`](docs/ROADMAP-90.md).
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Apply migration **011** (`lineups`) on production Supabase | ⚠️ Confirm |
+| 2 | Fix GK clean-sheet logic + unit test | Open |
+| 3 | Accessibility pass (skip link, lineup slots, form labels) | Open |
+| 4 | E2E tests: login, availability, admin result entry | Open |
+| 5 | Docs cleanup (`COPY.md`, README migration count) | ✅ Done |
+
+### P2 — When you have time
+
+1. Route code splitting (Admin routes, Landing).
+2. Scheduled DDSFL sync (GitHub Action) — weekly is enough.
+3. Empty-state copy on league table / stats when no events entered.
+4. Deploy `send-push` + VAPID keys if squad wants notifications.
+5. Admin audit log for invite/result/fixture changes.
+
+### P3 — Nice to have
+
+1. In-app "Sync league data" button for admin.
+2. Error monitoring if app grows beyond core squad.
+3. Consolidate audit docs into single source of truth.
+
+### Explicitly not required (operator decision)
+
+- Login rate limiting / longer passcodes
+- Server-side session invalidation on logout
+- Full WCAG 2.2 AA certification
+- Automated DDSFL sync more than weekly
+
+---
+
 ## Summary
 
-For a **closed BMFC squad deployment**, the app is in **strong shape for the 2025/26 season**. Since the June 8 project audit, P0 is closed: Supabase is live, Vercel is configured, DDSFL sync works, stats aggregate from match events, CI runs on every push, and copy reads like a human wrote it.
+For a **closed BMFC squad deployment**, the app is in **strong shape for the 2025/26 season** at **79 / 100**. Since audit v1, lineup builder and legacy cleanup are on `main`, and production env failures now surface clearly via `ConfigRequired`.
 
-The biggest remaining operational steps are **apply migration 011**, **commit/push local lineup + cleanup work**, and **invite players** when ready. Weak spots — accessibility, E2E coverage, bundle size, manual DDSFL sync — are proportionate to a private ~25-user grassroots app, not squad launch blockers.
+The biggest remaining operational steps are **confirm migration 011 on prod**, **fix GK clean-sheet stats**, and follow the [**90+ roadmap**](docs/ROADMAP-90.md). Weak spots — accessibility, E2E coverage, bundle size, manual DDSFL sync — are proportionate to a private ~25-user grassroots app, not squad launch blockers.
 
 If you ever opened this to the public internet, revisit security (passcode strength, rate limiting) and expand test coverage first.
 
 ---
 
-*End of Club Hub audit v1. Reflects workspace at `60ac34d` plus uncommitted lineup/P2 changes (11 Jun 2026).*
+*End of Club Hub audit v2. Reflects `main` at `3296128` (19 Jun 2026).*

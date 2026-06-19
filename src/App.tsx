@@ -29,6 +29,24 @@ import NotFound from './pages/NotFound'
 
 const wantsSupabase = import.meta.env.VITE_CLUB_DATA_SOURCE === 'supabase'
 
+function GuestRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen relative flex items-center justify-center">
+        <PageBackground />
+        <div className="w-8 h-8 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (user?.is_approved) return <Navigate to="/dashboard" replace />
+  if (user && !user.is_approved) return <Navigate to="/pending" replace />
+
+  return <>{children}</>
+}
+
 function ProtectedRoute({
   children,
   adminOnly = false,
@@ -73,9 +91,15 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
       <Route path="/invite/:token" element={<InvitePage />} />
+      {/* Legacy World Cup predictor URLs — keep for old bookmarks */}
       <Route path="/signup" element={<Navigate to="/login" replace />} />
+      <Route path="/leaderboard" element={<Navigate to="/table" replace />} />
+      <Route path="/history" element={<Navigate to="/results" replace />} />
+      <Route path="/predictions" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/admin/ops" element={<Navigate to="/admin" replace />} />
+      <Route path="/admin/technical" element={<Navigate to="/admin" replace />} />
       <Route
         path="/pending"
         element={
@@ -100,7 +124,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="/leaderboard" element={<Navigate to="/table" replace />} />
       <Route
         path="/results"
         element={
@@ -133,8 +156,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="/history" element={<Navigate to="/results" replace />} />
-      <Route path="/predictions" element={<Navigate to="/dashboard" replace />} />
       <Route
         path="/admin"
         element={
@@ -207,8 +228,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="/admin/ops" element={<Navigate to="/admin" replace />} />
-      <Route path="/admin/technical" element={<Navigate to="/admin" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )
