@@ -30,6 +30,14 @@ export function usePushNotifications(playerId?: string) {
       const result = await subscribeToPush(playerId)
       await refresh()
       return result
+    } catch (err) {
+      console.error('[push] enable() caught error from subscribeToPush', {
+        playerId,
+        permission: typeof Notification !== 'undefined' ? Notification.permission : 'n/a',
+        error: err,
+      })
+      await refresh()
+      return { ok: false, reason: err instanceof Error ? err.message : 'Could not enable notifications' }
     } finally {
       setLoading(false)
     }

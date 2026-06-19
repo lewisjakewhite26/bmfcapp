@@ -9,6 +9,8 @@ import { getTimeGreeting } from '../lib/greeting'
 import { formatMatchDate, formatMatchTime, formatScore } from '../lib/format'
 import { CLUB_NAME, LEAGUE_NAME } from '../lib/mockData'
 import { PushNotificationPrompt } from '../components/ui/PushNotificationPrompt'
+import { PwaInstallNotificationPrompt } from '../components/ui/PwaInstallNotificationPrompt'
+import { isStandalonePwa } from '../lib/pushNotifications'
 import { DataErrorBanner } from '../components/ui/DataErrorBanner'
 import { AvailabilityNudge } from '../components/club/AvailabilityNudge'
 import { pageContainerClass } from '../lib/layout'
@@ -33,7 +35,11 @@ export default function Dashboard() {
     <PageShell>
       <Navbar />
       <div className={pageContainerClass()}>
-        <PushNotificationPrompt playerId={user?.id} />
+        {isStandalonePwa() ? (
+          <PwaInstallNotificationPrompt playerId={user?.id} />
+        ) : (
+          <PushNotificationPrompt playerId={user?.id} />
+        )}
 
         {dashboardError && (
           <DataErrorBanner message={dashboardError} onRetry={reloadDashboard} />

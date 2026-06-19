@@ -1,0 +1,7 @@
+# BMFC Club Hub — Supabase CLI (edge function deploy only)
+#
+# Schema/migrations live in supabase-club/migrations/ (apply separately).
+# Edge function source of truth: supabase-club/functions/
+
+[functions.send-push]
+entrypoint = "../supabase-club/functions/send-push/index.ts"

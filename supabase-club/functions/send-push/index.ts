@@ -1,5 +1,6 @@
 // Supabase Edge Function — send web push to squad members
-// Deploy: supabase functions deploy send-push --project-ref <club-hub-ref>
+// Deploy (from repo root): supabase functions deploy send-push --project-ref kqxsbbkedhidsfojapny
+// CLI reads supabase/config.toml → entrypoint points here (source of truth).
 // Secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto:you@example.com)
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
