@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { ResultEntryForm } from '../components/admin/ResultEntryForm'
@@ -8,11 +8,14 @@ import { pageContainerClass } from '../lib/layout'
 import type { FixtureWithResult, SquadMember } from '../types'
 
 export default function AdminResults() {
-  const [tab, setTab] = useState<'pending' | 'completed'>('pending')
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState<'pending' | 'completed'>(() =>
+    searchParams.get('tab') === 'completed' ? 'completed' : 'pending',
+  )
   const [upcoming, setUpcoming] = useState<FixtureWithResult[]>([])
   const [completed, setCompleted] = useState<FixtureWithResult[]>([])
   const [squad, setSquad] = useState<SquadMember[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(() => searchParams.get('fixture'))
   const [loading, setLoading] = useState(true)
 
   const reload = async () => {
@@ -28,6 +31,13 @@ export default function AdminResults() {
   }
 
   useEffect(() => { reload() }, [])
+
+  useEffect(() => {
+    const fixture = searchParams.get('fixture')
+    const tabParam = searchParams.get('tab')
+    if (fixture) setSelectedId(fixture)
+    if (tabParam === 'completed' || tabParam === 'pending') setTab(tabParam)
+  }, [searchParams])
 
   const list = tab === 'pending' ? upcoming : completed
   const selected = list.find((f) => f.id === selectedId) ?? list[0]

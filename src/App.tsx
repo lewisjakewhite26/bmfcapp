@@ -30,6 +30,7 @@ const AdminAvailability = lazy(() => import('./pages/AdminAvailability'))
 const AdminNotifications = lazy(() => import('./pages/AdminNotifications'))
 const AdminLineup = lazy(() => import('./pages/AdminLineup'))
 const AdminFundraisers = lazy(() => import('./pages/AdminFundraisers'))
+const AdminLive = lazy(() => import('./pages/AdminLive'))
 
 const wantsSupabase = import.meta.env.VITE_CLUB_DATA_SOURCE === 'supabase'
 
@@ -237,6 +238,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <AdminLineup />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/live/:fixtureId"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminLive />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/live"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminLive />
           </ProtectedRoute>
         }
       />

@@ -6,6 +6,7 @@ const IMPACT: Record<MatchEvent['event_type'], number> = {
   motm: 15,
   yellow_card: -3,
   red_card: -10,
+  substitution: 0,
 }
 
 export function eventImpact(event: MatchEvent): number {

@@ -43,6 +43,7 @@ import {
   getMockFundraiserParticipationSummary,
   uploadMockPlayerPhoto,
   deleteMockPlayerPhoto,
+  startMockLiveMatch,
 } from './mockData'
 import { playerPhotoFileExt, validatePlayerPhotoFile } from './playerPhotos'
 import type {
@@ -399,11 +400,12 @@ export async function resetUserPasscode(userId: string, newPasscode: string): Pr
 export async function upsertSquadMember(
   playerId: string,
   displayName: string,
-  position: SquadPosition
+  position: SquadPosition,
+  squadNumber?: number | null,
 ): Promise<void> {
   if (isMockDataMode()) {
     await delay()
-    upsertMockSquad(playerId, displayName, position)
+    upsertMockSquad(playerId, displayName, position, squadNumber)
     return
   }
 
@@ -416,6 +418,7 @@ export async function upsertSquadMember(
     p_player_id: playerId,
     p_position: position,
     p_joined_date: new Date().toISOString().slice(0, 10),
+    p_squad_number: squadNumber ?? null,
   })
   if (error) throw error
 }
@@ -558,6 +561,30 @@ export async function approveUser(userId: string, approved: boolean): Promise<vo
   if (error) throw error
 }
 
+/** Manual fixtures eligible for live matchday logging. */
+export async function fetchLiveMatchFixtures(): Promise<FixtureWithResult[]> {
+  const manual = await fetchManualFixtures()
+  return manual.filter((f) => f.status === 'scheduled' || f.status === 'in_progress')
+}
+
+export async function startLiveMatch(fixtureId: string): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    startMockLiveMatch(fixtureId)
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_start_live_match', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_fixture_id: fixtureId,
+  })
+  if (error) throw error
+}
+
 export async function submitMatchResult(
   fixtureId: string,
   goalsFor: number,
@@ -585,6 +612,7 @@ export async function submitMatchResult(
       player_id: e.player_id,
       event_type: e.event_type,
       minute: e.minute,
+      ...(e.related_player_id ? { related_player_id: e.related_player_id } : {}),
     })),
   })
   if (error) throw error

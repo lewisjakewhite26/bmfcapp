@@ -412,25 +412,43 @@ export function resetMockPasscode(userId: string, passcode: string) {
   void passcode
 }
 
-export function upsertMockSquad(playerId: string, displayName: string, position: string) {
+export function upsertMockSquad(
+  playerId: string,
+  displayName: string,
+  position: string,
+  squadNumber?: number | null,
+) {
   const existing = squad.find((s) => s.player_id === playerId)
   if (existing) {
     existing.position = position
     existing.active = true
     existing.display_name = displayName
+    if (squadNumber !== undefined) {
+      existing.squad_number = squadNumber
+    }
     return existing
   }
   const row: SquadMember = {
     id: crypto.randomUUID(),
     player_id: playerId,
     display_name: displayName,
-    squad_number: null,
+    squad_number: squadNumber ?? null,
     position,
     joined_date: new Date().toISOString().slice(0, 10),
     active: true,
   }
   squad.push(row)
   return row
+}
+
+export function startMockLiveMatch(fixtureId: string) {
+  const fixture = fixtures.find((f) => f.id === fixtureId)
+  if (!fixture) throw new Error('Fixture not found')
+  if (fixture.ddsfl_fixture_id != null) throw new Error('Only manually added fixtures can go live here')
+  if (fixture.status !== 'scheduled' && fixture.status !== 'in_progress') {
+    throw new Error('Fixture cannot go live')
+  }
+  fixture.status = 'in_progress'
 }
 
 export function removeMockSquad(playerId: string) {

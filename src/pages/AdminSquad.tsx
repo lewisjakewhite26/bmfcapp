@@ -145,11 +145,32 @@ export default function AdminSquad() {
 
   const handlePositionChange = async (member: SquadMember, position: SquadPosition) => {
     try {
-      await upsertSquadMember(member.player_id, member.display_name, position)
+      await upsertSquadMember(member.player_id, member.display_name, position, member.squad_number)
       toast.success('Position updated')
       reload()
     } catch {
       toast.error("Couldn't update position")
+    }
+  }
+
+  const handleSquadNumberChange = async (member: SquadMember, raw: string) => {
+    const trimmed = raw.trim()
+    const squadNumber = trimmed === '' ? null : parseInt(trimmed, 10)
+    if (trimmed !== '' && (isNaN(squadNumber!) || squadNumber! < 1 || squadNumber! > 99)) {
+      toast.error('Squad number must be 1–99')
+      return
+    }
+    try {
+      await upsertSquadMember(
+        member.player_id,
+        member.display_name,
+        (member.position ?? 'Midfielder') as SquadPosition,
+        squadNumber,
+      )
+      toast.success('Squad number updated')
+      reload()
+    } catch {
+      toast.error("Couldn't update squad number")
     }
   }
 
@@ -232,6 +253,16 @@ export default function AdminSquad() {
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
+                <input
+                  type="number"
+                  min={1}
+                  max={99}
+                  placeholder="#"
+                  defaultValue={member.squad_number ?? ''}
+                  onBlur={(e) => handleSquadNumberChange(member, e.target.value)}
+                  className="input-field w-16 text-center"
+                  aria-label={`Squad number for ${member.display_name}`}
+                />
                 <button
                   type="button"
                   onClick={() => handleRemove(member)}

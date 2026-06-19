@@ -9,7 +9,12 @@ interface ResultEntryFormProps {
   onSaved: () => void
 }
 
-type EventRow = { player_id: string; event_type: MatchEventType; minute: string }
+type EventRow = {
+  player_id: string
+  event_type: MatchEventType
+  minute: string
+  related_player_id?: string
+}
 
 export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProps) {
   const [goalsFor, setGoalsFor] = useState(fixture.result?.goals_for?.toString() ?? '')
@@ -20,6 +25,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
       player_id: e.player_id,
       event_type: e.event_type,
       minute: e.minute?.toString() ?? '',
+      related_player_id: e.related_player_id ?? undefined,
     }))
   )
   const [saving, setSaving] = useState(false)
@@ -50,6 +56,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
             player_id: e.player_id,
             event_type: e.event_type,
             minute: e.minute ? parseInt(e.minute, 10) : null,
+            ...(e.related_player_id ? { related_player_id: e.related_player_id } : {}),
           }))
       )
       toast.success('Result saved')
@@ -109,7 +116,24 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
               <option value="motm">MOTM</option>
               <option value="yellow_card">Yellow</option>
               <option value="red_card">Red</option>
+              <option value="substitution">Substitution off</option>
             </select>
+            {ev.event_type === 'substitution' && (
+              <select
+                value={ev.related_player_id ?? ''}
+                onChange={(e) =>
+                  setEvents((prev) =>
+                    prev.map((row, j) => (j === i ? { ...row, related_player_id: e.target.value } : row)),
+                  )
+                }
+                className="input-field text-sm col-span-2"
+              >
+                <option value="">Player on…</option>
+                {squad.map((s) => (
+                  <option key={s.player_id} value={s.player_id}>{s.display_name}</option>
+                ))}
+              </select>
+            )}
             <input
               type="number"
               min={0}

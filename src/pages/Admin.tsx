@@ -9,6 +9,7 @@ const LINKS = [
   { to: '/admin/fundraisers', title: 'Fundraisers', desc: 'Track squad participation in fundraising events' },
   { to: '/admin/squad', title: 'Squad list', desc: 'Positions for stats and result entry' },
   { to: '/admin/fixtures', title: 'Add match', desc: 'Friendlies, cups & pre-season games' },
+  { to: '/admin/live', title: 'Live matchday', desc: 'Log goals, cards & subs during the game' },
   { to: '/admin/results', title: 'Enter results', desc: 'Scores, goalscorers, MOTM & cards' },
   { to: '/admin/training', title: 'Training sessions', desc: 'Add, edit & remove training on the calendar' },
   { to: '/admin/events', title: 'Other events', desc: 'Socials, AGM, committee meetings & more' },

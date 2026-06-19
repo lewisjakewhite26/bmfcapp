@@ -21,6 +21,7 @@ const EVENT_LABELS: Record<string, string> = {
   motm: '⭐ MOTM',
   yellow_card: '🟨 Yellow',
   red_card: '🟥 Red',
+  substitution: '🔄 Sub off',
 }
 
 interface PlayerProfileViewProps {

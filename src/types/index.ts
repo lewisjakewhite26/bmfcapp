@@ -36,10 +36,10 @@ export interface CreateInviteResult {
   invite_expires_at: string | null
 }
 
-export type FixtureStatus = 'scheduled' | 'completed' | 'postponed' | 'cancelled'
+export type FixtureStatus = 'scheduled' | 'in_progress' | 'completed' | 'postponed' | 'cancelled'
 export type HomeAway = 'home' | 'away'
 export type AvailabilityStatus = 'yes' | 'no' | 'maybe'
-export type MatchEventType = 'goal' | 'assist' | 'motm' | 'yellow_card' | 'red_card'
+export type MatchEventType = 'goal' | 'assist' | 'motm' | 'yellow_card' | 'red_card' | 'substitution'
 
 export interface Fixture {
   id: string
@@ -68,6 +68,8 @@ export interface MatchEvent {
   fixture_id: string
   player_id: string
   player_name?: string
+  related_player_id?: string | null
+  related_player_name?: string
   event_type: MatchEventType
   minute: number | null
   created_at: string
