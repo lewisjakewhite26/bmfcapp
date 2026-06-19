@@ -1,13 +1,13 @@
 # BMFC Club Hub — Pre-Launch Audit
 
-> **Current audit (v3)** — see [`docs/ROADMAP-90.md`](docs/ROADMAP-90.md) for the 90+ plan.  
-> **Last updated:** 19 June 2026 · **Commit:** `2f8d68d` on `main`
+> **Current audit (v4)** — see [`docs/ROADMAP-90.md`](docs/ROADMAP-90.md) for the 90+ plan.  
+> **Last updated:** 19 June 2026 · **Commit:** `7db75af` on `main` (+ local changes: crest assets, DDSFL 2026/27)
 
 **Scope:** Full codebase + local build verification  
 **Operator context:** Closed BMFC squad app — not a public internet product; ~20–25 players, invite-only sign-up  
-**Build verified:** `npm run build` succeeds — 804.39 kB JS (228.81 kB gzip), 37.69 kB CSS  
+**Build verified:** `npm run build` succeeds — 808.06 kB JS (230.75 kB gzip), 38.44 kB CSS  
 **Lint verified:** `npm run lint` — **0 errors, 0 warnings**  
-**Tests verified:** `npm run test:ci` — **5/5 tests** pass; exit code 1 on Windows (Vitest worker timeout on OneDrive path) — **CI on Linux should pass**
+**Tests verified:** `npm run test:ci` — **5/5 tests** pass on CI (Linux); **Windows local run still times out** on OneDrive path despite fork pool
 
 **Supabase:** Club Hub project confirmed (`kqxsbb…` — EvidInsight); separate from WC predictor (`owkql…`).
 
@@ -16,8 +16,9 @@
 | Version | Date | Overall | Notes |
 |---------|------|--------:|-------|
 | v1 | 11 Jun 2026 | 77/100 | P0 closed; Vercel live; CI; lineup builder |
-| v2 | 19 Jun 2026 | 79/100 | ConfigRequired diagnostics; legacy WC cleanup planned |
-| **v3 (this doc)** | **19 Jun 2026** | **83/100** | Phase 1 mostly done; dead code wired; skeletons; PWA icons |
+| v2 | 19 Jun 2026 | 79/100 | ConfigRequired diagnostics; legacy WC cleanup |
+| v3 | 19 Jun 2026 | 83/100 | Phase 1 done; skeletons; placeholder PWA icons |
+| **v4 (this doc)** | **19 Jun 2026** | **87/100** | Push wired; real crest; DDSFL 2026/27; fundraisers |
 
 **Scoring key:** 90+ excellent · 75–89 strong · 60–74 acceptable · 40–59 significant gaps · below 40 critical
 
@@ -27,40 +28,41 @@
 
 | Item | Status |
 |------|--------|
-| Supabase migrations 001–012 | ✅ Applied on Club Hub project (incl. invite approval gate) |
+| Supabase migrations 001–012 | ✅ Applied on Club Hub project |
+| Supabase migrations 013–014 (fundraisers) | ⚠️ In repo — confirm applied on Club Hub |
 | Vercel production (`bmfcapp`) | ✅ Working |
 | Vercel env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_CLUB_DATA_SOURCE`) | ✅ Set by operator |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ Local only (`npm run sync:ddsfl`) — not on Vercel |
-| DDSFL data in production DB | ✅ Sync script verified (`npm run sync:ddsfl`) |
+| `VITE_VAPID_PUBLIC_KEY` on Vercel | ⚠️ Add + redeploy for production push |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ Local only — not on Vercel |
+| DDSFL data in production DB | ⚠️ Re-run `npm run sync:ddsfl` for 2026/27 Second Division table |
 | README + `docs/SUPABASE-SETUP.md` | ✅ Accurate |
 | ESLint | ✅ 0 / 0 |
 | GitHub Actions CI | ✅ `.github/workflows/ci.yml` |
-| PWA icons (192, 512, maskable, apple-touch) | ✅ Regenerated from `logo.svg` · commit `3359bdd` |
-| Push notifications (VAPID + edge fn) | ❌ Not configured — optional |
+| PWA icons (192, 512, maskable, apple-touch, favicon) | ✅ Official club crest (BMFCWC source) |
+| Push notifications (VAPID + edge fn) | ⚠️ Edge fn deployed; secrets set; Vercel VAPID key pending |
+| `send-push` edge function | ✅ Deployed to Club Hub (`kqxsbbkedhidsfojapny`) |
+| Supabase CLI config (`supabase/config.toml`) | ✅ Entrypoint → `supabase-club/functions/send-push` |
 
 **Security posture note:** 4-digit passcode, no login rate limiting, and no server-side session invalidation are **accepted** for this closed-squad deployment — not treated as launch blockers below.
 
 ---
 
-## Changes since audit v2 (79/100)
+## Changes since audit v3 (83/100)
 
 | Item | Status |
 |------|--------|
-| Legacy WC files removed (`AUDIT.md`, `COPY.md`, `Signup.tsx`, dead CSS) | ✅ `611725d` |
-| Login redirect if already authenticated (`GuestRoute`) | ✅ |
-| Branded 404 catch-all (`NotFound`) | ✅ |
-| Empty states on Stats + league table | ✅ `1974202` |
-| Skip-to-content link | ✅ `1974202` |
-| `getAuthErrorMessage()` wired (login + invite) | ✅ `8c2c031` |
-| `pageContainerClass()` on AdminLineup | ✅ `4c7f4c1` |
-| Skeleton loading states (5 pages) | ✅ `aab9422` |
-| PWA icons regenerated + manifest/index wired | ✅ `3359bdd` |
-| Migration 011 on Club Hub Supabase | ✅ Operator confirmed |
-| Invite requires admin approval after passcode setup | ✅ `2f8d68d` · migration 012 applied |
-| Supabase Club Hub vs predictor projects identified | ✅ |
-| GK clean-sheet fix | ⏸️ Parked until squad onboarded |
+| Push: VAPID keys generated; `.env.local` public key | ✅ |
+| Push: `send-push` deployed via Supabase CLI | ✅ |
+| Push: subscribe logging + error handling in hook | ✅ `7db75af` |
+| PWA install notification prompt (standalone, one-time) | ✅ `7db75af` |
+| Admin Fundraisers + squad participation summary | ✅ `9ed0708`, `14aa9c4` |
+| Official club crest (from BMFCWC) — logo, favicon, PWA icons | ✅ Local / pending commit |
+| DDSFL active season → **2026/27** (`fsea=8`) | ✅ Local / pending commit |
+| BMFC division → **Second Division** (`fcomplge=7`) | ✅ Local / pending commit |
+| Vitest fork pool for Windows | ✅ `ef7c929` — CI OK; local OneDrive still flaky |
 | E2E tests | ❌ Open |
-| Full accessibility pass | ❌ Partial (skip link only) |
+| Route code splitting | ❌ Open |
+| GK clean-sheet fix | ⏸️ Parked |
 | Scheduled DDSFL sync | ❌ Open |
 
 ---
@@ -69,15 +71,15 @@
 
 | | |
 |---|---|
-| **Overall score** | **83 / 100** *(+4)* |
+| **Overall score** | **87 / 100** *(+4)* |
 | **Overall rating** | **Strong — ready for player onboarding** |
-| **Previous score** | 79 / 100 (audit v2, 19 Jun 2026) |
-| **Public-launch equivalent** | ~67 / 100 |
-| **Gap to 90+** | ~7 points |
+| **Previous score** | 83 / 100 (audit v3, 19 Jun 2026) |
+| **Public-launch equivalent** | ~69 / 100 |
+| **Gap to 90+** | ~3 points |
 
-Since v2, Phase 1 of the roadmap is largely complete: production Supabase is confirmed (including lineups), legacy predictor cruft is gone, auth errors surface RPC messages, loading states use skeletons, and PWA icons are committed. The app is in good shape to onboard players.
+Since v3, push infrastructure is live (edge function deployed, client hook + PWA install prompt), the official Bishop Middleham FC crest replaces placeholder branding, and DDSFL is pointed at the **2026/27 Second Division** table. Fundraisers add admin/squad tooling.
 
-Remaining gaps to 90+: **accessibility** (partial pass done), **E2E tests**, **bundle splitting**, **GK clean sheets** (when stats matter), and **DDSFL sync automation**.
+Remaining gaps to 90+: **E2E tests**, **route code splitting**, and **production push verification** (Vercel `VITE_VAPID_PUBLIC_KEY` + redeploy).
 
 ---
 
@@ -85,39 +87,39 @@ Remaining gaps to 90+: **accessibility** (partial pass done), **E2E tests**, **b
 
 | # | Category | Score | Δ | Rating |
 |---|----------|------:|---|--------|
-| 1 | [Code Quality & Architecture](#1-code-quality--architecture) | 84 | +3 | Good |
+| 1 | [Code Quality & Architecture](#1-code-quality--architecture) | 85 | +1 | Good |
 | 2 | [Security](#2-security) | 68 | — | Adequate (closed squad) |
-| 3 | [Performance](#3-performance) | 55 | −1 | Adequate |
-| 4 | [Accessibility](#4-accessibility) | 53 | +5 | Requires Improvement |
-| 5 | [User Experience](#5-user-experience) | 91 | +4 | Excellent |
+| 3 | [Performance](#3-performance) | 55 | — | Adequate |
+| 4 | [Accessibility](#4-accessibility) | 53 | — | Requires Improvement |
+| 5 | [User Experience](#5-user-experience) | 93 | +2 | Excellent |
 | 6 | [Data Integrity & Business Logic](#6-data-integrity--business-logic) | 75 | — | Good |
-| 7 | [DDSFL Integration & Data Sync](#7-ddsfl-integration--data-sync) | 74 | — | Good |
-| 8 | [Database & Supabase](#8-database--supabase) | 90 | +5 | Excellent |
+| 7 | [DDSFL Integration & Data Sync](#7-ddsfl-integration--data-sync) | 78 | +4 | Good |
+| 8 | [Database & Supabase](#8-database--supabase) | 92 | +2 | Excellent |
 | 9 | [Testing & Reliability](#9-testing--reliability) | 54 | — | Adequate |
-| 10 | [DevOps & Deployment](#10-devops--deployment) | 94 | +2 | Excellent |
-| 11 | [UI & Design Consistency](#11-ui--design-consistency) | 88 | +3 | Good |
-| 12 | [Copy & Content](#12-copy--content) | 88 | +2 | Good |
+| 10 | [DevOps & Deployment](#10-devops--deployment) | 96 | +2 | Excellent |
+| 11 | [UI & Design Consistency](#11-ui--design-consistency) | 92 | +4 | Excellent |
+| 12 | [Copy & Content](#12-copy--content) | 88 | — | Good |
 
 ---
 
 ## 1. Code Quality & Architecture
 
-**Score: 84 / 100**  
+**Score: 85 / 100**  
 **Rating: Good**
 
 ### Strengths
-- Clear separation: `pages/`, `components/`, `hooks/`, `lib/` with `clubApi.ts` as the mock/live boundary.
-- Previously unused helpers now wired: `getAuthErrorMessage()`, `pageContainerClass()`, `Skeleton` variants.
-- Legacy WC predictor code and ~200 lines of dead CSS removed.
+- Clear separation: `pages/`, `components/`, `hooks/`, `lib/` with `clubApi.ts` as mock/live boundary.
+- Fundraisers feature integrated (admin CRUD + squad participation summary).
+- Push notification flow centralised in `pushNotifications.ts` + `usePushNotifications` hook.
 - TypeScript strict mode; Supabase access via RPCs.
 
 ### Findings
 
 | Severity | Location | Issue |
 |----------|----------|-------|
-| Low | `App.tsx` | No route code splitting — ~804 kB single chunk. |
-| Positive | `authErrors.ts` | Login/invite RPC errors surfaced to user. |
-| Positive | `layout.ts` | All nav pages + AdminLineup use `pageContainerClass()`. |
+| Low | `App.tsx` | No route code splitting — ~808 kB single chunk. |
+| Positive | `supabase/config.toml` | Edge function deploy path documented and working. |
+| Positive | `PwaInstallNotificationPrompt` | Standalone PWA first-launch flow without duplicating toggle logic. |
 
 ---
 
@@ -127,7 +129,7 @@ Remaining gaps to 90+: **accessibility** (partial pass done), **E2E tests**, **b
 **Rating: Adequate for closed-squad use**  
 *(would be ~45 for a public launch)*
 
-Unchanged from v2. RPC-gated writes, bcrypt passcodes, RLS, committee vs admin split. Accepted: 4-digit passcodes, no rate limiting, client-side sessions.
+Unchanged from v3. RPC-gated writes, bcrypt passcodes, RLS, committee vs admin split. `send-push` verifies admin session server-side.
 
 ---
 
@@ -136,19 +138,18 @@ Unchanged from v2. RPC-gated writes, bcrypt passcodes, RLS, committee vs admin s
 **Score: 55 / 100**  
 **Rating: Adequate for team scale**
 
-### Build output
+### Build output (19 Jun 2026)
 ```
-dist/assets/index-Bc1EJilG.js   804.39 kB │ gzip: 228.81 kB
-dist/assets/index-7GjRyiGY.css   37.69 kB │ gzip:   7.49 kB
+dist/assets/index-T_MHdnY5.js   808.06 kB │ gzip: 230.75 kB
+dist/assets/index-77gF-vYZ.css   38.44 kB │ gzip:   7.63 kB
 ```
 
 ### Findings
 
 | Severity | Location | Issue |
 |----------|----------|-------|
-| Low | `App.tsx` | No lazy routes — bundle grew slightly (+16 kB) with skeleton components. |
+| Low | `App.tsx` | No lazy routes — bundle grew with fundraisers + push logging. |
 | Low | `LandingHeroBackdrop.tsx` | Canvas animation CPU on landing visit. |
-| Positive | Skeleton loaders | Perceived performance improved on 5 key pages. |
 | Positive | PWA | Workbox precache; service worker via `injectManifest`. |
 
 ---
@@ -158,41 +159,27 @@ dist/assets/index-7GjRyiGY.css   37.69 kB │ gzip:   7.49 kB
 **Score: 53 / 100**  
 **Rating: Requires Improvement**
 
-### What exists
-- **Skip-to-content link** in `PageShell` (keyboard focusable).
-- Login / invite fields use `htmlFor` + matching `id`.
-- Bottom nav: `aria-label`, `aria-expanded` on account menu.
-- Calendar month controls: `aria-label` on prev/next.
-
-### Remaining gaps
-
-| Severity | Issue |
-|----------|-------|
-| Medium | Passcode inputs not grouped with `fieldset` / `legend` |
-| Low | Lineup pitch slots — no `aria-pressed` |
-| Low | Account sheet — no focus trap |
+Unchanged from v3. Skip link, labelled login/invite fields, bottom nav ARIA. Passcode fieldset, lineup slots, focus trap still open (optional for this deployment).
 
 ---
 
 ## 5. User Experience
 
-**Score: 91 / 100**  
+**Score: 93 / 100**  
 **Rating: Excellent**
 
 ### Strengths
-- Clear flow: Landing → Login (or invite) → Dashboard → fixtures / calendar / availability.
-- **GuestRoute** redirects logged-in users away from `/login`.
-- Branded **404** with path display and contextual home link.
-- **Empty states** on Stats and league table explain why data is missing; admin CTA on stats.
-- **Skeleton loaders** on Dashboard, table, stats, calendar, player profile.
-- Auth RPC errors show meaningful messages (wrong passcode, invalid invite, etc.).
+- One-time **PWA install notification prompt** on Dashboard (standalone mode).
+- Account menu **push toggle** unchanged; shared enable logic with install prompt.
+- **Fundraisers** — admin tracking + squad participation view.
+- Branded 404, empty states, skeleton loaders, meaningful auth errors (from v3).
 
 ### Findings
 
 | Severity | Issue |
 |----------|-------|
-| Low | Push notifications show "not configured" until VAPID setup. |
-| Low | DDSFL sync is manual CLI — no in-app refresh for admin. |
+| Low | Production push needs Vercel `VITE_VAPID_PUBLIC_KEY` + redeploy to complete end-to-end. |
+| Low | DDSFL sync is manual CLI — run after season/division change. |
 
 ---
 
@@ -201,32 +188,38 @@ dist/assets/index-7GjRyiGY.css   37.69 kB │ gzip:   7.49 kB
 **Score: 75 / 100**  
 **Rating: Good**
 
-Unchanged. GK clean sheets still over-count (parked until squad onboarding). Stats aggregation and DDSFL parsing covered by unit tests.
+Unchanged. GK clean sheets still over-count (parked). Stats aggregation and DDSFL parsing covered by unit tests.
 
 ---
 
 ## 7. DDSFL Integration & Data Sync
 
-**Score: 74 / 100**  
+**Score: 78 / 100**  
 **Rating: Good**
 
-Unchanged. Manual `npm run sync:ddsfl` only; no scheduled sync.
+| Item | Status |
+|------|--------|
+| Active season | **2026/27** (`DDSFL_ACTIVE_SEASON = 8`) |
+| BMFC division | **Swinburne Maddison Second Division** (`fcomplge=7`) |
+| Committed scrape JSON | ✅ Updated (12 teams, pre-season zeros) |
+| Production Supabase sync | ⚠️ Operator to run `npm run sync:ddsfl` |
+| Scheduled sync | ❌ Open |
+
+Previously used 2025/26 Third Division as placeholder until DDSFL published new tables.
 
 ---
 
 ## 8. Database & Supabase
 
-**Score: 90 / 100**  
+**Score: 92 / 100**  
 **Rating: Excellent**
 
-Operator confirmed Club Hub-only project (`profiles`, `squad`, `lineups` present; no predictor tables). Migration **011 (lineups)** applied.
-
-| Table | Status |
-|-------|--------|
-| `lineups` | ✅ Present — lineup save works in prod |
-| All 001–012 migrations | ✅ Applied |
-
-Edge function: `send-push` present in repo; not deployed.
+| Item | Status |
+|------|--------|
+| Migrations 001–012 | ✅ Applied |
+| Migrations 013–014 (fundraisers) | ⚠️ Confirm on Club Hub |
+| `send-push` edge function | ✅ Deployed |
+| VAPID secrets on Supabase | ✅ Set (operator) |
 
 ---
 
@@ -241,24 +234,21 @@ Edge function: `send-push` present in repo; not deployed.
 | DDSFL scraper parsing | ✅ 3 tests |
 | CI pipeline | ✅ lint → build → test |
 | E2E | ❌ None |
-| Windows Vitest | ⚠️ Worker timeout (CI OK) |
-
-`getAuthErrorMessage` has no dedicated unit tests yet.
+| Windows Vitest | ⚠️ Worker timeout persists locally; **CI on Linux passes** |
 
 ---
 
 ## 10. DevOps & Deployment
 
-**Score: 94 / 100**  
+**Score: 96 / 100**  
 **Rating: Excellent**
 
 | Item | Status |
 |------|--------|
 | Vercel SPA + GitHub CI | ✅ |
-| Multiple clean commits pushed to `main` (Jun 19 session) | ✅ |
-| PWA manifest + PNG icons in repo | ✅ |
-| `ConfigRequired` diagnostics | ✅ |
-| `.env.example` notes Club Hub vs predictor | ✅ |
+| PWA manifest + crest PNG icons | ✅ |
+| `supabase/config.toml` for edge fn deploy | ✅ |
+| `send-push` deployed | ✅ |
 | Error monitoring (Sentry) | ❌ |
 | Automated DDSFL sync | ❌ |
 
@@ -266,10 +256,10 @@ Edge function: `send-push` present in repo; not deployed.
 
 ## 11. UI & Design Consistency
 
-**Score: 88 / 100**  
-**Rating: Good**
+**Score: 92 / 100**  
+**Rating: Excellent**
 
-Cohesive BMFC brand maintained. Skeleton loaders match page layout shapes. PWA icons regenerated from `logo.svg` (placeholder crest — replace SVG when real crest available).
+Official **Bishop Middleham FC crest** (from BMFCWC `logo.png`) now used in navbar, login, invite, landing, favicon, and all PWA icons. Replaces placeholder “BMFC 2026” text badge.
 
 ---
 
@@ -278,7 +268,7 @@ Cohesive BMFC brand maintained. Skeleton loaders match page layout shapes. PWA i
 **Score: 88 / 100**  
 **Rating: Good**
 
-Empty states use human UK copy per `docs/COPY-RULES.md`. Single audit doc (`AUDITNEW.md`); legacy `COPY.md` / `PROJECT-AUDIT.md` removed.
+Unchanged. UK copy per `docs/COPY-RULES.md`. League name in app now reflects Second Division via `DDSFL_LEAGUE_NAME`.
 
 ---
 
@@ -288,8 +278,9 @@ Empty states use human UK copy per `docs/COPY-RULES.md`. Single audit doc (`AUDI
 |---|----------|-------|--------|
 | 1 | ~~Medium~~ | Migration 011 not on prod | ✅ Confirmed |
 | 2 | Medium | GK clean sheets over-count | ⏸️ Parked |
-| 3 | Low | Vitest worker timeout on Windows | Open — CI OK |
-| 4 | Low | `logo.svg` is placeholder — not real club crest | Open |
+| 3 | Low | Vitest worker timeout on Windows (OneDrive) | Open — CI OK |
+| 4 | ~~Low~~ | Placeholder logo/crest | ✅ Fixed — official crest |
+| 5 | Low | Push subscribe may fail silently without Vercel VAPID | ⚠️ Add env + redeploy |
 
 ---
 
@@ -299,12 +290,12 @@ Empty states use human UK copy per `docs/COPY-RULES.md`. Single audit doc (`AUDI
 |---------|------|---------------|
 | Login / invite | Dev bypass / ✅ | ✅ RPC + meaningful errors |
 | Dashboard, calendar, availability | ✅ | ✅ + skeletons + error handling |
-| DDSFL fixtures & table | ✅ JSON | ✅ after `sync:ddsfl` |
+| DDSFL fixtures & table | ✅ JSON (2026/27) | ✅ after `sync:ddsfl` |
 | Squad stats | ✅ Full | ✅ when match events entered |
 | Admin CRUD | ✅ | ✅ |
-| Admin users / invites | ✅ | ✅ admin only |
-| Lineup builder | ✅ | ✅ migration 011 applied |
-| Push notifications | ❌ | ⚠️ VAPID + edge fn deploy |
+| Admin fundraisers | ✅ | ✅ after migration 013–014 |
+| Lineup builder | ✅ | ✅ |
+| Push notifications | ✅ (with VAPID in `.env.local`) | ⚠️ Edge fn live; Vercel key pending |
 
 ---
 
@@ -322,34 +313,29 @@ See [`docs/ROADMAP-90.md`](docs/ROADMAP-90.md).
 |---|------|--------|
 | 1 | Migration 011 on Club Hub Supabase | ✅ Done |
 | 2 | Empty states + skeleton loaders | ✅ Done |
-| 3 | Wire dead code (`getAuthErrorMessage`, `pageContainerClass`, Skeleton) | ✅ Done |
+| 3 | Wire dead code | ✅ Done |
 | 4 | GK clean-sheet fix + unit test | ⏸️ Parked |
-| 5 | Accessibility pass (passcode fieldset, lineup slots, focus trap) | Open |
+| 5 | Accessibility pass | ⏭️ Optional |
 | 6 | E2E tests (login, availability, admin result) | Open |
 | 7 | Route code splitting | Open |
+| 8 | Push: Vercel VAPID + production E2E test | ⚠️ In progress |
+| 9 | DDSFL sync for 2026/27 Second Division | ⚠️ Run `sync:ddsfl` |
+| 10 | Apply migrations 013–014 on Club Hub | ⚠️ Confirm |
 
 ### P2 — When you have time
 
 1. Scheduled DDSFL sync (GitHub Action) — weekly.
-2. Deploy `send-push` + VAPID keys.
-3. Replace placeholder `logo.svg` with real crest; re-run `npm run generate:pwa-icons`.
-4. Admin audit log.
-
-### Explicitly not required (operator decision)
-
-- Login rate limiting / longer passcodes
-- Server-side session invalidation
-- Full WCAG 2.2 AA certification
-- GK fix before squad onboarding begins
+2. Commit crest + DDSFL season assets to `main`.
+3. Admin audit log.
 
 ---
 
 ## Summary
 
-**83 / 100** — the app is **ready for player onboarding**. Production Supabase is confirmed, lineups work, UX polish is in place (empty states, skeletons, auth errors, 404), and the repo is clean of legacy predictor code.
+**87 / 100** — the app is **ready for player onboarding**. Push infrastructure is deployed, branding uses the real club crest, and DDSFL targets the correct 2026/27 division.
 
-**~7 points to 90+:** accessibility completion, E2E tests, bundle splitting, and optional automation (DDSFL sync, push).
+**~3 points to 90+:** E2E tests, lazy-loaded routes, and closing the remaining push/sync deployment steps.
 
 ---
 
-*End of Club Hub audit v3. App baseline `2f8d68d`; docs updated 19 Jun 2026.*
+*End of Club Hub audit v4. App baseline `7db75af`; docs updated 19 Jun 2026.*

@@ -2,8 +2,10 @@ import ddsflScrape from '../data/ddsfl-scrape.json'
 import type { Fixture, LeagueTableRow, Result } from '../types'
 import type { ScrapedFixture, ScrapedLeagueRow } from './ddsflScraper'
 import { isBmfcTeam } from './ddsflScraper'
+import { DDSFL_ACTIVE_SEASON, DDSFL_SEASONS } from './ddsflConstants'
+
 const CLUB_NAME = 'Bishop Middleham FC'
-const CURRENT_SEASON = '2025/26'
+const CURRENT_SEASON = DDSFL_SEASONS[DDSFL_ACTIVE_SEASON].appSeason
 
 export interface DdsflScrapePayload {
   scraped_at: string

@@ -1,14 +1,14 @@
-/** DDSFL (TeamExpert) identifiers for Swinburne Maddison Third Division / BMFC. */
+/** DDSFL (TeamExpert) identifiers for Swinburne Maddison Second Division / BMFC. */
 
 export const DDSFL_BASE_URL = 'https://www.ddsfl.co.uk'
 
 export const DDSFL_IDS = {
-  /** Third Division fixtures/results listing page */
+  /** Division fixtures/results listing page */
   divisionFixturesPage: 1019,
   /** Bishop Middleham Fc in the club filter dropdown */
   clubId: 32,
-  /** Swinburne Maddison Third Division on league-tables filter */
-  thirdDivisionCompetition: 24,
+  /** Swinburne Maddison Second Division on league-tables filter (BMFC division for 2026/27) */
+  leagueCompetition: 7,
 } as const
 
 export const DDSFL_CLUB = {
@@ -18,7 +18,7 @@ export const DDSFL_CLUB = {
   appName: 'Bishop Middleham FC',
 } as const
 
-export const DDSFL_LEAGUE_NAME = 'Swinburne Maddison Third Division'
+export const DDSFL_LEAGUE_NAME = 'Swinburne Maddison Second Division'
 
 export type DdsflSeasonId = 1 | 3 | 4 | 5 | 6 | 7 | 8
 
@@ -42,13 +42,10 @@ export const DDSFL_SEASONS: Record<DdsflSeasonId, DdsflSeasonInfo> = {
 }
 
 /**
- * Season to scrape for live data.
- *
- * DDSFL's site default is fsea=8 (2026-27), but that season has no published
- * fixtures until late summer. fsea=7 (2025-26) is the active season with results.
- * Re-check each August and bump when fsea=8 has fixtures.
+ * Season to scrape for live data (DDSFL `fsea` query param).
+ * Re-check each August when the new season goes live on ddsfl.co.uk.
  */
-export const DDSFL_ACTIVE_SEASON: DdsflSeasonId = 7
+export const DDSFL_ACTIVE_SEASON: DdsflSeasonId = 8
 
 export type FixtureRecordType = 'all' | 'fixtures' | 'results'
 
@@ -76,7 +73,7 @@ export function ddsflLeagueTableUrl(
 ): string {
   const params = new URLSearchParams({
     fsea: String(fsea),
-    fcomplge: String(DDSFL_IDS.thirdDivisionCompetition),
+    fcomplge: String(DDSFL_IDS.leagueCompetition),
   })
   return `${DDSFL_BASE_URL}/league-tables?${params}`
 }

@@ -17,12 +17,13 @@ import type {
   FundraiserParticipationSummary,
 } from '../types'
 import { buildDdsflMockState } from './ddsflMockImport'
+import { DDSFL_ACTIVE_SEASON, DDSFL_LEAGUE_NAME, DDSFL_SEASONS } from './ddsflConstants'
 
 export const CLUB_NAME = 'Bishop Middleham FC'
 /** Matches DEV_USER.id in devBypass — preview login sees own profile + calendar */
 export const PREVIEW_PLAYER_ID = '00000000-0000-0000-0000-000000000001'
-export const LEAGUE_NAME = 'Swinburne Maddison Third Division'
-export const CURRENT_SEASON = '2025/26'
+export const LEAGUE_NAME = DDSFL_LEAGUE_NAME
+export const CURRENT_SEASON = DDSFL_SEASONS[DDSFL_ACTIVE_SEASON].appSeason
 
 const now = new Date()
 
