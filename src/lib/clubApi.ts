@@ -31,6 +31,10 @@ import {
   setMockUserCommittee,
   upsertMockAvailability,
   upsertMockSquad,
+  getMockFundraisers,
+  addMockFundraiser,
+  getMockFundraiserDetail,
+  saveMockFundraiserParticipation,
 } from './mockData'
 import type {
   AdminUserRow,
@@ -44,6 +48,9 @@ import type {
   CreateInviteResult,
   Fixture,
   FormationId,
+  Fundraiser,
+  FundraiserDetail,
+  FundraiserParticipationRow,
   HomeAway,
   Lineup,
   LineupSlotAssignment,
@@ -691,4 +698,83 @@ export async function saveLineup(
   })
   if (error) throw error
   return data as Lineup
+}
+
+export async function fetchFundraisers(): Promise<Fundraiser[]> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockFundraisers()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_list_fundraisers', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return (data ?? []) as Fundraiser[]
+}
+
+export async function createFundraiser(
+  input: Pick<Fundraiser, 'name' | 'date' | 'notes'>,
+): Promise<Fundraiser> {
+  if (isMockDataMode()) {
+    await delay()
+    return addMockFundraiser(input)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_create_fundraiser', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_name: input.name,
+    p_date: input.date,
+    p_notes: input.notes,
+  })
+  if (error) throw error
+  return data as Fundraiser
+}
+
+export async function fetchFundraiserDetail(fundraiserId: string): Promise<FundraiserDetail> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockFundraiserDetail(fundraiserId)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_get_fundraiser_participation', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_fundraiser_id: fundraiserId,
+  })
+  if (error) throw error
+  return data as FundraiserDetail
+}
+
+export async function saveFundraiserParticipation(
+  fundraiserId: string,
+  entries: Pick<FundraiserParticipationRow, 'profile_id' | 'participated'>[],
+): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    saveMockFundraiserParticipation(fundraiserId, entries)
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_save_fundraiser_participation', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_fundraiser_id: fundraiserId,
+    p_entries: entries,
+  })
+  if (error) throw error
 }

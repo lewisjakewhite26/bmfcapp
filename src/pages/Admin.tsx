@@ -6,6 +6,7 @@ import { pageContainerClass } from '../lib/layout'
 
 const LINKS = [
   { to: '/admin/users', title: 'Squad members', desc: 'Create accounts, invite links & passcodes', adminOnly: true },
+  { to: '/admin/fundraisers', title: 'Fundraisers', desc: 'Track squad participation in fundraising events' },
   { to: '/admin/squad', title: 'Squad list', desc: 'Positions for stats and result entry' },
   { to: '/admin/fixtures', title: 'Add match', desc: 'Friendlies, cups & pre-season games' },
   { to: '/admin/results', title: 'Enter results', desc: 'Scores, goalscorers, MOTM & cards' },

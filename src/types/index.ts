@@ -182,3 +182,22 @@ export interface AvailablePlayer {
   player_id: string
   display_name: string
 }
+
+export interface Fundraiser {
+  id: string
+  name: string
+  date: string
+  notes: string | null
+  created_at: string
+}
+
+export interface FundraiserParticipationRow {
+  profile_id: string
+  display_name: string
+  participated: boolean
+}
+
+export interface FundraiserDetail {
+  fundraiser: Fundraiser
+  participants: FundraiserParticipationRow[]
+}

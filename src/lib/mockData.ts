@@ -11,6 +11,9 @@ import type {
   PlayerStats,
   SquadMember,
   TrainingSession,
+  Fundraiser,
+  FundraiserDetail,
+  FundraiserParticipationRow,
 } from '../types'
 import { buildDdsflMockState } from './ddsflMockImport'
 
@@ -87,6 +90,23 @@ export const MOCK_TRAINING: TrainingSession[] = [
   },
 ]
 
+export const MOCK_FUNDRAISERS: Fundraiser[] = [
+  {
+    id: 'fr1',
+    name: 'Bag pack at Tesco',
+    date: '2025-11-02',
+    notes: 'Morning shift',
+    created_at: daysAgo(30),
+  },
+  {
+    id: 'fr2',
+    name: 'Race night',
+    date: '2026-01-15',
+    notes: null,
+    created_at: daysAgo(10),
+  },
+]
+
 export const MOCK_ADMIN_USERS: AdminUserRow[] = [
   {
     id: '00000000-0000-0000-0000-000000000001',
@@ -126,10 +146,23 @@ let results = [...initialMock.results]
 let leagueTableRows = [...initialMock.leagueTableRows]
 let matchEvents = [...initialMock.matchEvents]
 let training = [...MOCK_TRAINING]
+let fundraisers = [...MOCK_FUNDRAISERS]
+const fundraiserParticipation = new Map<string, Map<string, boolean>>()
 let availability: Availability[] = []
 const mockLineups = new Map<string, Lineup>()
 let adminUsers = [...MOCK_ADMIN_USERS]
 let squad = [...MOCK_SQUAD]
+
+function seedMockFundraiserParticipation() {
+  fundraiserParticipation.clear()
+  const fr1 = new Map<string, boolean>()
+  fr1.set('p1', true)
+  fr1.set('p2', true)
+  fr1.set(PREVIEW_PLAYER_ID, true)
+  fundraiserParticipation.set('fr1', fr1)
+}
+
+seedMockFundraiserParticipation()
 
 function seedMockFixtureAvailability() {
   const next = [...fixtures]
@@ -555,6 +588,64 @@ export function removeMockTrainingSession(trainingId: string): void {
   availability = availability.filter((a) => a.training_id !== trainingId)
 }
 
+export function getMockFundraisers(): Fundraiser[] {
+  return [...fundraisers].sort((a, b) => {
+    const byDate = b.date.localeCompare(a.date)
+    if (byDate !== 0) return byDate
+    return b.created_at.localeCompare(a.created_at)
+  })
+}
+
+export function addMockFundraiser(
+  input: Pick<Fundraiser, 'name' | 'date' | 'notes'>,
+): Fundraiser {
+  const row: Fundraiser = {
+    ...input,
+    id: crypto.randomUUID(),
+    created_at: new Date().toISOString(),
+  }
+  fundraisers.push(row)
+  fundraiserParticipation.set(row.id, new Map())
+  return row
+}
+
+export function getMockFundraiserDetail(fundraiserId: string): FundraiserDetail {
+  const fundraiser = fundraisers.find((f) => f.id === fundraiserId)
+  if (!fundraiser) throw new Error('Fundraiser not found')
+
+  const participation = fundraiserParticipation.get(fundraiserId) ?? new Map()
+
+  return {
+    fundraiser,
+    participants: squad
+      .filter((m) => m.active)
+      .map((m) => ({
+        profile_id: m.player_id,
+        display_name: m.display_name,
+        participated: participation.get(m.player_id) ?? false,
+      }))
+      .sort((a, b) => a.display_name.localeCompare(b.display_name)),
+  }
+}
+
+export function saveMockFundraiserParticipation(
+  fundraiserId: string,
+  entries: Pick<FundraiserParticipationRow, 'profile_id' | 'participated'>[],
+): void {
+  if (!fundraisers.some((f) => f.id === fundraiserId)) {
+    throw new Error('Fundraiser not found')
+  }
+
+  const map = new Map<string, boolean>()
+  for (const entry of entries) {
+    if (!squad.some((m) => m.active && m.player_id === entry.profile_id)) {
+      throw new Error('Invalid squad member')
+    }
+    map.set(entry.profile_id, entry.participated)
+  }
+  fundraiserParticipation.set(fundraiserId, map)
+}
+
 export function getMockLineup(fixtureId: string): Lineup | null {
   return mockLineups.get(fixtureId) ?? null
 }
@@ -585,6 +676,8 @@ export function resetMockData() {
   leagueTableRows = [...reset.leagueTableRows]
   matchEvents = [...reset.matchEvents]
   training = [...MOCK_TRAINING]
+  fundraisers = [...MOCK_FUNDRAISERS]
+  seedMockFundraiserParticipation()
   availability = []
   mockLineups.clear()
   adminUsers = [...MOCK_ADMIN_USERS]
