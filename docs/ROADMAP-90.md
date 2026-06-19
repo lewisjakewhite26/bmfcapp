@@ -1,21 +1,22 @@
 # BMFC Club Hub — Roadmap to 90+ / 100
 
-**Baseline:** [AUDITNEW.md](../AUDITNEW.md) v4 — **87 / 100** (19 June 2026)  
+**Baseline:** [AUDITNEW.md](../AUDITNEW.md) v5 — **90 / 100** (19 June 2026)  
 **Target:** **90–91 / 100** — production-grade private squad app  
-**Gap to close:** ~3 points  
-**Estimated effort:** ~1 week part-time (Phases 2–3)
+**Status:** **Target reached** — remaining work is E2E tests and ops polish
 
 ---
 
 ## Overview
 
-Phase 1 and most Phase 4 polish are done. Reaching 90+ now focuses on:
+Phase 1, Phase 3 (performance), and most feature work are done. **90/100 achieved.**
 
-1. **Testing** (54/100) — Playwright E2E smoke tests
-2. **Performance** (55/100) — lazy-load admin + landing, smaller first paint
-3. **Ops closure** — Vercel VAPID key, `sync:ddsfl` for 2026/27, commit crest assets
+Remaining to push toward 91+:
 
-**Skipped / optional:** Accessibility pass — not required for this closed ~25-player squad app. Skip link done; revisit only if someone reports friction.
+1. **Testing** (58/100) — Playwright E2E smoke tests
+2. **Ops closure** — Vercel VAPID key, production push E2E verification
+3. **Optional** — pause landing canvas off-screen; GK clean-sheet fix when squad is in
+
+**Skipped / optional:** Accessibility pass — not required for this closed ~25-player squad app.
 
 **Parked:** GK clean-sheet fix — when squad is in and stats matter.
 
@@ -27,9 +28,9 @@ Phase 1 and most Phase 4 polish are done. Reaching 90+ now focuses on:
 |-----------|--------:|--------|
 | v2 baseline (19 Jun AM) | 79 | ✅ |
 | v3 (Phase 1) | 83 | ✅ |
-| **Today (v4)** | **87** | ✅ Push + crest + DDSFL 2026/27 |
-| After Phase 2 (E2E) | ~89 | **Next** |
-| After Phase 3 (perf) | **90–91** | Target |
+| v4 (push + crest + DDSFL) | 87 | ✅ |
+| **v5 (today)** | **90** | ✅ Lazy routes + live matchday + photos + events |
+| After Phase 2 (E2E) | ~91 | Optional stretch |
 
 ---
 
@@ -37,7 +38,7 @@ Phase 1 and most Phase 4 polish are done. Reaching 90+ now focuses on:
 
 ```mermaid
 gantt
-    title Roadmap to 90+ (revised 19 Jun 2026 PM)
+    title Roadmap (revised 19 Jun 2026 — 90 reached)
     dateFormat  YYYY-MM-DD
     section Phase 1 — Ops DONE
     Migration 011–012 on Club Hub     :done, p1a, 2026-06-19, 1d
@@ -46,25 +47,30 @@ gantt
     section Phase 4 — Polish DONE
     send-push deploy + supabase config :done, p4a, 2026-06-19, 1d
     PWA install notification prompt    :done, p4b, 2026-06-19, 1d
-    Official crest + icon regen          :done, p4c, 2026-06-19, 1d
-    DDSFL 2026/27 Second Division        :done, p4d, 2026-06-19, 1d
-    Fundraisers (013–014)                :done, p4e, 2026-06-19, 1d
+    Official crest + icon regen        :done, p4c, 2026-06-19, 1d
+    DDSFL 2026/27 Second Division      :done, p4d, 2026-06-19, 1d
+    Fundraisers (013–014)              :done, p4e, 2026-06-19, 1d
+    Club events (015)                  :done, p4f, 2026-06-19, 1d
+    Player photos (016)                :done, p4g, 2026-06-19, 1d
+    Live matchday (017–018)            :done, p4h, 2026-06-19, 1d
+    Copy audit vs COPY-RULES           :done, p4i, 2026-06-19, 1d
     section Phase 2 — Testing
-    Vitest pool forks (Windows)          :done, p2a, 2026-06-19, 1d
-    Playwright E2E (3 flows)             :p2b, 2026-06-23, 3d
-    Unit tests (formations, auth err)    :p2c, 2026-06-26, 1d
-    section Phase 3 — Performance
-    Lazy-load Admin + Landing            :p3a, 2026-06-28, 2d
-    Pause landing canvas off-screen      :p3b, 2026-06-30, 1d
+    Vitest pool forks (Windows)        :done, p2a, 2026-06-19, 1d
+    liveMatchEvents unit tests         :done, p2a2, 2026-06-19, 1d
+    Playwright E2E (3 flows)           :p2b, 2026-06-23, 3d
+    Unit tests (formations, auth err)  :p2c, 2026-06-26, 1d
+    section Phase 3 — Performance DONE
+    Lazy-load Admin + Landing          :done, p3a, 2026-06-19, 1d
+    Main chunk ~177 kB gzip            :done, p3a2, 2026-06-19, 1d
+    Pause landing canvas off-screen    :p3b, 2026-06-30, 1d
     section Ops closure
-    Vercel VITE_VAPID_PUBLIC_KEY         :pops1, 2026-06-20, 1d
-    npm run sync:ddsfl (2026/27)         :pops2, 2026-06-20, 1d
-    Apply migrations 013–014 on Supabase :pops3, 2026-06-20, 1d
-    Commit crest + DDSFL assets          :pops4, 2026-06-20, 1d
+    Vercel VITE_VAPID_PUBLIC_KEY       :pops1, 2026-06-20, 1d
+    npm run sync:ddsfl (2026/27)       :pops2, 2026-06-20, 1d
+    Apply migrations 015–018 Supabase  :done, pops3, 2026-06-19, 1d
     section Phase 5 — Automation
-    Weekly DDSFL sync GitHub Action      :p5a, 2026-07-05, 2d
+    Weekly DDSFL sync GitHub Action    :done, p5a, 2026-06-19, 1d
     section When squad is in
-    GK clean-sheet fix                   :p6a, 2026-08-01, 1d
+    GK clean-sheet fix                 :p6a, 2026-08-01, 1d
 ```
 
 ---
@@ -80,31 +86,35 @@ gantt
 
 ---
 
-## Phase 4 — Polish ✅ (mostly complete)
+## Phase 4 — Polish ✅ (complete)
 
 | Task | Status |
 |------|--------|
 | Deploy `send-push` + VAPID Supabase secrets | ✅ |
 | `supabase/config.toml` → `supabase-club/functions/send-push` | ✅ |
-| PWA install notification prompt (standalone) | ✅ `7db75af` |
-| Push subscribe logging + hook error handling | ✅ `7db75af` |
-| Official club crest (BMFCWC) — logo, favicon, PWA icons | ✅ Local — **commit pending** |
-| DDSFL **2026/27** + **Second Division** | ✅ Local — **commit + sync pending** |
-| Admin Fundraisers + participation summary | ✅ `9ed0708`, `14aa9c4` |
-| Migrations 013–014 applied on Club Hub | ⚠️ Confirm |
+| PWA install notification prompt (standalone) | ✅ |
+| Official club crest — logo, favicon, PWA icons | ✅ `4f778fd` |
+| DDSFL **2026/27** + **Second Division** | ✅ `64c0a6a` |
+| Admin Fundraisers + participation summary | ✅ |
+| Admin Other events (calendar) | ✅ `68518a5`, migration 015 |
+| Player profile photos (admin upload) | ✅ `e9287b1`, migration 016 |
+| Live matchday logger + draft persistence | ✅ `d2c31e8`, `1bc5009`, migrations 017–018 |
+| Copy alignment vs `COPY-RULES.md` | ✅ `876cae6` |
+| Stale fixture filter + “Matches” nav label | ✅ `57c31c1` |
+| Migrations 015–018 applied on Club Hub | ✅ Operator confirmed |
 | `VITE_VAPID_PUBLIC_KEY` on Vercel + redeploy | ⚠️ Operator |
 | Production push E2E test (subscribe + admin send) | ⚠️ After Vercel key |
 
 ---
 
-## Phase 2 — Testing depth ⭐ (next priority)
+## Phase 2 — Testing depth (optional stretch to 91+)
 
-**Target overall:** ~89 / 100  
-**Target category:** Testing **54 → 72**
+**Target category:** Testing **58 → 72**
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Vitest `pool: 'forks'` for Windows | ✅ `ef7c929` | CI passes; OneDrive local still flaky |
+| Vitest `pool: 'forks'` for Windows | ✅ | CI passes; OneDrive local still flaky |
+| `liveMatchEvents` unit tests | ✅ `d2c31e8` |
 | Playwright E2E: login → dashboard | Open | Mock mode or dev bypass |
 | Playwright E2E: set availability | Open | Core player flow |
 | Playwright E2E: admin result entry | Open | Core admin flow |
@@ -113,19 +123,16 @@ gantt
 
 ---
 
-## Phase 3 — Performance
+## Phase 3 — Performance ✅ (complete)
 
-**Target overall:** ~90–91 / 100  
-**Target category:** Performance **55 → 72**
+**Target category:** Performance **55 → 72** — achieved
 
 | Task | Status |
 |------|--------|
-| `React.lazy()` for `/admin/*` routes | Open |
-| Lazy-load `Landing` | Open |
-| Main chunk under ~400 kB gzip | Open |
-| Pause landing canvas off-screen | Open |
-
-Current bundle: **808 kB JS (231 kB gzip)** — single chunk.
+| `React.lazy()` for `/admin/*` routes | ✅ `19b2d9f` |
+| Lazy-load `Landing` | ✅ `19b2d9f` |
+| Main chunk ~630 kB / **~177 kB gzip** (was 231 kB) | ✅ |
+| Pause landing canvas off-screen | Open (optional) |
 
 ---
 
@@ -141,7 +148,7 @@ Current bundle: **808 kB JS (231 kB gzip)** — single chunk.
 
 ## Phase 6 — Accessibility (optional / skipped)
 
-Not required for this deployment. Score stays ~53 — acceptable.
+Not required for this deployment.
 
 | Task | Status |
 |------|--------|
@@ -157,35 +164,34 @@ Not required for this deployment. Score stays ~53 — acceptable.
 | GK clean-sheet fix + unit test | When 2+ keepers or live stats |
 | Invite players via Admin → Squad members | Operational |
 | Re-run `sync:ddsfl` during season | After fixtures appear on DDSFL |
+| Use Admin → Live matchday on match days | Operational |
 
 ---
 
-## Category score targets
+## Category score targets (v5)
 
-| Category | v4 | Target | Phase |
-|----------|---:|-------:|-------|
-| Code Quality & Architecture | 85 | 88 | 3 |
+| Category | v4 | v5 | Phase |
+|----------|---:|---:|-------|
+| Code Quality & Architecture | 85 | 87 | 3 ✅ |
 | Security | 68 | 68 | N/A |
-| Performance | 55 | 72 | 3 |
+| Performance | 55 | 72 | 3 ✅ |
 | Accessibility | 53 | 53 | ⏭️ Skipped |
-| User Experience | 93 | 94 | Ops (push E2E) |
-| Data Integrity | 75 | 82 | 7 (parked) |
-| DDSFL Integration | 78 | 85 | Ops + 5 |
-| Database & Supabase | 92 | 93 | Ops (013–014) |
-| Testing & Reliability | 54 | 72 | 2 |
-| DevOps & Deployment | 96 | 97 | Ops + 5 |
+| User Experience | 93 | 95 | 4 ✅ |
+| Data Integrity | 75 | 76 | 7 (parked GK) |
+| DDSFL Integration | 78 | 80 | Ops |
+| Database & Supabase | 92 | 94 | 015–018 ✅ |
+| Testing & Reliability | 54 | 58 | 2 (partial) |
+| DevOps & Deployment | 96 | 96 | — |
 | UI & Design | 92 | 92 | ✅ Done |
-| Copy & Content | 88 | 88 | Done |
+| Copy & Content | 88 | 90 | ✅ Done |
 
 ---
 
 ## Recommended next 3 actions
 
-1. **Add `VITE_VAPID_PUBLIC_KEY` on Vercel** and redeploy — complete push notifications.
-2. **Run `npm run sync:ddsfl`** — load 2026/27 Second Division table into production.
-3. **Playwright E2E** — login + availability smoke test (~1 day).
-
-Then: lazy-load admin routes (~half day) → **90+**.
+1. **Add `VITE_VAPID_PUBLIC_KEY` on Vercel** and redeploy — complete push notifications (including live goal alerts).
+2. **Run `npm run sync:ddsfl`** — refresh 2026/27 Second Division table when DDSFL publishes fixtures.
+3. **Playwright E2E** — login + availability smoke test (optional stretch to 91+).
 
 ---
 
@@ -208,4 +214,4 @@ After each phase, update [AUDITNEW.md](../AUDITNEW.md):
 
 ---
 
-*Roadmap updated 19 June 2026 (PM). Baseline: AUDITNEW.md v4 (app at `7db75af`). ~3 points to 90+.*
+*Roadmap updated 19 June 2026 (PM). Baseline: AUDITNEW.md v5 (app at `1bc5009`). **90/100 reached.***
