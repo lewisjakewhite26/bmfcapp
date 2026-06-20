@@ -1487,6 +1487,11 @@ export async function saveFundraiserParticipation(
   if (isMockDataMode()) {
     await delay()
     saveMockFundraiserParticipation(fundraiserId, entries)
+    void recordAdminAudit('fundraiser_participation_saved', {
+      entityType: 'fundraiser',
+      entityId: fundraiserId,
+      details: { entry_count: entries.length },
+    })
     return
   }
 
@@ -1500,6 +1505,11 @@ export async function saveFundraiserParticipation(
     p_entries: entries,
   })
   if (error) throw error
+  void recordAdminAudit('fundraiser_participation_saved', {
+    entityType: 'fundraiser',
+    entityId: fundraiserId,
+    details: { entry_count: entries.length },
+  })
 }
 
 export async function fetchFundraiserParticipationSummary(): Promise<FundraiserParticipationSummary> {
@@ -1524,7 +1534,9 @@ export async function uploadPlayerPhoto(playerId: string, file: File): Promise<s
 
   if (isMockDataMode()) {
     await delay()
-    return uploadMockPlayerPhoto(playerId, file)
+    const url = uploadMockPlayerPhoto(playerId, file)
+    void recordAdminAudit('photo_uploaded', { entityType: 'profile', entityId: playerId })
+    return url
   }
 
   const session = getClubSession()
@@ -1555,6 +1567,7 @@ export async function uploadPlayerPhoto(playerId: string, file: File): Promise<s
   })
   if (confirmErr) throw confirmErr
 
+  void recordAdminAudit('photo_uploaded', { entityType: 'profile', entityId: playerId })
   return (confirmed as { photo_url: string }).photo_url
 }
 
@@ -1562,6 +1575,7 @@ export async function deletePlayerPhoto(playerId: string): Promise<void> {
   if (isMockDataMode()) {
     await delay()
     deleteMockPlayerPhoto(playerId)
+    void recordAdminAudit('photo_deleted', { entityType: 'profile', entityId: playerId })
     return
   }
 
@@ -1574,6 +1588,7 @@ export async function deletePlayerPhoto(playerId: string): Promise<void> {
     p_player_id: playerId,
   })
   if (error) throw error
+  void recordAdminAudit('photo_deleted', { entityType: 'profile', entityId: playerId })
 }
 
 function num(value: unknown): number {
@@ -1667,7 +1682,13 @@ export async function createSponsorship(input: {
 }): Promise<Sponsorship> {
   if (isMockDataMode()) {
     await delay()
-    return addMockSponsorship(input)
+    const row = addMockSponsorship(input)
+    void recordAdminAudit('sponsorship_created', {
+      entityType: 'sponsorship',
+      entityId: row.id,
+      details: { sponsor_name: input.sponsor_name, amount: input.amount },
+    })
+    return row
   }
 
   const session = getClubSession()
@@ -1684,7 +1705,13 @@ export async function createSponsorship(input: {
     p_date_added: input.date_added,
   })
   if (error) throw error
-  return mapSponsorship(data as Record<string, unknown>)
+  const row = mapSponsorship(data as Record<string, unknown>)
+  void recordAdminAudit('sponsorship_created', {
+    entityType: 'sponsorship',
+    entityId: row.id,
+    details: { sponsor_name: input.sponsor_name, amount: input.amount },
+  })
+  return row
 }
 
 export async function updateSponsorship(
@@ -1700,7 +1727,13 @@ export async function updateSponsorship(
 ): Promise<Sponsorship> {
   if (isMockDataMode()) {
     await delay()
-    return updateMockSponsorship(id, input)
+    const row = updateMockSponsorship(id, input)
+    void recordAdminAudit('sponsorship_updated', {
+      entityType: 'sponsorship',
+      entityId: id,
+      details: { sponsor_name: input.sponsor_name, amount: input.amount },
+    })
+    return row
   }
 
   const session = getClubSession()
@@ -1718,13 +1751,20 @@ export async function updateSponsorship(
     p_date_added: input.date_added,
   })
   if (error) throw error
-  return mapSponsorship(data as Record<string, unknown>)
+  const row = mapSponsorship(data as Record<string, unknown>)
+  void recordAdminAudit('sponsorship_updated', {
+    entityType: 'sponsorship',
+    entityId: id,
+    details: { sponsor_name: input.sponsor_name, amount: input.amount },
+  })
+  return row
 }
 
 export async function deleteSponsorship(id: string): Promise<void> {
   if (isMockDataMode()) {
     await delay()
     deleteMockSponsorship(id)
+    void recordAdminAudit('sponsorship_deleted', { entityType: 'sponsorship', entityId: id })
     return
   }
 
@@ -1737,6 +1777,7 @@ export async function deleteSponsorship(id: string): Promise<void> {
     p_sponsorship_id: id,
   })
   if (error) throw error
+  void recordAdminAudit('sponsorship_deleted', { entityType: 'sponsorship', entityId: id })
 }
 
 export async function fetchExpenses(): Promise<Expense[]> {
@@ -1764,7 +1805,13 @@ export async function createExpense(input: {
 }): Promise<Expense> {
   if (isMockDataMode()) {
     await delay()
-    return addMockExpense(input)
+    const row = addMockExpense(input)
+    void recordAdminAudit('expense_created', {
+      entityType: 'expense',
+      entityId: row.id,
+      details: { description: input.description, amount: input.amount },
+    })
+    return row
   }
 
   const session = getClubSession()
@@ -1779,7 +1826,13 @@ export async function createExpense(input: {
     p_expense_date: input.expense_date,
   })
   if (error) throw error
-  return mapExpense(data as Record<string, unknown>)
+  const row = mapExpense(data as Record<string, unknown>)
+  void recordAdminAudit('expense_created', {
+    entityType: 'expense',
+    entityId: row.id,
+    details: { description: input.description, amount: input.amount },
+  })
+  return row
 }
 
 export async function updateExpense(
@@ -1793,7 +1846,13 @@ export async function updateExpense(
 ): Promise<Expense> {
   if (isMockDataMode()) {
     await delay()
-    return updateMockExpense(id, input)
+    const row = updateMockExpense(id, input)
+    void recordAdminAudit('expense_updated', {
+      entityType: 'expense',
+      entityId: id,
+      details: { description: input.description, amount: input.amount },
+    })
+    return row
   }
 
   const session = getClubSession()
@@ -1809,13 +1868,20 @@ export async function updateExpense(
     p_expense_date: input.expense_date,
   })
   if (error) throw error
-  return mapExpense(data as Record<string, unknown>)
+  const row = mapExpense(data as Record<string, unknown>)
+  void recordAdminAudit('expense_updated', {
+    entityType: 'expense',
+    entityId: id,
+    details: { description: input.description, amount: input.amount },
+  })
+  return row
 }
 
 export async function deleteExpense(id: string): Promise<void> {
   if (isMockDataMode()) {
     await delay()
     deleteMockExpense(id)
+    void recordAdminAudit('expense_deleted', { entityType: 'expense', entityId: id })
     return
   }
 
@@ -1828,4 +1894,5 @@ export async function deleteExpense(id: string): Promise<void> {
     p_expense_id: id,
   })
   if (error) throw error
+  void recordAdminAudit('expense_deleted', { entityType: 'expense', entityId: id })
 }

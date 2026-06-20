@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { getClubSession } from '../lib/clubAuth'
+import { recordAdminAudit } from '../lib/adminAudit'
 import { supabase } from '../lib/supabase'
 import { fetchAdminUsers, isMockDataMode } from '../lib/clubApi'
 import { pageContainerClass } from '../lib/layout'
@@ -79,7 +80,16 @@ export default function AdminNotifications() {
       })
 
       if (error) throw error
-      toast.success(`Sent to ${data?.sent ?? 0} device(s)`)
+      const sent = (data as { sent?: number })?.sent ?? 0
+      void recordAdminAudit('push_sent', {
+        details: {
+          title,
+          recipient_count: sent,
+          mode: sendMode,
+          selected_count: sendMode === 'selected' ? selectedIds.size : undefined,
+        },
+      })
+      toast.success(`Sent to ${sent} device(s)`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't send")
     } finally {

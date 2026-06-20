@@ -32,6 +32,7 @@ const AdminNotifications = lazy(() => import('./pages/AdminNotifications'))
 const AdminLineup = lazy(() => import('./pages/AdminLineup'))
 const AdminFundraisers = lazy(() => import('./pages/AdminFundraisers'))
 const AdminFinance = lazy(() => import('./pages/AdminFinance'))
+const AdminAuditLog = lazy(() => import('./pages/AdminAuditLog'))
 const AdminLive = lazy(() => import('./pages/AdminLive'))
 
 const wantsSupabase = import.meta.env.VITE_CLUB_DATA_SOURCE === 'supabase'
@@ -273,6 +274,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <AdminFinance />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/audit"
+        element={
+          <ProtectedRoute adminOnly requireAdmin>
+            <AdminAuditLog />
           </ProtectedRoute>
         }
       />

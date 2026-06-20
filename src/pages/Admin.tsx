@@ -17,6 +17,7 @@ const LINKS = [
   { to: '/admin/fundraisers', title: 'Fundraisers', desc: 'Track squad participation in fundraising events' },
   { to: '/admin/finance', title: 'Finance', desc: 'Sponsorship income, expenses & club balance' },
   { to: '/admin/users', title: 'Squad members', desc: 'Create accounts, invite links & passcodes', adminOnly: true },
+  { to: '/admin/audit', title: 'Audit log', desc: 'Who changed what — invites, results, finance & more', adminOnly: true },
 ]
 
 export default function Admin() {
