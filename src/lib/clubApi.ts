@@ -74,6 +74,7 @@ import {
   updateMockSponsorship,
 } from './mockFinance'
 import { parseLiveDraftEntries } from './liveMatchDraftStorage'
+import { recordAdminAudit } from './adminAudit'
 import type { LiveMatchDraft } from './liveMatchEvents'
 import { playerPhotoFileExt, validatePlayerPhotoFile } from './playerPhotos'
 import type {
@@ -115,6 +116,8 @@ export {
   getMockTeamInvitePreview,
   completeMockTeamInvite,
 } from './mockData'
+
+export { fetchAuditLog } from './adminAudit'
 
 /** Use mock data until the club hub Supabase project is wired up. E2E builds always use mock. */
 export function isMockDataMode(): boolean {
@@ -437,6 +440,11 @@ export async function createInvite(
   if (isMockDataMode()) {
     await delay()
     const row = createMockInvite(position, inviteLabel)
+    void recordAdminAudit('invite_created', {
+      entityType: 'profile',
+      entityId: row.id,
+      details: { display_name: row.display_name, invite_label: row.invite_label ?? null },
+    })
     return { ...row, invite_expires_at: null }
   }
 
@@ -473,7 +481,9 @@ export async function fetchTeamInviteSettings(): Promise<TeamInviteSettings> {
 export async function generateTeamInvite(): Promise<TeamInviteSettings> {
   if (isMockDataMode()) {
     await delay()
-    return generateMockTeamInvite()
+    const settings = generateMockTeamInvite()
+    void recordAdminAudit('team_invite_generated')
+    return settings
   }
 
   const session = getClubSession()
@@ -484,13 +494,16 @@ export async function generateTeamInvite(): Promise<TeamInviteSettings> {
     p_session_token: session.sessionToken,
   })
   if (error) throw error
+  void recordAdminAudit('team_invite_generated')
   return data as TeamInviteSettings
 }
 
 export async function regenerateTeamInvite(): Promise<TeamInviteSettings> {
   if (isMockDataMode()) {
     await delay()
-    return regenerateMockTeamInvite()
+    const settings = regenerateMockTeamInvite()
+    void recordAdminAudit('team_invite_regenerated')
+    return settings
   }
 
   const session = getClubSession()
@@ -501,13 +514,16 @@ export async function regenerateTeamInvite(): Promise<TeamInviteSettings> {
     p_session_token: session.sessionToken,
   })
   if (error) throw error
+  void recordAdminAudit('team_invite_regenerated')
   return data as TeamInviteSettings
 }
 
 export async function disableTeamInvite(): Promise<TeamInviteSettings> {
   if (isMockDataMode()) {
     await delay()
-    return disableMockTeamInvite()
+    const settings = disableMockTeamInvite()
+    void recordAdminAudit('team_invite_disabled')
+    return settings
   }
 
   const session = getClubSession()
@@ -518,13 +534,16 @@ export async function disableTeamInvite(): Promise<TeamInviteSettings> {
     p_session_token: session.sessionToken,
   })
   if (error) throw error
+  void recordAdminAudit('team_invite_disabled')
   return data as TeamInviteSettings
 }
 
 export async function enableTeamInvite(): Promise<TeamInviteSettings> {
   if (isMockDataMode()) {
     await delay()
-    return enableMockTeamInvite()
+    const settings = enableMockTeamInvite()
+    void recordAdminAudit('team_invite_enabled')
+    return settings
   }
 
   const session = getClubSession()
@@ -535,10 +554,9 @@ export async function enableTeamInvite(): Promise<TeamInviteSettings> {
     p_session_token: session.sessionToken,
   })
   if (error) throw error
+  void recordAdminAudit('team_invite_enabled')
   return data as TeamInviteSettings
 }
-
-export async function updatePlayerNames(
   userId: string,
   firstName: string,
   lastName: string,

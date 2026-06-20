@@ -39,6 +39,17 @@ export interface TeamInviteSettings {
   token: string | null
 }
 
+export interface AdminAuditEntry {
+  id: string
+  action: string
+  entity_type: string | null
+  entity_id: string | null
+  details: Record<string, unknown> | null
+  created_at: string
+  actor_name: string
+  actor_login_name: string | null
+}
+
 export interface CreateInviteResult {
   id: string
   display_name: string
