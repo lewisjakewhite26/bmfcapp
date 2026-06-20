@@ -11,8 +11,6 @@ import type { InvitePreview } from '../../types'
 
 const passcodeInputType = import.meta.env.VITE_E2E === 'true' ? 'text' : 'password'
 
-type InviteStep = 1 | 2 | 3
-
 interface InviteFormProps {
   token: string
 }
@@ -20,7 +18,6 @@ interface InviteFormProps {
 export function InviteForm({ token }: InviteFormProps) {
   const [preview, setPreview] = useState<InvitePreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
-  const [step, setStep] = useState<InviteStep>(1)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [passcode, setPasscode] = useState('')
@@ -51,36 +48,8 @@ export function InviteForm({ token }: InviteFormProps) {
     return () => { cancelled = true }
   }, [token, mockMode])
 
-  const canAdvanceFromStep1 = firstName.trim().length > 0
-  const canAdvanceFromStep2 = lastName.trim().length > 0
-  const canFinish =
-    /^\d{4}$/.test(passcode) &&
-    /^\d{4}$/.test(confirmPasscode) &&
-    passcode === confirmPasscode
-
-  const goToStep2 = () => {
-    try {
-      validateNamePart(firstName, 'First name')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Enter your first name')
-      return
-    }
-    setStep(2)
-  }
-
-  const goToStep3 = () => {
-    try {
-      validateNamePart(lastName, 'Last name')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Enter your surname')
-      return
-    }
-    setStep(3)
-  }
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (step !== 3) return
 
     const form = e.currentTarget
     const passEl = form.elements.namedItem('passcode') as HTMLInputElement | null
@@ -158,15 +127,13 @@ export function InviteForm({ token }: InviteFormProps) {
         <p className="text-gray-500 text-sm mt-2">
           {preview.invite_label
             ? `Invite: ${preview.invite_label}`
-            : step === 3
-              ? 'Pick a 4-digit passcode.'
-              : 'A few quick details to get you set up.'}
+            : 'Enter your name and pick a 4-digit passcode.'}
         </p>
       </div>
 
-      {step === 1 && (
+      <div className="space-y-4">
         <div>
-          <label htmlFor="invite-first" className="block text-sm font-medium text-brand-navy mb-2">
+          <label htmlFor="invite-first" className="block text-sm text-gray-500 mb-2">
             What&apos;s your first name?
           </label>
           <input
@@ -176,14 +143,12 @@ export function InviteForm({ token }: InviteFormProps) {
             onChange={(e) => setFirstName(e.target.value)}
             className="input-field"
             autoComplete="given-name"
-            autoFocus
+            required
           />
         </div>
-      )}
 
-      {step === 2 && (
         <div>
-          <label htmlFor="invite-last" className="block text-sm font-medium text-brand-navy mb-2">
+          <label htmlFor="invite-last" className="block text-sm text-gray-500 mb-2">
             What&apos;s your surname?
           </label>
           <input
@@ -193,90 +158,48 @@ export function InviteForm({ token }: InviteFormProps) {
             onChange={(e) => setLastName(e.target.value)}
             className="input-field"
             autoComplete="family-name"
-            autoFocus
+            required
           />
         </div>
-      )}
 
-      {step === 3 && (
-        <>
-          <div>
-            <label htmlFor="invite-passcode" className="block text-sm text-gray-500 mb-2">Passcode</label>
-            <input
-              id="invite-passcode"
-              name="passcode"
-              type={passcodeInputType}
-              inputMode="numeric"
-              pattern="\d{4}"
-              maxLength={4}
-              value={passcode}
-              onChange={(e) => setPasscode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              className="input-field tracking-[0.4em] text-center font-mono"
-              placeholder="••••"
-              autoFocus
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="invite-confirm" className="block text-sm text-gray-500 mb-2">Confirm passcode</label>
-            <input
-              id="invite-confirm"
-              name="confirmPasscode"
-              type={passcodeInputType}
-              inputMode="numeric"
-              pattern="\d{4}"
-              maxLength={4}
-              value={confirmPasscode}
-              onChange={(e) => setConfirmPasscode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              className="input-field tracking-[0.4em] text-center font-mono"
-              placeholder="••••"
-              required
-            />
-          </div>
-        </>
-      )}
+        <div>
+          <label htmlFor="invite-passcode" className="block text-sm text-gray-500 mb-2">Passcode</label>
+          <input
+            id="invite-passcode"
+            name="passcode"
+            type={passcodeInputType}
+            inputMode="numeric"
+            pattern="\d{4}"
+            maxLength={4}
+            value={passcode}
+            onChange={(e) => setPasscode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            className="input-field tracking-[0.4em] text-center font-mono"
+            placeholder="••••"
+            required
+          />
+        </div>
 
-      <div className={`flex gap-3 ${step > 1 ? '' : ''}`}>
-        {step > 1 && (
-          <button
-            type="button"
-            onClick={() => setStep((step - 1) as InviteStep)}
-            disabled={loading}
-            className="btn-secondary flex-1 min-h-[44px]"
-          >
-            Back
-          </button>
-        )}
-        {step === 1 && (
-          <button
-            type="button"
-            onClick={goToStep2}
-            disabled={!canAdvanceFromStep1}
-            className="btn-primary w-full min-h-[44px]"
-          >
-            Next
-          </button>
-        )}
-        {step === 2 && (
-          <button
-            type="button"
-            onClick={goToStep3}
-            disabled={!canAdvanceFromStep2}
-            className="btn-primary flex-1 min-h-[44px]"
-          >
-            Next
-          </button>
-        )}
-        {step === 3 && (
-          <button
-            type="submit"
-            disabled={loading || !canFinish}
-            className="btn-primary flex-1 min-h-[44px]"
-          >
-            {loading ? 'Saving...' : 'Finish setup'}
-          </button>
-        )}
+        <div>
+          <label htmlFor="invite-confirm" className="block text-sm text-gray-500 mb-2">Confirm passcode</label>
+          <input
+            id="invite-confirm"
+            name="confirmPasscode"
+            type={passcodeInputType}
+            inputMode="numeric"
+            pattern="\d{4}"
+            maxLength={4}
+            value={confirmPasscode}
+            onChange={(e) => setConfirmPasscode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            className="input-field tracking-[0.4em] text-center font-mono"
+            placeholder="••••"
+            required
+          />
+        </div>
       </div>
+
+      <button type="submit" disabled={loading} className="btn-primary w-full">
+        {loading ? 'Saving...' : 'Finish setup'}
+      </button>
 
       <p className="text-center text-sm text-gray-500">
         Already set up?{' '}
@@ -285,3 +208,4 @@ export function InviteForm({ token }: InviteFormProps) {
     </form>
   )
 }
+
