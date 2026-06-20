@@ -1,11 +1,11 @@
 # BMFC Club Hub — Pre-Launch Audit
 
-> **Current audit (v7)** — see [`docs/ROADMAP-99.md`](docs/ROADMAP-99.md) for path to 99/100.  
-> **Last updated:** 20 June 2026 · **Commit:** `f91371c` on `main`
+> **Current audit (v8)** — see [`docs/ROADMAP-99.md`](docs/ROADMAP-99.md) for path to 99/100.  
+> **Last updated:** 20 June 2026 · **Commit:** `79c9688` on `main`
 
 **Scope:** Full codebase + local build verification  
 **Operator context:** Closed BMFC squad app — not a public internet product; ~20–25 players, invite-only sign-up  
-**Build verified:** `npm run build` succeeds — ~637 kB JS (~179 kB gzip main chunk), admin routes lazy-loaded  
+**Build verified:** `npm run build` succeeds — ~644 kB JS (~180 kB gzip main chunk), admin routes lazy-loaded (`AdminFinance` ~12 kB)  
 **Lint verified:** `npm run lint` — **0 errors, 0 warnings**  
 **Tests verified:** `npm run test:ci` — unit tests pass on CI (Linux); Windows local run still flaky on OneDrive path
 
@@ -21,7 +21,8 @@
 | v4 | 19 Jun 2026 | 87/100 | Push wired; real crest; DDSFL 2026/27; fundraisers |
 | v5 | 19 Jun 2026 | 90/100 | Lazy routes; live matchday; photos; events; copy audit |
 | v6 | 20 Jun 2026 | 92/100 | Onboarding rework; passcode self-service; migration 019 |
-| **v7 (this doc)** | **20 Jun 2026** | **93/100** | Prod bug fixes; ChrisL format; photo_url grant; migrations 019–021 |
+| v7 | 20 Jun 2026 | 93/100 | Prod bug fixes; ChrisL format; photo_url grant; migrations 019–021 |
+| **v8 (this doc)** | **20 Jun 2026** | **94/100** | Finance admin — sponsorships, expenses, ledger dashboard; migration 022 |
 
 **Scoring key:** 90+ excellent · 75–89 strong · 60–74 acceptable · 40–59 significant gaps · below 40 critical
 
@@ -35,13 +36,14 @@
 | Supabase migration 019 (names + passcode + invite rework) | ⚠️ Apply / verify on Club Hub (3-arg DROP + explicit GRANTs) |
 | Supabase migration 020 (display name **ChrisL** format) | ⚠️ Apply on Club Hub |
 | Supabase migration 021 (`photo_url` column grant) | ⚠️ Apply on Club Hub — fixes squad stats load error |
+| Supabase migration 022 (finance — sponsorships + expenses) | ⚠️ Apply on Club Hub |
 | Vercel production (`bmfcapp`) | ✅ Working |
 | Vercel env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_CLUB_DATA_SOURCE`) | ✅ Set by operator |
 | `VITE_VAPID_PUBLIC_KEY` on Vercel | ⚠️ Add + redeploy for production push |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ Local only — not on Vercel |
 | DDSFL data in production DB | ⚠️ Re-run `npm run sync:ddsfl` when fixtures publish |
 | Production `squad` table populated | ⚠️ Add players via Admin → Squad (required for stats/profiles) |
-| README + `docs/SUPABASE-SETUP.md` | ✅ Accurate |
+| README + `docs/SUPABASE-SETUP.md` | ✅ Accurate (includes 022) |
 | ESLint | ✅ 0 / 0 |
 | GitHub Actions CI | ✅ `.github/workflows/ci.yml` |
 | PWA icons | ✅ Official club crest |
@@ -54,15 +56,15 @@
 
 ---
 
-## Changes since audit v6 (92/100)
+## Changes since audit v7 (93/100)
 
 | Item | Status |
 |------|--------|
-| Fix dashboard/calendar 400 — ambiguous `match_events` → `profiles` embed | ✅ `7189fcc` |
-| Display name format **ChrisL** (no space, no period) | ✅ `8d092a8`, migration 020 |
-| Fix squad stats 400 — grant `profiles.photo_url` read | ✅ `f91371c`, migration 021 |
-| Fundraisers on calendar skip admin RPC for regular players | ✅ `7189fcc` |
-| Player enters name on invite; passcode self-service | ✅ `538e006`, migration 019 |
+| Admin Finance — sponsorships + expenses + overview dashboard | ✅ `79c9688`, migration 022 |
+| Ledger-style `logged_by` / `edited_by` (server-captured, not client-supplied) | ✅ 022 RPCs |
+| Admin + committee read/write (not admin-only) | ✅ `adminOnly` guard + `assert_finance_user` |
+| Finance mock-mode parity | ✅ `mockFinance.ts` |
+| Category breakdown charts (reuse Player Profile bar pattern) | ✅ `FinanceBreakdownChart` |
 | E2E tests | ❌ Open |
 | GK clean-sheet fix | ⏸️ Parked |
 
@@ -72,13 +74,13 @@
 
 | | |
 |---|---|
-| **Overall score** | **93 / 100** *(+1)* |
+| **Overall score** | **94 / 100** *(+1)* |
 | **Overall rating** | **Excellent — ready for player onboarding** |
-| **Previous score** | 92 / 100 (audit v6, 20 Jun 2026) |
-| **Public-launch equivalent** | ~73 / 100 |
+| **Previous score** | 93 / 100 (audit v7, 20 Jun 2026) |
+| **Public-launch equivalent** | ~74 / 100 |
 | **99 target** | See [`docs/ROADMAP-99.md`](docs/ROADMAP-99.md) |
 
-Since v6: production issues from live matchday (dual FK embed) and player photos (missing column grant) are fixed in app + migrations. Display name format updated to **ChrisL**. Operator still needs migrations **019–021** on Supabase and to **populate the squad table** before stats/profiles work.
+Since v7: Finance admin shipped — sponsorship and expense tracking with paid/pending income, net balance, and transparent ledger notes on every record. Operator still needs migrations **019–022** on Supabase and to **populate the squad table** before stats/profiles work.
 
 ---
 
@@ -86,37 +88,40 @@ Since v6: production issues from live matchday (dual FK embed) and player photos
 
 | # | Category | Score | Δ | Rating |
 |---|----------|------:|---|--------|
-| 1 | [Code Quality & Architecture](#1-code-quality--architecture) | 89 | +1 | Good |
+| 1 | [Code Quality & Architecture](#1-code-quality--architecture) | 90 | +1 | Good |
 | 2 | [Security](#2-security) | 69 | — | Adequate (closed squad) |
 | 3 | [Performance](#3-performance) | 72 | — | Good |
 | 4 | [Accessibility](#4-accessibility) | 53 | — | Requires Improvement |
-| 5 | [User Experience](#5-user-experience) | 97 | — | Excellent |
-| 6 | [Data Integrity & Business Logic](#6-data-integrity--business-logic) | 80 | +2 | Good |
+| 5 | [User Experience](#5-user-experience) | 98 | +1 | Excellent |
+| 6 | [Data Integrity & Business Logic](#6-data-integrity--business-logic) | 81 | +1 | Good |
 | 7 | [DDSFL Integration & Data Sync](#7-ddsfl-integration--data-sync) | 80 | — | Good |
-| 8 | [Database & Supabase](#8-database--supabase) | 96 | +1 | Excellent |
-| 9 | [Testing & Reliability](#9-testing--reliability) | 62 | +1 | Adequate |
+| 8 | [Database & Supabase](#8-database--supabase) | 97 | +1 | Excellent |
+| 9 | [Testing & Reliability](#9-testing--reliability) | 62 | — | Adequate |
 | 10 | [DevOps & Deployment](#10-devops--deployment) | 96 | — | Excellent |
-| 11 | [UI & Design Consistency](#11-ui--design-consistency) | 92 | — | Excellent |
+| 11 | [UI & Design Consistency](#11-ui--design-consistency) | 93 | +1 | Excellent |
 | 12 | [Copy & Content](#12-copy--content) | 91 | — | Excellent |
 
 ---
 
 ## 1. Code Quality & Architecture
 
-**Score: 89 / 100** · **Good**
+**Score: 90 / 100** · **Good**
 
 ### Strengths
+- Finance split across `financeCategories.ts`, `mockFinance.ts`, `clubApi.ts`, and dedicated UI components.
 - `clubApi.ts` uses explicit PostgREST FK hints for `match_events` player + related player embeds.
 - Shared `playerNames.ts` mirrored in SQL and mock.
-- Lazy-loaded admin routes; TypeScript strict mode.
+- Lazy-loaded admin routes (including `AdminFinance`); TypeScript strict mode.
 
 ### Findings
 
 | Severity | Location | Issue |
 |----------|----------|-------|
+| Positive | `79c9688` | Finance CRUD via RPCs; mock/live parity. |
 | Positive | `7189fcc` | `profiles!match_events_player_id_fkey` — avoids PGRST201 ambiguity. |
-| Positive | `019`–`021` | Migrations cover onboarding, display format, and column grants. |
+| Positive | `019`–`022` | Migrations cover onboarding, display format, column grants, finance. |
 | Low | `LandingHeroBackdrop.tsx` | Canvas CPU on landing (optional pause). |
+| Low | Finance | No unit tests for overview calculations yet. |
 
 ---
 
@@ -124,7 +129,7 @@ Since v6: production issues from live matchday (dual FK embed) and player photos
 
 **Score: 69 / 100** · **Adequate for closed-squad use** *(~46 public-launch equivalent)*
 
-RPC-gated writes, bcrypt passcodes, RLS, committee vs admin split. `change_player_passcode` verifies current code + session. Unique name pair on profiles.
+RPC-gated writes, bcrypt passcodes, RLS, committee vs admin split. Finance uses `assert_finance_user` — admin **or** committee; `logged_by` / `edited_by` set server-side from session, never client-supplied. Direct table access blocked by RLS.
 
 ---
 
@@ -132,7 +137,7 @@ RPC-gated writes, bcrypt passcodes, RLS, committee vs admin split. `change_playe
 
 **Score: 72 / 100** · **Good for team scale**
 
-Main chunk ~637 kB / ~179 kB gzip. Admin routes lazy-loaded. Optional: pause landing canvas off-screen.
+Main chunk ~644 kB / ~180 kB gzip. Admin routes lazy-loaded (`AdminFinance` ~12 kB / ~3.5 kB gzip). Optional: pause landing canvas off-screen.
 
 ---
 
@@ -140,15 +145,15 @@ Main chunk ~637 kB / ~179 kB gzip. Admin routes lazy-loaded. Optional: pause lan
 
 **Score: 53 / 100** · **Requires Improvement**
 
-Invite first/last name fields and change-passcode labels in place. Broader pass deferred — ROADMAP-99 Phase 9.
+Invite first/last name fields and change-passcode labels in place. Finance forms use standard labels. Broader pass deferred — ROADMAP-99 Phase 9.
 
 ---
 
 ## 5. User Experience
 
-**Score: 97 / 100** · **Excellent**
+**Score: 98 / 100** · **Excellent**
 
-Invite onboarding, **ChrisL** display names, passcode self-service, admin name edit, live matchday, photos, events, fundraisers, PWA.
+Invite onboarding, **ChrisL** display names, passcode self-service, live matchday, photos, events, fundraisers, **Finance dashboard** (paid vs pending income, expenses, net balance, category breakdowns), PWA.
 
 | Severity | Issue |
 |----------|-------|
@@ -159,9 +164,9 @@ Invite onboarding, **ChrisL** display names, passcode self-service, admin name e
 
 ## 6. Data Integrity & Business Logic
 
-**Score: 80 / 100** · **Good**
+**Score: 81 / 100** · **Good**
 
-Unique `(first_name, last_name)`. Display collision suffix `ChrisL2`. Live drafts separate from `match_events`. GK clean sheets over-count (parked).
+Unique `(first_name, last_name)`. Display collision suffix `ChrisL2`. Live drafts separate from `match_events`. Finance ledger: every sponsorship/expense records creator; edits capture `edited_by` + `edited_at`. GK clean sheets over-count (parked).
 
 ---
 
@@ -175,7 +180,7 @@ Unique `(first_name, last_name)`. Display collision suffix `ChrisL2`. Live draft
 
 ## 8. Database & Supabase
 
-**Score: 96 / 100** · **Excellent**
+**Score: 97 / 100** · **Excellent**
 
 | Item | Status |
 |------|--------|
@@ -183,6 +188,7 @@ Unique `(first_name, last_name)`. Display collision suffix `ChrisL2`. Live draft
 | 019 — invite names, passcode change, admin name edit | ⚠️ Apply / verify |
 | 020 — **ChrisL** display name + backfill | ⚠️ Apply |
 | 021 — `GRANT SELECT (photo_url)` on profiles | ⚠️ Apply |
+| 022 — sponsorships, expenses, finance RPCs | ⚠️ Apply |
 | `send-push` | ✅ Deployed |
 
 ---
@@ -191,7 +197,7 @@ Unique `(first_name, last_name)`. Display collision suffix `ChrisL2`. Live draft
 
 **Score: 62 / 100** · **Adequate**
 
-Player stats, DDSFL scraper, live match events, and `playerNames` unit tests. CI lint → build → test. No E2E yet. Windows Vitest flaky locally.
+Player stats, DDSFL scraper, live match events, and `playerNames` unit tests. CI lint → build → test. No E2E yet. No finance unit tests. Windows Vitest flaky locally.
 
 ---
 
@@ -205,9 +211,9 @@ Vercel + GitHub CI, PWA crest icons, weekly DDSFL sync. No Sentry yet.
 
 ## 11. UI & Design Consistency
 
-**Score: 92 / 100** · **Excellent**
+**Score: 93 / 100** · **Excellent**
 
-Official crest, glass-card admin UI, photo avatars, pending invite labels in squad admin.
+Official crest, glass-card admin UI, photo avatars, Finance overview with horizontal bar breakdowns (same pattern as Player Profile charts), ledger notes on list entries.
 
 ---
 
@@ -215,7 +221,7 @@ Official crest, glass-card admin UI, photo avatars, pending invite labels in squ
 
 **Score: 91 / 100** · **Excellent**
 
-Login placeholder `ChrisL`. UK English. Aligned with `docs/COPY-RULES.md`.
+Login placeholder `ChrisL`. UK English. Finance category labels in `financeCategories.ts`. Aligned with `docs/COPY-RULES.md`.
 
 ---
 
@@ -249,6 +255,7 @@ Login placeholder `ChrisL`. UK English. Aligned with `docs/COPY-RULES.md`.
 | Squad stats | ✅ | ✅ after 021 + squad rows |
 | Player profile | ✅ | ✅ after 021 + squad row |
 | Admin live matchday | ✅ | ✅ |
+| Admin finance (sponsorships + expenses) | ✅ | ✅ after 022 |
 | Push notifications | ✅ (local VAPID) | ⚠️ Vercel key pending |
 
 ---
@@ -259,7 +266,7 @@ Login placeholder `ChrisL`. UK English. Aligned with `docs/COPY-RULES.md`.
 
 | # | Task | Status |
 |---|------|--------|
-| 1 | Apply migrations **019**, **020**, **021** on Club Hub | ⚠️ Operator |
+| 1 | Apply migrations **019**, **020**, **021**, **022** on Club Hub | ⚠️ Operator |
 | 2 | Add squad members (Admin → Squad) — including admin if they need a profile | ⚠️ Operator |
 | 3 | Brief squad: login as **ChrisL**-style display name | ⚠️ After 020 |
 
@@ -270,19 +277,20 @@ See [`docs/ROADMAP-99.md`](docs/ROADMAP-99.md).
 | # | Task | Status |
 |---|------|--------|
 | 1 | Onboarding + prod bug fixes | ✅ `538e006`–`f91371c` |
-| 2 | E2E tests | Open |
-| 3 | Vercel VAPID + push smoke test | ⚠️ |
-| 4 | DDSFL sync 2026/27 | ⚠️ When fixtures publish |
-| 5 | GK clean-sheet fix | ⏸️ Parked |
+| 2 | Finance admin | ✅ `79c9688` / 022 |
+| 3 | E2E tests | Open |
+| 4 | Vercel VAPID + push smoke test | ⚠️ |
+| 5 | DDSFL sync 2026/27 | ⚠️ When fixtures publish |
+| 6 | GK clean-sheet fix | ⏸️ Parked |
 
 ---
 
 ## Summary
 
-**93 / 100** — app is production-ready after **migrations 019–021** and **squad setup**. Recent fixes resolved dashboard/calendar and stats load failures on live Supabase.
+**94 / 100** — app is production-ready after **migrations 019–022** and **squad setup**. Finance admin gives committee transparent sponsorship and expense tracking with server-side ledger audit.
 
 **Path to 99:** E2E tests, VAPID, DDSFL sync, optional a11y and observability — see [`docs/ROADMAP-99.md`](docs/ROADMAP-99.md).
 
 ---
 
-*End of Club Hub audit v7. App baseline `f91371c`; docs updated 20 June 2026.*
+*End of Club Hub audit v8. App baseline `79c9688`; docs updated 20 June 2026.*
