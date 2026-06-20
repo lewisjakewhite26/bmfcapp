@@ -10,7 +10,7 @@ import {
   resolveCompetitionName,
   type CompetitionPreset,
 } from '../lib/fixtureCompetitions'
-import { formatMatchDate, formatMatchTime } from '../lib/format'
+import { formatFixtureSchedule } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
 import type { FixtureWithResult, HomeAway } from '../types'
 
@@ -35,17 +35,16 @@ function fixtureToForm(fixture: FixtureWithResult) {
     String(d.getMonth() + 1).padStart(2, '0'),
     String(d.getDate()).padStart(2, '0'),
   ].join('-')
-  const time = fixture.kickoff_time
-    ? fixture.kickoff_time.slice(0, 5)
-    : [
-        String(d.getHours()).padStart(2, '0'),
-        String(d.getMinutes()).padStart(2, '0'),
-      ].join(':')
+  const kickoffTbc = fixture.kickoff_time == null
+  const time = kickoffTbc
+    ? DEFAULT_TIME
+    : fixture.kickoff_time!.slice(0, 5)
   const { preset, custom } = guessCompetitionPreset(fixture.competition)
 
   return {
     date,
     time,
+    kickoffTbc,
     opponent: stripFc(fixture.opponent),
     homeAway: fixture.home_away,
     venue: fixture.venue ?? (fixture.home_away === 'home' ? DEFAULT_HOME_VENUE : ''),
@@ -58,6 +57,7 @@ function emptyForm() {
   return {
     date: '',
     time: DEFAULT_TIME,
+    kickoffTbc: false,
     opponent: '',
     homeAway: 'home' as HomeAway,
     venue: DEFAULT_HOME_VENUE,
@@ -69,6 +69,7 @@ function emptyForm() {
 export default function AdminFixtures() {
   const [date, setDate] = useState('')
   const [time, setTime] = useState(DEFAULT_TIME)
+  const [kickoffTbc, setKickoffTbc] = useState(false)
   const [opponent, setOpponent] = useState('')
   const [homeAway, setHomeAway] = useState<HomeAway>('home')
   const [venue, setVenue] = useState(DEFAULT_HOME_VENUE)
@@ -100,6 +101,7 @@ export default function AdminFixtures() {
     setEditingId(null)
     setDate(blank.date)
     setTime(blank.time)
+    setKickoffTbc(blank.kickoffTbc)
     setOpponent(blank.opponent)
     setHomeAway(blank.homeAway)
     setVenue(blank.venue)
@@ -112,6 +114,7 @@ export default function AdminFixtures() {
     setEditingId(fixture.id)
     setDate(form.date)
     setTime(form.time)
+    setKickoffTbc(form.kickoffTbc)
     setOpponent(form.opponent)
     setHomeAway(form.homeAway)
     setVenue(form.venue)
@@ -142,14 +145,16 @@ export default function AdminFixtures() {
       return
     }
 
-    const matchDate = new Date(`${date}T${time}:00`)
+    const matchDate = kickoffTbc
+      ? new Date(`${date}T12:00:00`)
+      : new Date(`${date}T${time}:00`)
     const payload = {
       match_date: matchDate.toISOString(),
       opponent: formatOpponentName(opponent),
       home_away: homeAway,
       competition,
       venue: venue.trim() || null,
-      kickoff_time: `${time}:00`,
+      kickoff_time: kickoffTbc ? null : `${time}:00`,
     }
 
     setSaving(true)
@@ -201,7 +206,7 @@ export default function AdminFixtures() {
             {editingId ? 'Edit match' : 'Add match'}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Friendlies, cups and other games. League fixtures come from DDSFL automatically.
+            Add, edit or remove friendlies, cups and pre-season games. League fixtures come from DDSFL automatically.
           </p>
         </div>
 
@@ -270,8 +275,18 @@ export default function AdminFixtures() {
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 className="input-field mt-1"
-                required
+                required={!kickoffTbc}
+                disabled={kickoffTbc}
               />
+              <label className="mt-2 flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={kickoffTbc}
+                  onChange={(e) => setKickoffTbc(e.target.checked)}
+                  className="rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+                />
+                Time not confirmed yet
+              </label>
             </div>
           </div>
 
@@ -407,7 +422,7 @@ function ManualFixtureRow({
           {fixture.result ? ` · ${fixture.result.goals_for}-${fixture.result.goals_against}` : ''}
         </p>
         <p className="text-sm text-gray-500 mt-0.5">
-          {formatMatchDate(fixture.match_date)} · {formatMatchTime(fixture.match_date, fixture.kickoff_time)}
+          {formatFixtureSchedule(fixture.match_date, fixture.kickoff_time)}
           {fixture.venue ? ` · ${fixture.venue}` : ''}
         </p>
         {fixture.result && (

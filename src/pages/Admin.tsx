@@ -11,7 +11,7 @@ const LINKS = [
   { to: '/admin/availability', title: 'Availability overview', desc: 'See who\'s in for upcoming events' },
   { to: '/admin/training', title: 'Training sessions', desc: 'Add, edit & remove training on the calendar' },
   { to: '/admin/notifications', title: 'Send notification', desc: 'Push to the whole squad or selected players' },
-  { to: '/admin/fixtures', title: 'Add match', desc: 'Friendlies, cups & pre-season games' },
+  { to: '/admin/fixtures', title: 'Matches & friendlies', desc: 'Add, edit & remove pre-season and cup games' },
   { to: '/admin/squad', title: 'Squad list', desc: 'Positions for stats and result entry' },
   { to: '/admin/events', title: 'Other events', desc: 'Socials, AGM, committee meetings & more' },
   { to: '/admin/fundraisers', title: 'Fundraisers', desc: 'Track squad participation in fundraising events' },

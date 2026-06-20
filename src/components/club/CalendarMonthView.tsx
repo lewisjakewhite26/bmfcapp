@@ -8,7 +8,7 @@ import {
   itemsOnDay,
   startOfMonth,
 } from '../../lib/calendar'
-import { formatMatchDate, formatMatchTime, formatScore, resultColor } from '../../lib/format'
+import { formatMatchDate, formatMatchTime, formatFixtureTimeDetail, formatScore, resultColor } from '../../lib/format'
 import {
   CALENDAR_BORDER,
   CALENDAR_DOT,
@@ -174,8 +174,7 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                             {f.home_away === 'home' ? 'vs' : '@'} {f.opponent.replace(' FC', '')}
                           </p>
                           <p className="text-sm text-gray-500">
-                            {formatMatchTime(f.match_date, f.kickoff_time)}
-                            {f.venue ? ` · ${f.venue}` : ''}
+                            {formatFixtureTimeDetail(f.match_date, f.kickoff_time, f.venue)}
                           </p>
                           {completed && (
                             <p className="text-sm font-semibold text-brand-navy mt-1">

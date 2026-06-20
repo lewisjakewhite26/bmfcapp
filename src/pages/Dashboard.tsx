@@ -6,7 +6,7 @@ import { AvailabilityForm } from '../components/club/AvailabilityForm'
 import { useAuth } from '../hooks/useAuth'
 import { useCalendar, useDashboard } from '../hooks/useClubData'
 import { getTimeGreeting } from '../lib/greeting'
-import { formatMatchDate, formatMatchTime, formatScore } from '../lib/format'
+import { formatFixtureSchedule, formatMatchDate, formatMatchTime, formatScore } from '../lib/format'
 import { CLUB_NAME, LEAGUE_NAME } from '../lib/mockData'
 import { PushRequiresInstallPrompt } from '../components/ui/PushRequiresInstallPrompt'
 import { PwaInstallNotificationPrompt } from '../components/ui/PwaInstallNotificationPrompt'
@@ -82,7 +82,7 @@ export default function Dashboard() {
                     {summary.nextFixture.home_away === 'home' ? 'vs' : '@'} {summary.nextFixture.opponent.replace(' FC', '')}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {formatMatchDate(summary.nextFixture.match_date)} · {formatMatchTime(summary.nextFixture.match_date, summary.nextFixture.kickoff_time)}
+                    {formatFixtureSchedule(summary.nextFixture.match_date, summary.nextFixture.kickoff_time)}
                   </p>
                 </>
               ) : (

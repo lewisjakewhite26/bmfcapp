@@ -35,7 +35,7 @@ const FIXTURES = [
   { date: '2026-07-12', opponent: 'Kirk Merrington', home_away: 'home' },
   { date: '2026-07-19', opponent: "Sedgefield St Edmund's", home_away: 'home' },
   { date: '2026-07-26', opponent: 'Black Bull', home_away: 'away' },
-  { date: '2026-07-31', opponent: "Sedgefield O40's", home_away: 'home' },
+  { date: '2026-07-31', opponent: "Sedgefield O40's", home_away: 'home', kickoffTbc: true },
 ]
 
 const SEASON_START = {
@@ -171,15 +171,18 @@ async function createFixture(supabase, session, row, dryRun) {
     return { status: 'skipped', reason: 'already exists', id: existing[0].id, date: row.date, opponent }
   }
 
+  const kickoffTbc = row.kickoffTbc === true
+  const matchTime = kickoffTbc ? '12:00' : MATCH_TIME
+
   const payload = {
     p_admin_id: session.id,
     p_session_token: session.session_token,
-    p_match_date: localIso(row.date, MATCH_TIME),
+    p_match_date: localIso(row.date, matchTime),
     p_opponent: opponent,
     p_home_away: row.home_away,
     p_competition: COMPETITION_FRIENDLY,
     p_venue: row.home_away === 'home' ? HOME_VENUE : null,
-    p_kickoff_time: `${MATCH_TIME}:00`,
+    p_kickoff_time: kickoffTbc ? null : `${MATCH_TIME}:00`,
   }
 
   if (dryRun) return { status: 'dry-run', date: row.date, opponent, payload }
@@ -192,7 +195,7 @@ async function createFixture(supabase, session, row, dryRun) {
     date: row.date,
     opponent,
     home_away: row.home_away,
-    time: MATCH_TIME,
+    time: kickoffTbc ? null : MATCH_TIME,
     label: row.label,
   }
 }

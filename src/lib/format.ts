@@ -18,11 +18,28 @@ export function formatMatchDate(iso: string): string {
 }
 
 export function formatMatchTime(iso: string, kickoffTime?: string | null): string {
+  if (kickoffTime === null) return ''
   if (kickoffTime) {
     const [h, m] = kickoffTime.split(':')
     return `${h}:${m}`
   }
   return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+}
+
+/** Date plus kick-off when known; date only when kickoff_time is explicitly null (TBC). */
+export function formatFixtureSchedule(iso: string, kickoffTime?: string | null): string {
+  const date = formatMatchDate(iso)
+  const time = formatMatchTime(iso, kickoffTime)
+  return time ? `${date} · ${time}` : date
+}
+
+/** Time and venue line for calendar detail — omits time when kick-off is TBC. */
+export function formatFixtureTimeDetail(
+  iso: string,
+  kickoffTime: string | null | undefined,
+  venue?: string | null,
+): string {
+  return [formatMatchTime(iso, kickoffTime), venue].filter(Boolean).join(' · ')
 }
 
 export function formatScore(goalsFor: number, goalsAgainst: number): string {

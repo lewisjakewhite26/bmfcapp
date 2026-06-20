@@ -1,5 +1,5 @@
 import type { FixtureWithResult } from '../../types'
-import { formatMatchDate, formatMatchTime, formatScore, resultColor, fixtureResultBorderClass } from '../../lib/format'
+import { formatFixtureSchedule, formatScore, resultColor, fixtureResultBorderClass } from '../../lib/format'
 import { CLUB_NAME } from '../../lib/mockData'
 
 interface FixtureCardProps {
@@ -23,7 +23,7 @@ export function FixtureCard({ fixture, availabilitySlot, useCalendarColors }: Fi
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-blue">{fixture.competition}</p>
           <p className="text-sm text-gray-500 mt-0.5">
-            {formatMatchDate(fixture.match_date)} · {formatMatchTime(fixture.match_date, fixture.kickoff_time)}
+            {formatFixtureSchedule(fixture.match_date, fixture.kickoff_time)}
           </p>
         </div>
         {completed && (
