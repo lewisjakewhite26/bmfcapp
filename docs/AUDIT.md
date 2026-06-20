@@ -1,13 +1,13 @@
 # BMFC Club Hub — Pre-Launch Audit
 
-> **Current audit (v10)** — see [ROADMAP-99.md](ROADMAP-99.md) for path to 99/100.  
-> **Last updated:** 20 June 2026 · **Commit:** `ed6bde1` on `main`
+> **Current audit (v11)** — see [ROADMAP-99.md](ROADMAP-99.md) for path to 99/100.  
+> **Last updated:** 20 June 2026 · **Commit:** `7265a28` on `main`
 
 **Scope:** Full codebase + local build verification  
 **Operator context:** Closed BMFC squad app — not a public internet product; ~20–25 players, invite-only sign-up  
-**Build verified:** `npm run build` succeeds — ~657 kB JS (~184 kB gzip main chunk), admin routes lazy-loaded  
+**Build verified:** `npm run build` succeeds — ~661 kB JS (~185 kB gzip main chunk), admin routes lazy-loaded  
 **Lint verified:** `npm run lint` — **0 errors, 0 warnings**  
-**Tests verified:** `npm run test:ci` — **21/21** unit tests; GitHub Actions CI in `node:20-bookworm-slim` container (canonical on OneDrive)
+**Tests verified:** **23** unit tests (Vitest) + **17** E2E tests (Playwright); GitHub Actions CI — verify job + e2e job on every push to `main`
 
 **Supabase:** Club Hub project confirmed (`kqxsbb…` — EvidInsight); separate from WC predictor (`owkql…`).
 
@@ -24,7 +24,8 @@
 | v7 | 20 Jun 2026 | 93/100 | Prod bug fixes; ChrisL format; photo_url grant; migrations 019–021 |
 | v8 | 20 Jun 2026 | 94/100 | Finance admin — sponsorships, expenses, ledger dashboard; migration 022 |
 | v9 | 20 Jun 2026 | 95/100 | All migrations 001–022 applied on Club Hub |
-| **v10 (this doc)** | **20 Jun 2026** | **96/100** | GK clean sheets; calendar archive; PWA install prompt; migrations 023–024 |
+| v10 | 20 Jun 2026 | 96/100 | GK clean sheets; calendar archive; PWA install prompt; migrations 023–024 |
+| **v11 (this doc)** | **20 Jun 2026** | **98/100** | E2E in CI; team invite link; login/display split; migrations 025–028 |
 
 **Scoring key:** 90+ excellent · 75–89 strong · 60–74 acceptable · 40–59 significant gaps · below 40 critical
 
@@ -34,40 +35,44 @@
 
 | Item | Status |
 |------|--------|
-| Supabase migrations **001–022** | ✅ Applied on Club Hub project |
-| Supabase migrations **023–024** | ⚠️ Apply on Club Hub — calendar archive + GK clean sheets |
+| Supabase migrations **001–028** | ✅ Applied on Club Hub project |
 | Vercel production (`bmfcapp`) | ✅ Working |
 | Vercel env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_CLUB_DATA_SOURCE`) | ✅ Set by operator |
 | `VITE_VAPID_PUBLIC_KEY` on Vercel | ✅ Set by operator |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ Local only — not on Vercel |
 | DDSFL data in production DB | ⚠️ Re-run `npm run sync:ddsfl` when fixtures publish |
 | Production `squad` table populated | ⚠️ Add players via Admin → Squad (required for stats/profiles) |
+| Admin accounts (DanJ, JordanC, etc.) | ✅ Created — passcode **0000** until changed |
 | README + `docs/SUPABASE-SETUP.md` | ✅ Accurate |
 | ESLint | ✅ 0 / 0 |
-| GitHub Actions CI | ✅ `.github/workflows/ci.yml` |
+| GitHub Actions CI | ✅ Lint, build, Vitest, Playwright E2E |
 | PWA icons | ✅ Official club crest |
-| PWA “Add to home screen” prompt | ✅ Dashboard dismissible banner |
-| Push notifications | ✅ Edge fn + Vercel VAPID key |
+| PWA “Add to home screen” prompt | ✅ Dashboard banner + navbar install button |
+| Push notifications | ✅ Edge fn + Vercel VAPID key; install required on iOS |
 | `send-push` edge function | ✅ Deployed to Club Hub |
 
 **Security posture note:** 4-digit passcode, no login rate limiting, and no server-side session invalidation are **accepted** for this closed-squad deployment. Players can change their own passcode; admin reset remains for forgotten codes.
 
-**Onboarding note:** Login uses **display name** (e.g. **`ChrisL`** for Chris Lee). Single-name accounts (e.g. `Lewis`) unchanged. Full first/last name stored internally for admin.
+**Onboarding note:** Players sign in with **login name** (e.g. **`ChrisL`** — no space). The app shows **display name** elsewhere (e.g. **`Chris L`**). One-time invites use `/invite/:token`; reusable squad link uses `/join/:token` (migration 028). Approval still required after sign-up.
 
 ---
 
-## Changes since audit v9 (95/100)
+## Changes since audit v10 (96/100)
 
 | Item | Status |
 |------|--------|
-| GK clean-sheet attribution (`cleanSheet.ts`, migration 024) | ✅ Shipped — live log → lineup → manual override |
-| Admin → Results optional goalkeeper field + missing-data banner | ✅ |
-| `cleanSheet.test.ts` + updated `playerStats.test.ts` | ✅ |
-| Calendar archive vs delete (events/fundraisers, migration 023) | ✅ Shipped |
-| Result colour coding on calendar | ✅ |
-| PWA “Add to home screen” prompt on dashboard | ✅ |
-| Apply migrations **023–024** on Club Hub | ⚠️ Operator |
-| E2E tests | ❌ Open |
+| Playwright E2E in CI — smoke, admin, squad, onboarding (`7265a28`) | ✅ Shipped |
+| Reusable **team invite link** — `/join/:token`, admin generate/regenerate (`eb5d4ba`, 028) | ✅ Shipped |
+| Login name vs display name split (`ff2e53d`, 025) | ✅ Shipped |
+| Pre-season stats toggle + fixture purge RPC (026) | ✅ Shipped |
+| Em-dash copy cleanup in RPC errors (027) | ✅ Shipped |
+| Invite onboarding simplified to single-page form | ✅ |
+| AdminLineup “Invalid Date” fix | ✅ |
+| Landing canvas pauses off-screen (`IntersectionObserver`) | ✅ |
+| Global error fallback + improved error boundary | ✅ |
+| PWA push — “install app first” messaging on unsupported browsers | ✅ |
+| Apply migrations **023–028** on Club Hub | ✅ Operator |
+| Sentry / admin audit log | ❌ Open |
 
 ---
 
@@ -75,15 +80,15 @@
 
 | | |
 |---|---|
-| **Overall score** | **96 / 100** *(+1)* |
+| **Overall score** | **98 / 100** *(+2)* |
 | **Overall rating** | **Excellent — ready for player onboarding** |
-| **Previous score** | 95 / 100 (audit v9, 20 Jun 2026) |
-| **Public-launch equivalent** | ~76 / 100 |
+| **Previous score** | 96 / 100 (audit v10, 20 Jun 2026) |
+| **Public-launch equivalent** | ~77 / 100 |
 | **99 target** | See [ROADMAP-99.md](ROADMAP-99.md) |
 
-Since v9: goalkeeper clean sheets now credit only the keeper(s) actually in goal (live log with subs, saved lineup, or manual Admin → Results override). Shutouts without GK data are flagged for admins and do not award credit. Calendar events/fundraisers can be archived rather than deleted. PWA install prompt on dashboard.
+Since v10: Playwright E2E tests run in CI on every push. Admins can share one reusable team join link (`/join/:token`) alongside one-time player invites. Login identifier (`ChrisL`) is separate from spaced display name (`Chris L`). Test coverage and DevOps maturity improved significantly.
 
-**Operator:** apply migrations **023** and **024** on Club Hub Supabase before relying on archive controls or live GK attribution in production.
+**Operator:** generate the team invite link in Admin → Squad members, populate squad rows, then brief players on **ChrisL**-style login. All migrations **001–028** are applied on Club Hub.
 
 ---
 
@@ -91,42 +96,42 @@ Since v9: goalkeeper clean sheets now credit only the keeper(s) actually in goal
 
 | # | Category | Score | Δ | Rating |
 |---|----------|------:|---|--------|
-| 1 | [Code Quality & Architecture](#1-code-quality--architecture) | 90 | — | Good |
+| 1 | [Code Quality & Architecture](#1-code-quality--architecture) | 91 | +1 | Good |
 | 2 | [Security](#2-security) | 69 | — | Adequate (closed squad) |
-| 3 | [Performance](#3-performance) | 72 | — | Good |
+| 3 | [Performance](#3-performance) | 74 | +2 | Good |
 | 4 | [Accessibility](#4-accessibility) | 53 | — | Requires Improvement |
-| 5 | [User Experience](#5-user-experience) | 98 | — | Excellent |
-| 6 | [Data Integrity & Business Logic](#6-data-integrity--business-logic) | 85 | +4 | Good |
+| 5 | [User Experience](#5-user-experience) | 99 | +1 | Excellent |
+| 6 | [Data Integrity & Business Logic](#6-data-integrity--business-logic) | 86 | +1 | Good |
 | 7 | [DDSFL Integration & Data Sync](#7-ddsfl-integration--data-sync) | 80 | — | Good |
 | 8 | [Database & Supabase](#8-database--supabase) | 98 | — | Excellent |
-| 9 | [Testing & Reliability](#9-testing--reliability) | 64 | +2 | Adequate |
-| 10 | [DevOps & Deployment](#10-devops--deployment) | 98 | — | Excellent |
-| 11 | [UI & Design Consistency](#11-ui--design-consistency) | 93 | — | Excellent |
-| 12 | [Copy & Content](#12-copy--content) | 91 | — | Excellent |
+| 9 | [Testing & Reliability](#9-testing--reliability) | 78 | +14 | Good |
+| 10 | [DevOps & Deployment](#10-devops--deployment) | 99 | +1 | Excellent |
+| 11 | [UI & Design Consistency](#11-ui--design-consistency) | 94 | +1 | Excellent |
+| 12 | [Copy & Content](#12-copy--content) | 93 | +2 | Excellent |
 
 ---
 
 ## 1. Code Quality & Architecture
 
-**Score: 90 / 100** · **Good**
+**Score: 91 / 100** · **Good**
 
 ### Strengths
 - Layered GK resolution in `cleanSheet.ts` — single source for stats and admin audit.
 - Finance split across `financeCategories.ts`, `mockFinance.ts`, `clubApi.ts`, and dedicated UI components.
-- `clubApi.ts` uses explicit PostgREST FK hints for `match_events` player + related player embeds.
-- Shared `playerNames.ts` mirrored in SQL and mock.
-- Lazy-loaded admin routes (including `AdminFinance`); TypeScript strict mode.
+- `playerNames.ts` — login name, display name, and username allocation mirrored in SQL and mock.
+- Team invite reuses `InviteForm` via `Join.tsx` — no duplicate onboarding UI.
+- Lazy-loaded admin routes; TypeScript strict mode; `GlobalErrorFallback` at root.
 
 ### Findings
 
 | Severity | Location | Issue |
 |----------|----------|-------|
-| Positive | `ed6bde1` | GK clean sheets via live log / lineup / manual override. |
-| Positive | `79c9688` | Finance CRUD via RPCs; mock/live parity. |
-| Positive | `7189fcc` | `profiles!match_events_player_id_fkey` — avoids PGRST201 ambiguity. |
-| Positive | `001`–`024` | Full migration chain (023–024 pending apply on prod). |
-| Low | `LandingHeroBackdrop.tsx` | Canvas CPU on landing (optional pause). |
+| Positive | `7265a28` | Playwright E2E + Vitest CI pipeline. |
+| Positive | `eb5d4ba` | Team invite link RPCs + admin UI. |
+| Positive | `ff2e53d` | `login_name` column separate from spaced `display_name`. |
+| Positive | `001`–`028` | Full migration chain applied on Club Hub production. |
 | Low | Finance | No unit tests for overview calculations yet. |
+| Low | E2E | Team join link flow not yet covered in Playwright. |
 
 ---
 
@@ -134,15 +139,15 @@ Since v9: goalkeeper clean sheets now credit only the keeper(s) actually in goal
 
 **Score: 69 / 100** · **Adequate for closed-squad use** *(~46 public-launch equivalent)*
 
-RPC-gated writes, bcrypt passcodes, RLS, committee vs admin split. Finance uses `assert_finance_user` — admin **or** committee; `logged_by` / `edited_by` set server-side from session, never client-supplied. Direct table access blocked by RLS.
+RPC-gated writes, bcrypt passcodes, RLS, committee vs admin split. Team invite still requires admin approval. Finance uses `assert_finance_user` — admin **or** committee; `logged_by` / `edited_by` set server-side from session, never client-supplied.
 
 ---
 
 ## 3. Performance
 
-**Score: 72 / 100** · **Good for team scale**
+**Score: 74 / 100** · **Good for team scale**
 
-Main chunk ~657 kB / ~184 kB gzip. Admin routes lazy-loaded. Optional: pause landing canvas off-screen.
+Main chunk ~661 kB / ~185 kB gzip. Admin routes lazy-loaded. Landing canvas animation pauses when hero is off-screen via `IntersectionObserver`.
 
 ---
 
@@ -156,9 +161,9 @@ Invite first/last name fields and change-passcode labels in place. Finance forms
 
 ## 5. User Experience
 
-**Score: 98 / 100** · **Excellent**
+**Score: 99 / 100** · **Excellent**
 
-Invite onboarding, **ChrisL** display names, passcode self-service, live matchday, photos, events, fundraisers, Finance dashboard, PWA install prompt — all live on Supabase (023–024 pending apply for archive + GK fields).
+Invite onboarding (one-time + reusable team link), login/display name split, passcode self-service, live matchday, photos, events, fundraisers, Finance dashboard, PWA install prompt, push with install guidance — all live on Supabase.
 
 | Severity | Issue |
 |----------|-------|
@@ -168,11 +173,11 @@ Invite onboarding, **ChrisL** display names, passcode self-service, live matchda
 
 ## 6. Data Integrity & Business Logic
 
-**Score: 85 / 100** · **Good**
+**Score: 86 / 100** · **Good**
 
-Unique `(first_name, last_name)`. Display collision suffix `ChrisL2`. Live drafts separate from `match_events`. Finance ledger: every sponsorship/expense records creator; edits capture `edited_by` + `edited_at`.
+Unique `(first_name, last_name)`. Login name `ChrisL`, display name `Chris L`, collision suffixes on both. Live drafts separate from `match_events`. Team invite duplicate-name handling in `complete_team_invite`.
 
-**GK clean sheets:** resolved per fixture via live matchday log (including keeper subs), saved lineup GK slot, or optional manual override on Admin → Results. Shutouts with no GK source are excluded and flagged in Admin → Results. On a 0-GA live-logged match with a keeper substitution, **both keepers are credited**.
+**GK clean sheets:** resolved per fixture via live matchday log (including keeper subs), saved lineup GK slot, or optional manual override on Admin → Results.
 
 ---
 
@@ -180,7 +185,7 @@ Unique `(first_name, last_name)`. Display collision suffix `ChrisL2`. Live draft
 
 **Score: 80 / 100** · **Good**
 
-2026/27 Second Division configured. Weekly GitHub Action sync. Operator runs `npm run sync:ddsfl` when fixtures publish.
+2026/27 Second Division configured. Weekly GitHub Action sync. Operator runs `npm run sync:ddsfl` when fixtures publish. Migration 026 adds admin fixture purge before a cutoff date.
 
 ---
 
@@ -190,11 +195,13 @@ Unique `(first_name, last_name)`. Display collision suffix `ChrisL2`. Live draft
 
 | Item | Status |
 |------|--------|
-| Migrations **001–022** | ✅ Applied on Club Hub |
-| Calendar archive + fundraiser delete (023) | ⚠️ Apply on Club Hub |
-| GK clean sheets — `goalkeeper_player_id`, `live_log_entries` (024) | ⚠️ Apply on Club Hub |
-| Onboarding, passcode, ChrisL display names (019–020) | ✅ |
-| Photo URL grant (021) | ✅ |
+| Migrations **001–028** | ✅ Applied on Club Hub |
+| Calendar archive + fundraiser delete (023) | ✅ |
+| GK clean sheets — `goalkeeper_player_id`, `live_log_entries` (024) | ✅ |
+| Login name vs display name (025) | ✅ |
+| Fixture purge RPC (026) | ✅ |
+| Em-dash RPC copy (027) | ✅ |
+| Team invite link table + RPCs (028) | ✅ |
 | Finance sponsorships + expenses (022) | ✅ |
 | `send-push` | ✅ Deployed |
 
@@ -202,33 +209,37 @@ Unique `(first_name, last_name)`. Display collision suffix `ChrisL2`. Live draft
 
 ## 9. Testing & Reliability
 
-**Score: 64 / 100** · **Adequate**
+**Score: 78 / 100** · **Good**
 
-Player stats, DDSFL scraper, live match events, `playerNames`, and **`cleanSheet`** unit tests (live log, lineup, manual override, no-data cases). CI lint → build → test in isolated Linux container. No E2E yet. Local Vitest on OneDrive not required — rely on GitHub Actions or `npm run test:ci`.
+**Unit tests (23):** `playerNames`, `playerStats`, `cleanSheet`, `liveMatchEvents`, `ddsflScraper`.
+
+**E2E tests (17):** landing, login, dashboard nav, 404, admin hub/finance/squad, player route guard, stats/profile/calendar/availability, full invite → approve → login flow.
+
+CI: lint → build → Vitest (verify job) + Playwright E2E (separate job, mock mode + `VITE_E2E=true` build). Local Vitest on OneDrive is flaky — use `npm run test:ci` / `npm run test:docker` or rely on GitHub Actions.
 
 ---
 
 ## 10. DevOps & Deployment
 
-**Score: 98 / 100** · **Excellent**
+**Score: 99 / 100** · **Excellent**
 
-Vercel + GitHub CI, PWA crest icons, weekly DDSFL sync, full migration chain on production Supabase, `VITE_VAPID_PUBLIC_KEY` on Vercel. No Sentry yet.
+Vercel + GitHub CI (unit + E2E), PWA crest icons, weekly DDSFL sync, full migration chain, `VITE_VAPID_PUBLIC_KEY` on Vercel. No Sentry yet.
 
 ---
 
 ## 11. UI & Design Consistency
 
-**Score: 93 / 100** · **Excellent**
+**Score: 94 / 100** · **Excellent**
 
-Official crest, glass-card admin UI, photo avatars, Finance overview with horizontal bar breakdowns (same pattern as Player Profile charts), calendar result colour coding (win teal, loss/draw as before).
+Official crest, glass-card admin UI, photo avatars, Finance overview with horizontal bar breakdowns, calendar result colour coding, team invite controls on Admin → Squad members.
 
 ---
 
 ## 12. Copy & Content
 
-**Score: 91 / 100** · **Excellent**
+**Score: 93 / 100** · **Excellent**
 
-Login placeholder `ChrisL`. UK English. Finance category labels in `financeCategories.ts`. Aligned with `docs/COPY-RULES.md`.
+Login placeholder `ChrisL`. UK English. Em dashes removed from UI and RPC errors (027). Placeholder inventory in `docs/INPUT-PLACEHOLDERS.md`. Aligned with `docs/COPY-RULES.md`. Default home venue **Bishop Middleham Park**.
 
 ---
 
@@ -247,8 +258,10 @@ Login placeholder `ChrisL`. UK English. Finance category labels in `financeCateg
 | 9 | ~~Low~~ | Migration 019 GRANT ambiguous | ✅ |
 | 10 | ~~High~~ | Dashboard/calendar 400 — match_events embed | ✅ `7189fcc` |
 | 11 | ~~Medium~~ | Stats 400 — `photo_url` not granted | ✅ 021 |
-| 12 | Low | Empty production squad → no stats/profiles | ⚠️ Ops — add via Admin |
-| 13 | Low | Migrations 023–024 not yet on prod | ⚠️ Operator |
+| 12 | ~~Low~~ | AdminLineup “Invalid Date” | ✅ `7265a28` |
+| 13 | ~~Medium~~ | No E2E tests | ✅ `7265a28` |
+| 14 | Low | Empty production squad → no stats/profiles | ⚠️ Ops — add via Admin |
+| 15 | ~~Low~~ | Migrations 023–028 not yet on prod | ✅ Operator |
 
 ---
 
@@ -256,16 +269,17 @@ Login placeholder `ChrisL`. UK English. Finance category labels in `financeCateg
 
 | Feature | Mock | Live Supabase |
 |---------|------|---------------|
-| Login (display name + passcode) | Dev bypass / ✅ | ✅ |
-| Invite (name on link + passcode) | ✅ | ✅ |
+| Login (login name + passcode) | Dev bypass / ✅ | ✅ |
+| One-time invite (`/invite/:token`) | ✅ | ✅ |
+| Team invite link (`/join/:token`) | ✅ | ✅ |
 | Change own passcode | ✅ | ✅ |
 | Dashboard / calendar | ✅ | ✅ |
-| Squad stats (GK clean sheets) | ✅ | ✅ (needs squad rows + 024) |
+| Squad stats (GK clean sheets) | ✅ | ✅ (needs squad rows) |
 | Player profile | ✅ | ✅ (needs squad row) |
 | Admin live matchday | ✅ | ✅ |
 | Admin finance (sponsorships + expenses) | ✅ | ✅ |
-| Admin → Results manual GK | ✅ | ✅ (needs 024) |
-| Calendar archive (events/fundraisers) | ✅ | ✅ (needs 023) |
+| Admin → Results manual GK | ✅ | ✅ |
+| Calendar archive (events/fundraisers) | ✅ | ✅ |
 | Push notifications | ✅ | ✅ |
 | PWA install prompt | ✅ | ✅ |
 
@@ -277,9 +291,10 @@ Login placeholder `ChrisL`. UK English. Finance category labels in `financeCateg
 
 | # | Task | Status |
 |---|------|--------|
-| 1 | Apply migrations **001–024** on Club Hub | ⚠️ 023–024 pending |
-| 2 | Add squad members (Admin → Squad) — including admin if they need a profile | ⚠️ Operator |
-| 3 | Brief squad: login as **ChrisL**-style display name | ⚠️ Operator |
+| 1 | Apply migrations **001–028** on Club Hub | ✅ |
+| 2 | Generate team invite link (Admin → Squad members) | ⚠️ Operator |
+| 3 | Add squad members (Admin → Squad) — including admins who need profiles | ⚠️ Operator |
+| 4 | Brief squad: sign in as **ChrisL**-style login name | ⚠️ Operator |
 
 ### P1 — Path to 99
 
@@ -291,19 +306,21 @@ See [ROADMAP-99.md](ROADMAP-99.md).
 | 2 | Finance admin | ✅ |
 | 3 | GK clean-sheet fix | ✅ |
 | 4 | Calendar archive + result colours | ✅ |
-| 5 | E2E tests | Open |
-| 6 | Vercel VAPID on production | ✅ |
-| 7 | Push smoke test (Admin → Notifications) | ⚠️ Optional |
-| 8 | DDSFL sync 2026/27 | ⚠️ When fixtures publish |
+| 5 | E2E tests in CI | ✅ |
+| 6 | Team invite link | ✅ |
+| 7 | Vercel VAPID on production | ✅ |
+| 8 | Push smoke test (Admin → Notifications) | ⚠️ Optional |
+| 9 | DDSFL sync 2026/27 | ⚠️ When fixtures publish |
+| 10 | Sentry + admin audit log | Open |
 
 ---
 
 ## Summary
 
-**96 / 100** — GK clean sheets fixed, calendar improvements shipped. Apply migrations **023–024** on Club Hub, then populate squad and brief players on **ChrisL** login format.
+**98 / 100** — E2E in CI, team invite link, login/display split, and migrations **001–028** all applied on Club Hub. Next: generate the team join link, populate squad, and brief players on **ChrisL** login format.
 
-**Path to 99:** E2E tests, DDSFL sync, optional push smoke test, a11y and observability — see [ROADMAP-99.md](ROADMAP-99.md).
+**Path to 99:** ops closure (migrations + squad + DDSFL), Sentry, admin audit log, optional a11y polish — see [ROADMAP-99.md](ROADMAP-99.md).
 
 ---
 
-*End of Club Hub audit v10. App baseline `ed6bde1`; docs updated 20 June 2026.*
+*End of Club Hub audit v11. App baseline `7265a28`; docs updated 20 June 2026.*

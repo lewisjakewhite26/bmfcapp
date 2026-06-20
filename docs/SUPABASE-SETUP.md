@@ -47,6 +47,9 @@ Apply migrations **in order** via the Supabase SQL Editor (Dashboard → SQL →
 | `supabase-club/migrations/023_calendar_archive_and_fundraiser_delete.sql` | Archive vs delete for events/fundraisers |
 | `supabase-club/migrations/024_goalkeeper_clean_sheets.sql` | GK clean-sheet attribution — manual override + live log snapshot |
 | `supabase-club/migrations/025_login_name_display_name_split.sql` | Login name (ChrisL) vs spaced display name (Chris L) |
+| `supabase-club/migrations/026_purge_old_fixtures.sql` | Admin purge fixtures before a cutoff date |
+| `supabase-club/migrations/027_em_dash_copy.sql` | Em-dash cleanup in RPC error messages |
+| `supabase-club/migrations/028_team_invite_link.sql` | Reusable team invite link (`/join/:token`) |
 
 **Supabase CLI example** (if `supabase` is installed and linked):
 
