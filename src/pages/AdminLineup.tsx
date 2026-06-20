@@ -148,7 +148,7 @@ function PlayerPill({ player, assigned, highlight, variant, onTap }: PlayerPillP
 export default function AdminLineup() {
   const [fixtures, setFixtures] = useState<FixtureWithResult[]>([])
   const [fixtureId, setFixtureId] = useState('')
-  const [formation, setFormation] = useState<FormationId>('4-4-2')
+  const [formation, setFormation] = useState<FormationId>('4-2-1-3')
   const [assignments, setAssignments] = useState<Record<string, string>>({})
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
   const [availablePlayers, setAvailablePlayers] = useState<AvailablePlayer[]>([])
@@ -222,7 +222,7 @@ export default function AdminLineup() {
         setFormation(lineup.formation)
         setAssignments(assignmentsFromSlots(lineup.slots))
       } else {
-        setFormation('4-4-2')
+        setFormation('4-2-1-3')
         setAssignments({})
       }
     } catch {

@@ -205,7 +205,7 @@ export interface DashboardSummary {
   upcomingTraining: TrainingSession | null
 }
 
-export type FormationId = '4-4-2' | '4-3-3' | '4-2-3-1' | '3-5-2' | '5-3-2'
+export type FormationId = '4-4-2' | '4-3-3' | '4-2-3-1' | '4-2-1-3' | '3-5-2' | '5-3-2'
 
 export interface LineupSlotAssignment {
   position: string
