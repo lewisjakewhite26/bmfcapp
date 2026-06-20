@@ -6,6 +6,7 @@ import { saveSession } from '../../hooks/authContext'
 import { rpcGetInvitePreview } from '../../lib/clubAuth'
 import { completeMockInvite, getMockInvitePreview, isMockDataMode } from '../../lib/clubApi'
 import { getAuthErrorMessage } from '../../lib/authErrors'
+import { validateNamePart } from '../../lib/playerNames'
 import type { InvitePreview } from '../../types'
 
 interface InviteFormProps {
@@ -15,6 +16,8 @@ interface InviteFormProps {
 export function InviteForm({ token }: InviteFormProps) {
   const [preview, setPreview] = useState<InvitePreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [passcode, setPasscode] = useState('')
   const [confirmPasscode, setConfirmPasscode] = useState('')
   const [loading, setLoading] = useState(false)
@@ -46,6 +49,14 @@ export function InviteForm({ token }: InviteFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    try {
+      validateNamePart(firstName, 'First name')
+      validateNamePart(lastName, 'Last name')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Enter your name')
+      return
+    }
+
     if (!/^\d{4}$/.test(passcode)) {
       toast.error('Passcode must be exactly 4 digits')
       return
@@ -58,7 +69,7 @@ export function InviteForm({ token }: InviteFormProps) {
     setLoading(true)
     try {
       if (mockMode) {
-        const user = await completeMockInvite(token, passcode)
+        const user = await completeMockInvite(token, firstName, lastName, passcode)
         if (!user) throw new Error('Invalid invite link')
         saveSession(user)
         await refreshUser()
@@ -67,7 +78,7 @@ export function InviteForm({ token }: InviteFormProps) {
         return
       }
 
-      await completeInvite(token, passcode)
+      await completeInvite(token, firstName, lastName, passcode)
       toast.success('Passcode saved. Waiting for approval')
       navigate('/pending')
     } catch (err) {
@@ -104,8 +115,39 @@ export function InviteForm({ token }: InviteFormProps) {
           className="h-20 w-20 mx-auto mb-4 object-contain drop-shadow-md"
           onError={(e) => { (e.target as HTMLImageElement).src = '/logo.svg' }}
         />
-        <h1 className="font-display text-2xl text-brand-navy">Welcome, {preview.display_name}</h1>
-        <p className="text-gray-500 text-sm mt-2">Pick a 4-digit passcode to finish setup.</p>
+        <h1 className="font-display text-2xl text-brand-navy">Join BMFC Club Hub</h1>
+        <p className="text-gray-500 text-sm mt-2">
+          {preview.invite_label
+            ? `Invite: ${preview.invite_label}`
+            : 'Enter your name and pick a 4-digit passcode.'}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="invite-first" className="block text-sm text-gray-500 mb-2">First name</label>
+          <input
+            id="invite-first"
+            type="text"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            className="input-field"
+            autoComplete="given-name"
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="invite-last" className="block text-sm text-gray-500 mb-2">Last name</label>
+          <input
+            id="invite-last"
+            type="text"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            className="input-field"
+            autoComplete="family-name"
+            required
+          />
+        </div>
       </div>
 
       <div>
@@ -140,7 +182,7 @@ export function InviteForm({ token }: InviteFormProps) {
       </div>
 
       <button type="submit" disabled={loading} className="btn-primary w-full">
-        {loading ? 'Saving...' : 'Save passcode'}
+        {loading ? 'Saving...' : 'Finish setup'}
       </button>
 
       <p className="text-center text-sm text-gray-500">

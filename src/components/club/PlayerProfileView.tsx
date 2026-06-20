@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { PlayerProfile } from '../../types'
 import { formatMatchDate, resultColor, resultLabel } from '../../lib/format'
 import { PlayerPhotoAvatar } from './PlayerPhotoAvatar'
+import { ChangePasscodeForm } from '../auth/ChangePasscodeForm'
 import {
   getDetailedStatRows,
   getMatchPerformances,
@@ -48,6 +49,7 @@ export function PlayerProfileView({
   availabilitySaving,
 }: PlayerProfileViewProps) {
   const { stats, matchHistory } = profile
+  const [passcodeOpen, setPasscodeOpen] = useState(false)
 
   const performances = useMemo(() => getMatchPerformances(matchHistory), [matchHistory])
   const seasonPoints = useMemo(() => getSeasonImpactTotal(matchHistory), [matchHistory])
@@ -115,6 +117,21 @@ export function PlayerProfileView({
               <span className="text-gray-500">Avg impact</span>
               <span className="font-semibold text-brand-gold">{avgPoints} pts</span>
             </div>
+            {isOwnProfile && (
+              <div className="border-t border-brand-blue/10 pt-3">
+                {passcodeOpen ? (
+                  <ChangePasscodeForm onClose={() => setPasscodeOpen(false)} />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPasscodeOpen(true)}
+                    className="text-sm text-brand-blue font-medium"
+                  >
+                    Change passcode
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { NotificationToggle } from './NotificationToggle'
+import { ChangePasscodeForm } from '../auth/ChangePasscodeForm'
 
 function NavIcon({ children }: { children: React.ReactNode }) {
   return (
@@ -77,9 +78,11 @@ export function MobileBottomNav() {
   const location = useLocation()
   const { user, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [passcodeOpen, setPasscodeOpen] = useState(false)
 
   useEffect(() => {
     setMenuOpen(false)
+    setPasscodeOpen(false)
   }, [location.pathname])
 
   useEffect(() => {
@@ -124,6 +127,17 @@ export function MobileBottomNav() {
           >
             My profile
           </Link>
+          {passcodeOpen ? (
+            <ChangePasscodeForm onClose={() => setPasscodeOpen(false)} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPasscodeOpen(true)}
+              className="w-full flex items-center min-h-[48px] px-3 rounded-xl text-brand-navy font-medium text-left"
+            >
+              Change passcode
+            </button>
+          )}
           <NotificationToggle playerId={user.id} />
           {(user.is_admin || user.is_committee) && (
             <Link to="/admin" onClick={() => setMenuOpen(false)} className="flex items-center min-h-[48px] px-3 rounded-xl text-brand-navy font-medium">

@@ -28,6 +28,8 @@ import {
   removeMockFixture,
   createMockInvite,
   regenerateMockInvite,
+  updateMockPlayerNames,
+  changeMockPasscode,
   getMockLineup,
   removeMockSquad,
   resetMockPasscode,
@@ -340,12 +342,12 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
 }
 
 export async function createInvite(
-  displayName: string,
-  position?: SquadPosition | null
+  position?: SquadPosition | null,
+  inviteLabel?: string | null,
 ): Promise<CreateInviteResult> {
   if (isMockDataMode()) {
     await delay()
-    const row = createMockInvite(displayName, position)
+    const row = createMockInvite(position, inviteLabel)
     return { ...row, invite_expires_at: null }
   }
 
@@ -355,11 +357,60 @@ export async function createInvite(
   const { data, error } = await supabase.rpc('admin_create_invite', {
     p_admin_id: session.userId,
     p_session_token: session.sessionToken,
-    p_display_name: displayName.trim(),
     p_position: position ?? null,
+    p_invite_label: inviteLabel?.trim() || null,
   })
   if (error) throw error
   return data as CreateInviteResult
+}
+
+export async function updatePlayerNames(
+  userId: string,
+  firstName: string,
+  lastName: string,
+): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    updateMockPlayerNames(userId, firstName, lastName)
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_update_player_names', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_target_id: userId,
+    p_first_name: firstName.trim(),
+    p_last_name: lastName.trim(),
+  })
+  if (error) throw error
+}
+
+export async function changePasscode(currentPasscode: string, newPasscode: string): Promise<void> {
+  if (!/^\d{4}$/.test(newPasscode) || !/^\d{4}$/.test(currentPasscode)) {
+    throw new Error('Passcode must be 4 digits')
+  }
+
+  if (isMockDataMode()) {
+    await delay()
+    const session = getClubSession()
+    if (!session) throw new Error('Not signed in')
+    changeMockPasscode(session.userId, currentPasscode, newPasscode)
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('change_player_passcode', {
+    p_user_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_current_passcode: currentPasscode,
+    p_new_passcode: newPasscode,
+  })
+  if (error) throw error
 }
 
 export async function setUserCommittee(userId: string, isCommittee: boolean): Promise<void> {

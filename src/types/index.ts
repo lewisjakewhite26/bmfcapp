@@ -12,6 +12,9 @@ export interface AdminUserRow {
   id: string
   username: string
   display_name: string
+  first_name?: string | null
+  last_name?: string | null
+  invite_label?: string | null
   is_admin: boolean
   is_committee: boolean
   is_approved: boolean
@@ -25,13 +28,14 @@ export interface AdminUserRow {
 export type SquadPosition = 'Forward' | 'Midfielder' | 'Defender' | 'Goalkeeper'
 
 export interface InvitePreview {
-  display_name: string
   expires_at: string | null
+  invite_label?: string | null
 }
 
 export interface CreateInviteResult {
   id: string
   display_name: string
+  invite_label?: string | null
   invite_token: string
   invite_expires_at: string | null
 }

@@ -5,7 +5,7 @@ export interface AuthContextType {
   user: User | null
   loading: boolean
   login: (displayName: string, passcode: string) => Promise<void>
-  completeInvite: (token: string, passcode: string) => Promise<void>
+  completeInvite: (token: string, firstName: string, lastName: string, passcode: string) => Promise<void>
   devBypassLogin: (asAdmin?: boolean, asPending?: boolean) => void
   logout: () => void | Promise<void>
   refreshUser: () => Promise<void>

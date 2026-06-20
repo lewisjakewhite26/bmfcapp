@@ -11,7 +11,9 @@ import {
   regenerateInvite,
   resetUserPasscode,
   setUserCommittee,
+  updatePlayerNames,
 } from '../lib/clubApi'
+import { validateNamePart } from '../lib/playerNames'
 import { SQUAD_POSITIONS } from '../lib/squadPositions'
 import { pageContainerClass } from '../lib/layout'
 import type { AdminUserRow, SquadPosition } from '../types'
@@ -23,14 +25,22 @@ function copyText(text: string) {
   )
 }
 
+function pendingInviteLabel(u: AdminUserRow): string {
+  if (u.invite_label?.trim()) return u.invite_label.trim()
+  return new Date(u.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 export default function AdminUsers() {
   const [users, setUsers] = useState<AdminUserRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [newName, setNewName] = useState('')
+  const [inviteLabel, setInviteLabel] = useState('')
   const [newPosition, setNewPosition] = useState<SquadPosition>('Midfielder')
   const [creating, setCreating] = useState(false)
   const [lastInviteLink, setLastInviteLink] = useState<string | null>(null)
   const [resetTarget, setResetTarget] = useState<AdminUserRow | null>(null)
+  const [editTarget, setEditTarget] = useState<AdminUserRow | null>(null)
+  const [editFirstName, setEditFirstName] = useState('')
+  const [editLastName, setEditLastName] = useState('')
   const [newPasscode, setNewPasscode] = useState('')
 
   const reload = async () => {
@@ -46,18 +56,14 @@ export default function AdminUsers() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (newName.trim().length < 2) {
-      toast.error('Enter the player\'s name')
-      return
-    }
 
     setCreating(true)
     try {
-      const result = await createInvite(newName.trim(), newPosition)
+      const result = await createInvite(newPosition, inviteLabel.trim() || null)
       const link = inviteUrl(result.invite_token)
       setLastInviteLink(link)
-      setNewName('')
-      toast.success(`Invite created for ${result.display_name}`)
+      setInviteLabel('')
+      toast.success('Invite link created')
       reload()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't create invite")
@@ -66,15 +72,43 @@ export default function AdminUsers() {
     }
   }
 
-  const handleRegenerate = async (userId: string, displayName: string) => {
+  const handleRegenerate = async (userId: string, label: string) => {
     try {
       const result = await regenerateInvite(userId)
       const link = inviteUrl(result.invite_token)
       setLastInviteLink(link)
-      toast.success(`New link for ${displayName}`)
+      toast.success(`New link for ${label}`)
       reload()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't regenerate link")
+    }
+  }
+
+  const openEditNames = (user: AdminUserRow) => {
+    setEditTarget(user)
+    setEditFirstName(user.first_name ?? '')
+    setEditLastName(user.last_name ?? '')
+  }
+
+  const handleEditNames = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editTarget) return
+
+    try {
+      validateNamePart(editFirstName, 'First name')
+      validateNamePart(editLastName, 'Last name')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Enter a valid name')
+      return
+    }
+
+    try {
+      await updatePlayerNames(editTarget.id, editFirstName, editLastName)
+      toast.success('Name updated')
+      setEditTarget(null)
+      reload()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't update name")
     }
   }
 
@@ -115,7 +149,7 @@ export default function AdminUsers() {
       <div className={pageContainerClass()}>
         <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         <h1 className="font-display text-2xl text-brand-navy">Squad members</h1>
-        <p className="text-sm text-gray-500">Add players and send invite links. Set their position so they appear in stats.</p>
+        <p className="text-sm text-gray-500">Create invite links — players enter their name when they open the link. Position is optional but helps stats.</p>
 
         <section className="glass-card p-5 space-y-4">
           <h2 className="font-semibold text-brand-navy">Add a player</h2>
@@ -123,10 +157,10 @@ export default function AdminUsers() {
             <div className="flex flex-col sm:flex-row gap-3">
               <input
                 type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+                value={inviteLabel}
+                onChange={(e) => setInviteLabel(e.target.value)}
                 className="input-field flex-1"
-                placeholder="Player name, e.g. Chris Lee"
+                placeholder="Label (optional), e.g. Trialist A"
               />
               <select
                 value={newPosition}
@@ -154,6 +188,37 @@ export default function AdminUsers() {
           )}
         </section>
 
+        {editTarget && (
+          <form onSubmit={handleEditNames} className="glass-card p-5 space-y-3 border border-brand-blue/20">
+            <h2 className="font-semibold text-brand-navy">Edit name: {editTarget.display_name}</h2>
+            <p className="text-sm text-gray-500">Display name and @username update automatically.</p>
+            <div className="grid grid-cols-2 gap-3 max-w-md">
+              <input
+                type="text"
+                value={editFirstName}
+                onChange={(e) => setEditFirstName(e.target.value)}
+                className="input-field"
+                placeholder="First name"
+                required
+              />
+              <input
+                type="text"
+                value={editLastName}
+                onChange={(e) => setEditLastName(e.target.value)}
+                className="input-field"
+                placeholder="Last name"
+                required
+              />
+            </div>
+            <div className="flex gap-2">
+              <button type="submit" className="btn-primary text-sm">Save name</button>
+              <button type="button" onClick={() => setEditTarget(null)} className="btn-secondary text-sm">
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
         {resetTarget && (
           <form onSubmit={handleResetPasscode} className="glass-card p-5 space-y-3 border border-brand-gold/30">
             <h2 className="font-semibold text-brand-navy">Reset passcode: {resetTarget.display_name}</h2>
@@ -180,18 +245,19 @@ export default function AdminUsers() {
         {awaitingSetup.length > 0 && (
           <section className="space-y-3">
             <h2 className="font-semibold text-amber-700">Awaiting setup ({awaitingSetup.length})</h2>
-            <p className="text-sm text-gray-500 -mt-1">Invite sent. Passcode not set yet.</p>
+            <p className="text-sm text-gray-500 -mt-1">Invite sent. Name and passcode not set yet.</p>
             {awaitingSetup.map((u) => (
               <div key={u.id} className="glass-card p-4 flex items-center justify-between gap-3 border border-amber-200/60">
                 <div>
-                  <p className="font-semibold text-brand-navy">{u.display_name}</p>
+                  <p className="font-semibold text-brand-navy">{pendingInviteLabel(u)}</p>
                   <p className="text-sm text-gray-500">
-                    Waiting for invite link{u.squad_position ? ` · ${u.squad_position}` : ''}
+                    Created {new Date(u.created_at).toLocaleDateString('en-GB')}
+                    {u.squad_position ? ` · ${u.squad_position}` : ''}
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleRegenerate(u.id, u.display_name)}
+                  onClick={() => handleRegenerate(u.id, pendingInviteLabel(u))}
                   className="btn-secondary text-sm py-2 px-4"
                 >
                   New link
@@ -210,7 +276,8 @@ export default function AdminUsers() {
                 <div>
                   <p className="font-semibold text-brand-navy">{u.display_name}</p>
                   <p className="text-sm text-gray-500">
-                    Ready for approval{u.squad_position ? ` · ${u.squad_position}` : ''}
+                    {u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : 'Ready for approval'}
+                    {u.squad_position ? ` · ${u.squad_position}` : ''}
                   </p>
                 </div>
                 <button
@@ -244,9 +311,17 @@ export default function AdminUsers() {
                   {users.map((u) => (
                     <tr key={u.id} className="border-t border-brand-blue/8">
                       <td className="px-4 py-3">
-                        <p className="font-medium">{u.display_name}</p>
+                        <p className="font-medium">{u.invite_pending ? pendingInviteLabel(u) : u.display_name}</p>
                         <p className="text-xs text-gray-500">
-                          {u.is_admin ? 'Admin' : u.is_committee ? 'Committee' : 'Player'}
+                          {u.invite_pending
+                            ? `Invite · ${new Date(u.created_at).toLocaleDateString('en-GB')}`
+                            : u.first_name && u.last_name
+                              ? `${u.first_name} ${u.last_name} · @${u.username}`
+                              : u.is_admin
+                                ? 'Admin'
+                                : u.is_committee
+                                  ? 'Committee'
+                                  : `@${u.username}`}
                         </p>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell text-gray-600">
@@ -268,13 +343,22 @@ export default function AdminUsers() {
                           {u.invite_pending ? (
                             <button
                               type="button"
-                              onClick={() => handleRegenerate(u.id, u.display_name)}
+                              onClick={() => handleRegenerate(u.id, pendingInviteLabel(u))}
                               className="text-xs text-brand-blue font-medium"
                             >
                               New link
                             </button>
                           ) : (
                             <>
+                              {!u.is_admin && u.first_name && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEditNames(u)}
+                                  className="text-xs text-brand-blue font-medium"
+                                >
+                                  Edit name
+                                </button>
+                              )}
                               {!u.is_admin && (
                                 <label className="inline-flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
                                   <input

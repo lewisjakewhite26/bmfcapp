@@ -48,18 +48,18 @@ export function LoginForm() {
           onError={(e) => { (e.target as HTMLImageElement).src = '/logo.svg' }}
         />
         <h1 className="font-display text-2xl text-brand-navy">Welcome back</h1>
-        <p className="text-gray-500 text-sm mt-1">Your name and 4-digit passcode</p>
+        <p className="text-gray-500 text-sm mt-1">Your display name and 4-digit passcode</p>
       </div>
 
       <div>
-        <label htmlFor="login-name" className="block text-sm text-gray-500 mb-2">Your name</label>
+        <label htmlFor="login-name" className="block text-sm text-gray-500 mb-2">Display name</label>
         <input
           id="login-name"
           type="text"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
           className="input-field"
-          placeholder="Chris Lee"
+          placeholder="Chris L."
           autoComplete="name"
           required={!mockMode}
         />

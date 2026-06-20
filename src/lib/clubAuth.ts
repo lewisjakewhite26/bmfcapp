@@ -49,13 +49,35 @@ export async function rpcGetInvitePreview(token: string): Promise<InvitePreview>
   return data as InvitePreview
 }
 
-export async function rpcCompleteInvite(token: string, passcode: string): Promise<User> {
+export async function rpcCompleteInvite(
+  token: string,
+  firstName: string,
+  lastName: string,
+  passcode: string,
+): Promise<User> {
   const { data, error } = await supabase.rpc('complete_invite', {
     p_token: token,
+    p_first_name: firstName.trim(),
+    p_last_name: lastName.trim(),
     p_passcode: passcode,
   })
   if (error) throw error
   return mapRpcUser(data as Record<string, unknown>)
+}
+
+export async function rpcChangePasscode(
+  userId: string,
+  sessionToken: string,
+  currentPasscode: string,
+  newPasscode: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('change_player_passcode', {
+    p_user_id: userId,
+    p_session_token: sessionToken,
+    p_current_passcode: currentPasscode,
+    p_new_passcode: newPasscode,
+  })
+  if (error) throw error
 }
 
 export function inviteUrl(token: string): string {

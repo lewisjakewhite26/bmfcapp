@@ -21,6 +21,13 @@ import type { LiveMatchDraft } from './liveMatchEvents'
 import { clearLocalLiveDraft, readLocalLiveDraft, writeLocalLiveDraft } from './liveMatchDraftStorage'
 import { buildDdsflMockState } from './ddsflMockImport'
 import { isUpcomingScheduledFixture } from './fixtureFilters'
+import {
+  allocateUniqueDisplayName,
+  allocateUniqueUsername,
+  formatPlayerDisplayName,
+  formatPlayerUsernameBase,
+  validateNamePart,
+} from './playerNames'
 import { DDSFL_ACTIVE_SEASON, DDSFL_LEAGUE_NAME, DDSFL_SEASONS } from './ddsflConstants'
 
 export const CLUB_NAME = 'Bishop Middleham FC'
@@ -50,12 +57,12 @@ function dateOnlyFromNow(days: number): string {
 export const MANUAL_FIXTURES: Fixture[] = []
 
 export const MOCK_SQUAD: SquadMember[] = [
-  { id: 's1', player_id: 'p1', display_name: 'Tom Harrison', squad_number: null, position: 'Goalkeeper', joined_date: '2023-08-01', active: true },
-  { id: 's2', player_id: 'p2', display_name: 'James Wilson', squad_number: null, position: 'Defender', joined_date: '2022-08-01', active: true },
-  { id: 's3', player_id: 'p3', display_name: 'Mark Davies', squad_number: null, position: 'Midfielder', joined_date: '2021-08-01', active: true },
-  { id: 's4', player_id: PREVIEW_PLAYER_ID, display_name: 'Chris Lee', squad_number: null, position: 'Forward', joined_date: '2020-08-01', active: true },
-  { id: 's5', player_id: 'p5', display_name: 'Sam Patel', squad_number: null, position: 'Forward', joined_date: '2024-01-01', active: true },
-  { id: 's6', player_id: 'p6', display_name: 'Alex Morgan', squad_number: null, position: 'Midfielder', joined_date: '2023-01-01', active: true },
+  { id: 's1', player_id: 'p1', display_name: 'Tom H.', squad_number: null, position: 'Goalkeeper', joined_date: '2023-08-01', active: true },
+  { id: 's2', player_id: 'p2', display_name: 'James W.', squad_number: null, position: 'Defender', joined_date: '2022-08-01', active: true },
+  { id: 's3', player_id: 'p3', display_name: 'Mark D.', squad_number: null, position: 'Midfielder', joined_date: '2021-08-01', active: true },
+  { id: 's4', player_id: PREVIEW_PLAYER_ID, display_name: 'Chris L.', squad_number: null, position: 'Forward', joined_date: '2020-08-01', active: true },
+  { id: 's5', player_id: 'p5', display_name: 'Sam P.', squad_number: null, position: 'Forward', joined_date: '2024-01-01', active: true },
+  { id: 's6', player_id: 'p6', display_name: 'Alex M.', squad_number: null, position: 'Midfielder', joined_date: '2023-01-01', active: true },
 ]
 
 export const MOCK_TRAINING: TrainingSession[] = [
@@ -116,8 +123,10 @@ export const MOCK_CLUB_EVENTS: ClubEvent[] = [
 export const MOCK_ADMIN_USERS: AdminUserRow[] = [
   {
     id: '00000000-0000-0000-0000-000000000001',
-    username: 'preview_user',
-    display_name: 'Preview Player',
+    username: 'clee',
+    display_name: 'Chris L.',
+    first_name: 'Chris',
+    last_name: 'Lee',
     is_admin: false,
     is_committee: false,
     is_approved: true,
@@ -133,6 +142,8 @@ export const MOCK_ADMIN_USERS: AdminUserRow[] = [
     created_at: '2026-05-01T00:00:00Z',
   },
 ]
+
+type MockAdminUser = AdminUserRow & { invite_label?: string | null }
 
 const ddsflMock = buildDdsflMockState()
 
@@ -157,8 +168,9 @@ let fundraisers = [...MOCK_FUNDRAISERS]
 const fundraiserParticipation = new Map<string, Map<string, boolean>>()
 let availability: Availability[] = []
 const mockLineups = new Map<string, Lineup>()
-let adminUsers = [...MOCK_ADMIN_USERS]
+let adminUsers: MockAdminUser[] = [...MOCK_ADMIN_USERS]
 let squad = [...MOCK_SQUAD]
+const mockPasscodes = new Map<string, string>([[PREVIEW_PLAYER_ID, '1234']])
 const mockPlayerPhotoUrls = new Map<string, string>()
 const mockLiveDrafts = new Map<string, LiveMatchDraft>()
 
@@ -365,23 +377,55 @@ export function getMockAdminUsers(): AdminUserRow[] {
   })
 }
 
-export function createMockInvite(
-  displayName: string,
-  position?: string | null
-): { id: string; display_name: string; invite_token: string } {
-  const name = displayName.trim()
-  if (adminUsers.some((u) => u.display_name.toLowerCase() === name.toLowerCase())) {
-    throw new Error('That name is already registered')
+function applyMockPlayerNames(userId: string, firstName: string, lastName: string) {
+  const first = validateNamePart(firstName, 'First name')
+  const last = validateNamePart(lastName, 'Last name')
+
+  if (
+    adminUsers.some(
+      (u) =>
+        u.id !== userId &&
+        u.first_name &&
+        u.last_name &&
+        u.first_name.toLowerCase() === first.toLowerCase() &&
+        u.last_name.toLowerCase() === last.toLowerCase(),
+    )
+  ) {
+    throw new Error('Someone with that name is already registered')
   }
 
+  const user = adminUsers.find((u) => u.id === userId)
+  if (!user) throw new Error('Player not found')
+
+  const baseDisplay = formatPlayerDisplayName(first, last)
+  const baseUsername = formatPlayerUsernameBase(first, last)
+  user.first_name = first
+  user.last_name = last
+  user.display_name = allocateUniqueDisplayName(baseDisplay, (candidate) =>
+    adminUsers.some((u) => u.id !== userId && u.display_name.toLowerCase() === candidate.toLowerCase()),
+  )
+  user.username = allocateUniqueUsername(baseUsername, (candidate) =>
+    adminUsers.some((u) => u.id !== userId && u.username.toLowerCase() === candidate.toLowerCase()),
+  )
+
+  const sq = squad.find((s) => s.player_id === userId)
+  if (sq) sq.display_name = user.display_name
+}
+
+export function createMockInvite(
+  position?: string | null,
+  inviteLabel?: string | null,
+): { id: string; display_name: string; invite_label: string | null; invite_token: string } {
   const id = crypto.randomUUID()
   const token = crypto.randomUUID().replace(/-/g, '')
-  const username = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 16) || 'player'
+  const label = inviteLabel?.trim() || null
+  const username = `inv_${token.slice(0, 12)}`
 
   adminUsers.push({
     id,
     username,
-    display_name: name,
+    display_name: label ?? 'New player',
+    invite_label: label,
     is_admin: false,
     is_committee: false,
     is_approved: true,
@@ -394,7 +438,7 @@ export function createMockInvite(
     squad.push({
       id: crypto.randomUUID(),
       player_id: id,
-      display_name: name,
+      display_name: label ?? 'New player',
       squad_number: null,
       position: position.trim(),
       joined_date: new Date().toISOString().slice(0, 10),
@@ -402,7 +446,7 @@ export function createMockInvite(
     })
   }
 
-  return { id, display_name: name, invite_token: token }
+  return { id, display_name: label ?? 'New player', invite_label: label, invite_token: token }
 }
 
 export function setMockUserCommittee(userId: string, isCommittee: boolean) {
@@ -411,8 +455,25 @@ export function setMockUserCommittee(userId: string, isCommittee: boolean) {
 }
 
 export function resetMockPasscode(userId: string, passcode: string) {
-  void userId
-  void passcode
+  if (!/^\d{4}$/.test(passcode)) throw new Error('Passcode must be 4 digits')
+  mockPasscodes.set(userId, passcode)
+}
+
+export function changeMockPasscode(userId: string, currentPasscode: string, newPasscode: string) {
+  if (!/^\d{4}$/.test(newPasscode) || !/^\d{4}$/.test(currentPasscode)) {
+    throw new Error('Passcode must be exactly 4 digits')
+  }
+  if (currentPasscode === newPasscode) throw new Error('Pick a different passcode')
+  const stored = mockPasscodes.get(userId)
+  if (!stored || stored !== currentPasscode) throw new Error('Current passcode is wrong')
+  mockPasscodes.set(userId, newPasscode)
+}
+
+export function updateMockPlayerNames(userId: string, firstName: string, lastName: string) {
+  const user = adminUsers.find((u) => u.id === userId)
+  if (!user) throw new Error('Player not found')
+  if (user.invite_pending) throw new Error('Player has not finished invite setup yet')
+  applyMockPlayerNames(userId, firstName, lastName)
 }
 
 export function upsertMockSquad(
@@ -554,15 +615,20 @@ export function regenerateMockInvite(userId: string): { id: string; display_name
   return { id: userId, display_name: user.display_name, invite_token: token }
 }
 
-export function getMockInvitePreview(token: string): { display_name: string; expires_at: string | null } {
+export function getMockInvitePreview(token: string): { expires_at: string | null; invite_label: string | null } {
   const userId = mockInviteTokens.get(token)
   if (!userId) throw new Error('Invite link not found')
   const user = adminUsers.find((u) => u.id === userId)
   if (!user) throw new Error('Invite link not found')
-  return { display_name: user.display_name, expires_at: null }
+  return { expires_at: null, invite_label: user.invite_label ?? null }
 }
 
-export function completeMockInvite(token: string, passcode: string): import('../types').User | null {
+export function completeMockInvite(
+  token: string,
+  firstName: string,
+  lastName: string,
+  passcode: string,
+): import('../types').User | null {
   if (!/^\d{4}$/.test(passcode)) throw new Error('Passcode must be exactly 4 digits')
 
   const userId = mockInviteTokens.get(token)
@@ -571,6 +637,10 @@ export function completeMockInvite(token: string, passcode: string): import('../
   const user = adminUsers.find((u) => u.id === userId)
   if (!user) return null
 
+  applyMockPlayerNames(userId, firstName, lastName)
+  user.invite_label = null
+  user.is_approved = false
+  mockPasscodes.set(userId, passcode)
   mockInviteTokens.delete(token)
 
   return {
