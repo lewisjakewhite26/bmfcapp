@@ -3,6 +3,7 @@ import { CLUB_EVENT_TYPE_LABELS } from '../../lib/clubEventTypes'
 import { FixtureCard } from './FixtureCard'
 import { AvailabilityForm } from './AvailabilityForm'
 import { formatMatchDate, formatMatchTime } from '../../lib/format'
+import { CALENDAR_BORDER, CALENDAR_LABEL } from '../../lib/calendarColors'
 import { isCompletedFixtureItem } from '../../lib/calendarItems'
 
 interface CalendarListProps {
@@ -41,6 +42,7 @@ export function CalendarList({ items, availability, onAvailabilityChange, showAv
             <FixtureCard
               key={`f-${item.data.id}`}
               fixture={item.data}
+              useCalendarColors
               availabilitySlot={
                 !completed && showAvailability && onAvailabilityChange ? (
                   <AvailabilityForm
@@ -61,8 +63,8 @@ export function CalendarList({ items, availability, onAvailabilityChange, showAv
           const training = item.data
           const entry = getEntry(undefined, training.id)
           return (
-            <article key={`t-${training.id}`} className="glass-card p-4 sm:p-5 border-l-4 border-brand-gold">
-              <p className="text-xs font-semibold uppercase tracking-wide text-brand-gold">Training</p>
+            <article key={`t-${training.id}`} className={`glass-card p-4 sm:p-5 border-l-4 ${CALENDAR_BORDER.training}`}>
+              <p className={`text-xs font-semibold uppercase tracking-wide ${CALENDAR_LABEL.training}`}>Training</p>
               <p className="font-semibold text-brand-navy mt-1">
                 {formatMatchDate(training.session_date)} · {formatMatchTime(training.session_date)}
               </p>
@@ -87,8 +89,8 @@ export function CalendarList({ items, availability, onAvailabilityChange, showAv
         if (item.type === 'event') {
           const event = item.data
           return (
-            <article key={`e-${event.id}`} className="glass-card p-4 sm:p-5 border-l-4 border-violet-500">
-              <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
+            <article key={`e-${event.id}`} className={`glass-card p-4 sm:p-5 border-l-4 ${CALENDAR_BORDER.other}`}>
+              <p className={`text-xs font-semibold uppercase tracking-wide ${CALENDAR_LABEL.other}`}>
                 {CLUB_EVENT_TYPE_LABELS[event.event_type]}
               </p>
               <p className="font-semibold text-brand-navy mt-1">{event.title}</p>
@@ -103,8 +105,8 @@ export function CalendarList({ items, availability, onAvailabilityChange, showAv
 
         const fundraiser = item.data
         return (
-          <article key={`fr-${fundraiser.id}`} className="glass-card p-4 sm:p-5 border-l-4 border-emerald-500">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Fundraiser</p>
+          <article key={`fr-${fundraiser.id}`} className={`glass-card p-4 sm:p-5 border-l-4 ${CALENDAR_BORDER.other}`}>
+            <p className={`text-xs font-semibold uppercase tracking-wide ${CALENDAR_LABEL.other}`}>Fundraiser</p>
             <p className="font-semibold text-brand-navy mt-1">{fundraiser.name}</p>
             <p className="text-sm text-gray-500 mt-1">{formatMatchDate(`${fundraiser.date}T12:00:00`)}</p>
             {fundraiser.notes && <p className="text-sm text-gray-600 mt-2">{fundraiser.notes}</p>}

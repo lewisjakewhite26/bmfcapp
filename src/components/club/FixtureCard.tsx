@@ -6,16 +6,19 @@ interface FixtureCardProps {
   fixture: FixtureWithResult
   showAvailability?: boolean
   availabilitySlot?: React.ReactNode
+  /** Calendar list: one match colour; result shown via badge only. */
+  useCalendarColors?: boolean
 }
 
-export function FixtureCard({ fixture, availabilitySlot }: FixtureCardProps) {
+export function FixtureCard({ fixture, availabilitySlot, useCalendarColors }: FixtureCardProps) {
   const isHome = fixture.home_away === 'home'
   const us = CLUB_NAME.replace(' FC', '')
   const them = fixture.opponent.replace(' FC', '').replace(' Fc', '')
   const completed = fixture.status === 'completed' && fixture.result
+  const borderClass = useCalendarColors ? 'border-brand-blue' : fixtureResultBorderClass(fixture)
 
   return (
-    <article className={`glass-card p-4 sm:p-5 border-l-4 ${fixtureResultBorderClass(fixture)}`}>
+    <article className={`glass-card p-4 sm:p-5 border-l-4 ${borderClass}`}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-blue">{fixture.competition}</p>

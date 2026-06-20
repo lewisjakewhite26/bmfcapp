@@ -8,9 +8,18 @@ import {
   itemsOnDay,
   startOfMonth,
 } from '../../lib/calendar'
-import { formatMatchDate, formatMatchTime, formatScore, fixtureResultBorderClass, fixtureResultDotClass } from '../../lib/format'
+import { formatMatchDate, formatMatchTime, formatScore, resultColor } from '../../lib/format'
+import {
+  CALENDAR_BORDER,
+  CALENDAR_DOT,
+  CALENDAR_LABEL,
+  completedMatchResultTint,
+  dayHasOther,
+  dayHasTraining,
+  dayHasUpcomingMatch,
+  matchResultDayBackground,
+} from '../../lib/calendarColors'
 import { CLUB_EVENT_TYPE_LABELS } from '../../lib/clubEventTypes'
-import { isUpcomingScheduledFixture } from '../../lib/fixtureFilters'
 import { AvailabilityForm } from './AvailabilityForm'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -89,20 +98,11 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                 const dayItems = itemsOnDay(items, day)
                 const isToday = isSameDay(day, today)
                 const isSelected = selectedDay && isSameDay(day, selectedDay)
-                const fixtureItems = dayItems.filter((i) => i.type === 'fixture')
-                const hasUpcomingMatch = fixtureItems.some((i) => isUpcomingScheduledFixture(i.data))
-                const hasWin = fixtureItems.some(
-                  (i) => i.data.status === 'completed' && i.data.result && i.data.result.goals_for > i.data.result.goals_against,
-                )
-                const hasDraw = fixtureItems.some(
-                  (i) => i.data.status === 'completed' && i.data.result && i.data.result.goals_for === i.data.result.goals_against,
-                )
-                const hasLoss = fixtureItems.some(
-                  (i) => i.data.status === 'completed' && i.data.result && i.data.result.goals_for < i.data.result.goals_against,
-                )
-                const hasTraining = dayItems.some((i) => i.type === 'training')
-                const hasEvent = dayItems.some((i) => i.type === 'event')
-                const hasFundraiser = dayItems.some((i) => i.type === 'fundraiser')
+                const resultTint = completedMatchResultTint(dayItems)
+                const hasUpcomingMatch = dayHasUpcomingMatch(dayItems)
+                const hasTraining = dayHasTraining(dayItems)
+                const hasOther = dayHasOther(dayItems)
+                const resultBg = matchResultDayBackground(resultTint, { selected: Boolean(isSelected) })
 
                 return (
                   <button
@@ -113,9 +113,9 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                       isSelected
                         ? 'bg-brand-blue text-white shadow-sm'
                         : isToday
-                          ? 'bg-brand-blue/10 text-brand-navy ring-1 ring-brand-blue/30'
+                          ? `text-brand-navy ring-1 ring-brand-blue/30 ${resultBg || 'bg-brand-blue/10'}`
                           : dayItems.length > 0
-                            ? 'bg-white/80 text-brand-navy hover:bg-white'
+                            ? `${resultBg || 'bg-white/80'} text-brand-navy hover:bg-white`
                             : 'text-gray-600 hover:bg-white/50'
                     }`}
                   >
@@ -126,37 +126,17 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                       <div className="flex gap-0.5 flex-wrap justify-center max-w-[2rem]">
                         {hasUpcomingMatch && (
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-brand-blue'}`}
-                          />
-                        )}
-                        {hasWin && (
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-teal-200' : 'bg-teal-600'}`}
-                          />
-                        )}
-                        {hasDraw && (
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-amber-200' : 'bg-amber-500'}`}
-                          />
-                        )}
-                        {hasLoss && (
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-red-200' : 'bg-red-500'}`}
+                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : CALENDAR_DOT.match}`}
                           />
                         )}
                         {hasTraining && (
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-brand-gold' : 'bg-brand-gold'}`}
+                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-brand-gold' : CALENDAR_DOT.training}`}
                           />
                         )}
-                        {hasEvent && (
+                        {hasOther && (
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-violet-200' : 'bg-violet-500'}`}
-                          />
-                        )}
-                        {hasFundraiser && (
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-emerald-200' : 'bg-emerald-500'}`}
+                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-slate-200' : CALENDAR_DOT.other}`}
                           />
                         )}
                       </div>
@@ -186,10 +166,10 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                   const dot = availColor(f.id)
                   const completed = f.status === 'completed' && f.result
                   return (
-                    <article key={f.id} className={`border-t border-brand-blue/10 pt-4 first:border-t-0 first:pt-0 border-l-4 pl-3 ${fixtureResultBorderClass(f)}`}>
+                    <article key={f.id} className={`border-t border-brand-blue/10 pt-4 first:border-t-0 first:pt-0 border-l-4 pl-3 ${CALENDAR_BORDER.match}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-xs font-semibold uppercase text-brand-blue">Match</p>
+                          <p className={`text-xs font-semibold uppercase ${CALENDAR_LABEL.match}`}>Match</p>
                           <p className="font-semibold text-brand-navy mt-0.5">
                             {f.home_away === 'home' ? 'vs' : '@'} {f.opponent.replace(' FC', '')}
                           </p>
@@ -206,7 +186,15 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                         {dot ? (
                           <span className={`w-3 h-3 rounded-full shrink-0 mt-1 ${dot}`} title={entry?.status} />
                         ) : completed ? (
-                          <span className={`w-3 h-3 rounded-full shrink-0 mt-1 ${fixtureResultDotClass(f)}`} />
+                          <span
+                            className={`text-xs font-bold px-2 py-0.5 rounded-pill shrink-0 ${resultColor(f.result!.goals_for, f.result!.goals_against)}`}
+                          >
+                            {f.result!.goals_for > f.result!.goals_against
+                              ? 'Win'
+                              : f.result!.goals_for < f.result!.goals_against
+                                ? 'Loss'
+                                : 'Draw'}
+                          </span>
                         ) : null}
                       </div>
                       {!completed && onAvailabilityChange && (
@@ -230,10 +218,10 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                   const entry = getEntry(undefined, t.id)
                   const dot = availColor(undefined, t.id)
                   return (
-                    <article key={t.id} className="border-t border-brand-blue/10 pt-4 first:border-t-0 first:pt-0 border-l-4 border-brand-gold pl-3">
+                    <article key={t.id} className={`border-t border-brand-blue/10 pt-4 first:border-t-0 first:pt-0 border-l-4 pl-3 ${CALENDAR_BORDER.training}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-xs font-semibold uppercase text-brand-gold">Training</p>
+                          <p className={`text-xs font-semibold uppercase ${CALENDAR_LABEL.training}`}>Training</p>
                           <p className="font-semibold text-brand-navy mt-0.5">{formatMatchTime(t.session_date)}</p>
                           {t.location && <p className="text-sm text-gray-500">{t.location}</p>}
                           {t.notes && <p className="text-sm text-gray-600 mt-1">{t.notes}</p>}
@@ -259,8 +247,8 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                 if (item.type === 'event') {
                   const event = item.data
                   return (
-                    <article key={event.id} className="border-t border-brand-blue/10 pt-4 first:border-t-0 first:pt-0 border-l-4 border-violet-500 pl-3">
-                      <p className="text-xs font-semibold uppercase text-violet-600">
+                    <article key={event.id} className={`border-t border-brand-blue/10 pt-4 first:border-t-0 first:pt-0 border-l-4 pl-3 ${CALENDAR_BORDER.other}`}>
+                      <p className={`text-xs font-semibold uppercase ${CALENDAR_LABEL.other}`}>
                         {CLUB_EVENT_TYPE_LABELS[event.event_type]}
                       </p>
                       <p className="font-semibold text-brand-navy mt-0.5">{event.title}</p>
@@ -275,8 +263,8 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
 
                 const fundraiser = item.data
                 return (
-                  <article key={fundraiser.id} className="border-t border-brand-blue/10 pt-4 first:border-t-0 first:pt-0 border-l-4 border-emerald-500 pl-3">
-                    <p className="text-xs font-semibold uppercase text-emerald-600">Fundraiser</p>
+                  <article key={fundraiser.id} className={`border-t border-brand-blue/10 pt-4 first:border-t-0 first:pt-0 border-l-4 pl-3 ${CALENDAR_BORDER.other}`}>
+                    <p className={`text-xs font-semibold uppercase ${CALENDAR_LABEL.other}`}>Fundraiser</p>
                     <p className="font-semibold text-brand-navy mt-0.5">{fundraiser.name}</p>
                     <p className="text-sm text-gray-500">{formatMatchDate(`${fundraiser.date}T12:00:00`)}</p>
                     {fundraiser.notes && <p className="text-sm text-gray-600 mt-1">{fundraiser.notes}</p>}
