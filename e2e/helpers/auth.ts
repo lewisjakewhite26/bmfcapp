@@ -64,13 +64,15 @@ export async function logoutFromNavbar(page: Page) {
   })
 }
 
-/** Fill invite UI, then finish via the same mock invite path the app uses in E2E builds. */
+/** Fill invite wizard, then finish via the same mock invite path the app uses in E2E builds. */
 export async function completeInviteSetup(
   page: Page,
   details: { firstName: string; lastName: string; passcode: string },
 ) {
-  await page.getByLabel('First name').fill(details.firstName)
-  await page.getByLabel('Last name').fill(details.lastName)
+  await page.getByLabel("What's your first name?").fill(details.firstName)
+  await page.getByRole('button', { name: 'Next' }).click()
+  await page.getByLabel("What's your surname?").fill(details.lastName)
+  await page.getByRole('button', { name: 'Next' }).click()
   await page.getByLabel('Passcode', { exact: true }).fill(details.passcode)
   await page.getByLabel('Confirm passcode').fill(details.passcode)
   await expect(page.getByLabel('Passcode', { exact: true })).toHaveValue(details.passcode)
