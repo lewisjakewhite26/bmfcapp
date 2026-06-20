@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { PwaInstallNavButton } from './PwaInstallNavButton'
 
 export function Navbar() {
   const location = useLocation()
@@ -32,34 +33,35 @@ export function Navbar() {
           </span>
         </Link>
 
-        {authUser?.is_approved ? (
-          <>
-            <div className="hidden md:flex items-center gap-5">
-              <Link to="/table" className={`nav-link ${isActive('/table') ? 'nav-link-active' : ''}`}>Table</Link>
-              <Link to="/results" className={`nav-link ${isActive('/results') ? 'nav-link-active' : ''}`}>Results</Link>
-              <Link to="/stats" className={`nav-link ${isActive('/stats') ? 'nav-link-active' : ''}`}>Stats</Link>
-              <Link to="/calendar" className={`nav-link ${isActive('/calendar') ? 'nav-link-active' : ''}`}>Calendar</Link>
-              <Link to={`/player/${authUser.id}`} className="text-sm text-gray-600 hover:text-brand-blue transition-colors">
-                {authUser.display_name}
-              </Link>
-              {(authUser.is_admin || authUser.is_committee) && (
-                <Link to="/admin" className={`nav-link ${isAdminActive ? 'nav-link-active' : ''}`}>Admin</Link>
-              )}
-              <button onClick={logout} className="text-sm text-gray-500 hover:text-red-500 transition-colors min-h-[44px] px-2">
-                Logout
-              </button>
-            </div>
-            <div className="md:hidden text-sm font-medium text-brand-navy truncate max-w-[120px]">
-              {authUser.display_name.split(' ')[0]}
-            </div>
-          </>
-        ) : authUser && !authUser.is_approved ? (
-          <button onClick={logout} className="text-sm text-gray-500 min-h-[44px] px-2">Logout</button>
-        ) : (
-          <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <PwaInstallNavButton />
+          {authUser?.is_approved ? (
+            <>
+              <div className="hidden md:flex items-center gap-5">
+                <Link to="/table" className={`nav-link ${isActive('/table') ? 'nav-link-active' : ''}`}>Table</Link>
+                <Link to="/results" className={`nav-link ${isActive('/results') ? 'nav-link-active' : ''}`}>Results</Link>
+                <Link to="/stats" className={`nav-link ${isActive('/stats') ? 'nav-link-active' : ''}`}>Stats</Link>
+                <Link to="/calendar" className={`nav-link ${isActive('/calendar') ? 'nav-link-active' : ''}`}>Calendar</Link>
+                <Link to={`/player/${authUser.id}`} className="text-sm text-gray-600 hover:text-brand-blue transition-colors">
+                  {authUser.display_name}
+                </Link>
+                {(authUser.is_admin || authUser.is_committee) && (
+                  <Link to="/admin" className={`nav-link ${isAdminActive ? 'nav-link-active' : ''}`}>Admin</Link>
+                )}
+                <button onClick={logout} className="text-sm text-gray-500 hover:text-red-500 transition-colors min-h-[44px] px-2">
+                  Logout
+                </button>
+              </div>
+              <div className="md:hidden text-sm font-medium text-brand-navy truncate max-w-[120px]">
+                {authUser.display_name.split(' ')[0]}
+              </div>
+            </>
+          ) : authUser && !authUser.is_approved ? (
+            <button onClick={logout} className="text-sm text-gray-500 min-h-[44px] px-2">Logout</button>
+          ) : (
             <Link to="/login" className="btn-primary text-sm py-2.5 px-5 min-h-[44px]">Log in</Link>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </nav>
   )

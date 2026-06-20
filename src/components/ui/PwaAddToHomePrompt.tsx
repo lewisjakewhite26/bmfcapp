@@ -1,62 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
-  BeforeInstallPromptEvent,
   dismissAddToHomePrompt,
   isAddToHomePromptDismissed,
-  isIosDevice,
+  triggerPwaInstall,
 } from '../../lib/pwaInstall'
-import { isStandalonePwa } from '../../lib/pushNotifications'
-
-function ShareIcon() {
-  return (
-    <svg
-      className="w-4 h-4 inline-block align-text-bottom mx-0.5 text-brand-blue"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M12 3v13" />
-      <path d="m16 7-4-4-4 4" />
-      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-    </svg>
-  )
-}
+import { usePwaInstall } from '../../hooks/usePwaInstall'
+import { PwaIosInstallInstructions } from './PwaIosInstallInstructions'
 
 export function PwaAddToHomePrompt() {
   const [dismissed, setDismissed] = useState(isAddToHomePromptDismissed)
-  const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null)
   const [installing, setInstalling] = useState(false)
-
-  const ios = isIosDevice()
-  const standalone = isStandalonePwa()
-
-  useEffect(() => {
-    if (standalone || dismissed) return
-
-    const onBeforeInstall = (event: Event) => {
-      event.preventDefault()
-      setInstallEvent(event as BeforeInstallPromptEvent)
-    }
-
-    const onInstalled = () => {
-      setInstallEvent(null)
-      setDismissed(true)
-    }
-
-    window.addEventListener('beforeinstallprompt', onBeforeInstall)
-    window.addEventListener('appinstalled', onInstalled)
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstall)
-      window.removeEventListener('appinstalled', onInstalled)
-    }
-  }, [standalone, dismissed])
+  const { ios, standalone, canPrompt } = usePwaInstall()
 
   if (standalone || dismissed) return null
-  if (!ios && !installEvent) return null
 
   const handleDismiss = () => {
     dismissAddToHomePrompt()
@@ -64,17 +20,17 @@ export function PwaAddToHomePrompt() {
   }
 
   const handleInstall = async () => {
-    if (!installEvent) return
+    if (!canPrompt) return
     setInstalling(true)
     try {
-      await installEvent.prompt()
-      const { outcome } = await installEvent.userChoice
+      const outcome = await triggerPwaInstall()
       if (outcome === 'accepted') {
-        setInstallEvent(null)
         setDismissed(true)
         return
       }
-      handleDismiss()
+      if (outcome === 'dismissed') {
+        handleDismiss()
+      }
     } finally {
       setInstalling(false)
     }
@@ -86,16 +42,20 @@ export function PwaAddToHomePrompt() {
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-brand-navy">Add BMFC Club Hub to your home screen</p>
         {ios ? (
+          <PwaIosInstallInstructions />
+        ) : canPrompt ? (
           <p className="text-sm text-gray-500 mt-1">
-            Tap <ShareIcon /> Share, then &ldquo;Add to Home Screen&rdquo; for quick access like an app.
+            Install for quick access, full-screen view, and match reminders on your phone.
           </p>
         ) : (
           <p className="text-sm text-gray-500 mt-1">
             Install for quick access, full-screen view, and match reminders on your phone.
+            If the Install button is not shown yet, your browser may need a little more browsing
+            first — use the Install link in the top bar when it becomes ready.
           </p>
         )}
         <div className="flex flex-wrap gap-2 mt-3">
-          {!ios && installEvent && (
+          {!ios && canPrompt && (
             <button
               type="button"
               disabled={installing}
