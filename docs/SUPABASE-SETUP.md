@@ -44,6 +44,9 @@ Apply migrations **in order** via the Supabase SQL Editor (Dashboard → SQL →
 | `supabase-club/migrations/020_display_name_no_space.sql` | ChrisL display name backfill |
 | `supabase-club/migrations/021_profiles_photo_url_grant.sql` | Squad stats photo_url read grant |
 | `supabase-club/migrations/022_finance.sql` | Sponsorships, expenses, finance RPCs |
+| `supabase-club/migrations/023_calendar_archive_and_fundraiser_delete.sql` | Archive vs delete for events/fundraisers |
+| `supabase-club/migrations/024_goalkeeper_clean_sheets.sql` | GK clean-sheet attribution — manual override + live log snapshot |
+| `supabase-club/migrations/025_login_name_display_name_split.sql` | Login name (ChrisL) vs spaced display name (Chris L) |
 
 **Supabase CLI example** (if `supabase` is installed and linked):
 
@@ -64,7 +67,7 @@ Edit `supabase-club/seed.sql` — change the display name and passcode **before*
 
 Run the seed in the SQL Editor. Then log in at `/login` with that name and 4-digit passcode.
 
-From Admin → **Squad members**, create invite links for players. Players enter their first and last name when they open the link, then set a passcode. Login uses the short display name (e.g. `Chris L.`).
+From Admin → **Squad members**, create invite links for players. Players enter their first and last name when they open the link, then set a passcode. Login uses the short identifier (e.g. `ChrisL`); the app shows the spaced display name (e.g. `Chris L`) everywhere else.
 
 ---
 
@@ -215,5 +218,5 @@ Checklist after deploy:
 
 - [README.md](../README.md) — quick start and scripts
 - [PAGE-COPY.md](PAGE-COPY.md) — all UI strings
-- [AUDITNEW.md](../AUDITNEW.md) — project audit
+- [AUDIT.md](AUDIT.md) — project audit
 - [ROADMAP-99.md](ROADMAP-99.md) — roadmap to 99/100 score

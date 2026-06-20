@@ -1,5 +1,14 @@
-/** Display/login name: "ChrisL" (first name + surname initial, no space) */
+/** UI display name: "Chris L" (first name + space + surname initial). */
 export function formatPlayerDisplayName(firstName: string, lastName: string): string {
+  const first = firstName.trim()
+  const last = lastName.trim()
+  if (!first || !last) return ''
+  const initial = last.charAt(0).toUpperCase()
+  return `${first} ${initial}`
+}
+
+/** Login identifier: "ChrisL" (first name + surname initial, no space). */
+export function formatPlayerLoginName(firstName: string, lastName: string): string {
   const first = firstName.trim()
   const last = lastName.trim()
   if (!first || !last) return ''
@@ -38,6 +47,13 @@ export function allocateUniqueDisplayName(
     n += 1
   }
   return `${base}${n}`
+}
+
+export function allocateUniqueLoginName(
+  base: string,
+  isTaken: (candidate: string) => boolean,
+): string {
+  return allocateUniqueDisplayName(base, isTaken)
 }
 
 export function normalizeNamePart(value: string): string {

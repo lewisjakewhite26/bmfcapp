@@ -12,6 +12,7 @@ export interface AdminUserRow {
   id: string
   username: string
   display_name: string
+  login_name?: string | null
   first_name?: string | null
   last_name?: string | null
   invite_label?: string | null

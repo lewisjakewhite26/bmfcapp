@@ -23,8 +23,10 @@ import { buildDdsflMockState } from './ddsflMockImport'
 import { isUpcomingScheduledFixture } from './fixtureFilters'
 import {
   allocateUniqueDisplayName,
+  allocateUniqueLoginName,
   allocateUniqueUsername,
   formatPlayerDisplayName,
+  formatPlayerLoginName,
   formatPlayerUsernameBase,
   validateNamePart,
 } from './playerNames'
@@ -58,12 +60,12 @@ function dateOnlyFromNow(days: number): string {
 export const MANUAL_FIXTURES: Fixture[] = []
 
 export const MOCK_SQUAD: SquadMember[] = [
-  { id: 's1', player_id: 'p1', display_name: 'TomH', squad_number: null, position: 'Goalkeeper', joined_date: '2023-08-01', active: true },
-  { id: 's2', player_id: 'p2', display_name: 'JamesW', squad_number: null, position: 'Defender', joined_date: '2022-08-01', active: true },
-  { id: 's3', player_id: 'p3', display_name: 'MarkD', squad_number: null, position: 'Midfielder', joined_date: '2021-08-01', active: true },
-  { id: 's4', player_id: PREVIEW_PLAYER_ID, display_name: 'ChrisL', squad_number: null, position: 'Forward', joined_date: '2020-08-01', active: true },
-  { id: 's5', player_id: 'p5', display_name: 'SamP', squad_number: null, position: 'Forward', joined_date: '2024-01-01', active: true },
-  { id: 's6', player_id: 'p6', display_name: 'AlexM', squad_number: null, position: 'Midfielder', joined_date: '2023-01-01', active: true },
+  { id: 's1', player_id: 'p1', display_name: 'Tom H', squad_number: null, position: 'Goalkeeper', joined_date: '2023-08-01', active: true },
+  { id: 's2', player_id: 'p2', display_name: 'James W', squad_number: null, position: 'Defender', joined_date: '2022-08-01', active: true },
+  { id: 's3', player_id: 'p3', display_name: 'Mark D', squad_number: null, position: 'Midfielder', joined_date: '2021-08-01', active: true },
+  { id: 's4', player_id: PREVIEW_PLAYER_ID, display_name: 'Chris L', squad_number: null, position: 'Forward', joined_date: '2020-08-01', active: true },
+  { id: 's5', player_id: 'p5', display_name: 'Sam P', squad_number: null, position: 'Forward', joined_date: '2024-01-01', active: true },
+  { id: 's6', player_id: 'p6', display_name: 'Alex M', squad_number: null, position: 'Midfielder', joined_date: '2023-01-01', active: true },
 ]
 
 export const MOCK_TRAINING: TrainingSession[] = [
@@ -129,7 +131,8 @@ export const MOCK_ADMIN_USERS: AdminUserRow[] = [
   {
     id: '00000000-0000-0000-0000-000000000001',
     username: 'clee',
-    display_name: 'ChrisL',
+    display_name: 'Chris L',
+    login_name: 'ChrisL',
     first_name: 'Chris',
     last_name: 'Lee',
     is_admin: false,
@@ -183,7 +186,8 @@ const E2E_SEED_USERS: MockAdminUser[] =
         {
           id: E2E_PENDING_APPROVAL_USER_ID,
           username: 'same2e',
-          display_name: 'SamE2e',
+          display_name: 'Sam E',
+          login_name: 'SamE2e',
           first_name: 'Sam',
           last_name: 'E2e',
           is_admin: false,
@@ -423,10 +427,14 @@ function applyMockPlayerNames(userId: string, firstName: string, lastName: strin
   const user = adminUsers.find((u) => u.id === userId)
   if (!user) throw new Error('Player not found')
 
+  const baseLogin = formatPlayerLoginName(first, last)
   const baseDisplay = formatPlayerDisplayName(first, last)
   const baseUsername = formatPlayerUsernameBase(first, last)
   user.first_name = first
   user.last_name = last
+  user.login_name = allocateUniqueLoginName(baseLogin, (candidate) =>
+    adminUsers.some((u) => u.id !== userId && (u.login_name ?? '').toLowerCase() === candidate.toLowerCase()),
+  )
   user.display_name = allocateUniqueDisplayName(baseDisplay, (candidate) =>
     adminUsers.some((u) => u.id !== userId && u.display_name.toLowerCase() === candidate.toLowerCase()),
   )
@@ -691,7 +699,9 @@ export function mockLoginByCredentials(displayName: string, passcode: string): i
   if (!import.meta.env.VITE_E2E || !/^\d{4}$/.test(passcode)) return null
 
   const normalized = displayName.trim().toLowerCase()
-  const user = adminUsers.find((u) => u.display_name.toLowerCase() === normalized)
+  const user = adminUsers.find(
+    (u) => (u.login_name ?? u.display_name).toLowerCase() === normalized,
+  )
   if (!user || !user.is_approved) return null
   if (mockPasscodes.get(user.id) !== passcode) return null
 
