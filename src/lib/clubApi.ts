@@ -458,7 +458,13 @@ export async function createInvite(
     p_invite_label: inviteLabel?.trim() || null,
   })
   if (error) throw error
-  return data as CreateInviteResult
+  const result = data as CreateInviteResult
+  void recordAdminAudit('invite_created', {
+    entityType: 'profile',
+    entityId: result.id,
+    details: { display_name: result.display_name, invite_label: result.invite_label ?? null },
+  })
+  return result
 }
 
 export async function fetchTeamInviteSettings(): Promise<TeamInviteSettings> {
@@ -564,6 +570,11 @@ export async function enableTeamInvite(): Promise<TeamInviteSettings> {
   if (isMockDataMode()) {
     await delay()
     updateMockPlayerNames(userId, firstName, lastName)
+    void recordAdminAudit('user_names_updated', {
+      entityType: 'profile',
+      entityId: userId,
+      details: { display_name: `${firstName} ${lastName}`.trim() },
+    })
     return
   }
 
@@ -578,6 +589,11 @@ export async function enableTeamInvite(): Promise<TeamInviteSettings> {
     p_last_name: lastName.trim(),
   })
   if (error) throw error
+  void recordAdminAudit('user_names_updated', {
+    entityType: 'profile',
+    entityId: userId,
+    details: { display_name: `${firstName} ${lastName}`.trim() },
+  })
 }
 
 export async function changePasscode(currentPasscode: string, newPasscode: string): Promise<void> {
@@ -609,6 +625,11 @@ export async function setUserCommittee(userId: string, isCommittee: boolean): Pr
   if (isMockDataMode()) {
     await delay()
     setMockUserCommittee(userId, isCommittee)
+    void recordAdminAudit('user_roles_updated', {
+      entityType: 'profile',
+      entityId: userId,
+      details: { is_committee: isCommittee },
+    })
     return
   }
 
@@ -622,6 +643,11 @@ export async function setUserCommittee(userId: string, isCommittee: boolean): Pr
     p_is_committee: isCommittee,
   })
   if (error) throw error
+  void recordAdminAudit('user_roles_updated', {
+    entityType: 'profile',
+    entityId: userId,
+    details: { is_committee: isCommittee },
+  })
 }
 
 export async function resetUserPasscode(userId: string, newPasscode: string): Promise<void> {
@@ -630,6 +656,7 @@ export async function resetUserPasscode(userId: string, newPasscode: string): Pr
   if (isMockDataMode()) {
     await delay()
     resetMockPasscode(userId, newPasscode)
+    void recordAdminAudit('passcode_reset', { entityType: 'profile', entityId: userId })
     return
   }
 
@@ -643,6 +670,7 @@ export async function resetUserPasscode(userId: string, newPasscode: string): Pr
     p_new_passcode: newPasscode,
   })
   if (error) throw error
+  void recordAdminAudit('passcode_reset', { entityType: 'profile', entityId: userId })
 }
 
 export async function upsertSquadMember(
@@ -654,6 +682,11 @@ export async function upsertSquadMember(
   if (isMockDataMode()) {
     await delay()
     upsertMockSquad(playerId, displayName, position, squadNumber)
+    void recordAdminAudit('squad_upserted', {
+      entityType: 'profile',
+      entityId: playerId,
+      details: { display_name: displayName, position },
+    })
     return
   }
 
@@ -669,12 +702,18 @@ export async function upsertSquadMember(
     p_squad_number: squadNumber ?? null,
   })
   if (error) throw error
+  void recordAdminAudit('squad_upserted', {
+    entityType: 'profile',
+    entityId: playerId,
+    details: { display_name: displayName, position },
+  })
 }
 
 export async function removeSquadMember(playerId: string): Promise<void> {
   if (isMockDataMode()) {
     await delay()
     removeMockSquad(playerId)
+    void recordAdminAudit('squad_removed', { entityType: 'profile', entityId: playerId })
     return
   }
 
@@ -687,6 +726,7 @@ export async function removeSquadMember(playerId: string): Promise<void> {
     p_player_id: playerId,
   })
   if (error) throw error
+  void recordAdminAudit('squad_removed', { entityType: 'profile', entityId: playerId })
 }
 
 export async function createFixture(input: {
@@ -699,7 +739,13 @@ export async function createFixture(input: {
 }): Promise<Fixture> {
   if (isMockDataMode()) {
     await delay()
-    return addMockFixture(input)
+    const fixture = addMockFixture(input)
+    void recordAdminAudit('fixture_created', {
+      entityType: 'fixture',
+      entityId: fixture.id,
+      details: { opponent: input.opponent, match_date: input.match_date },
+    })
+    return fixture
   }
 
   const session = getClubSession()
@@ -716,7 +762,13 @@ export async function createFixture(input: {
     p_kickoff_time: input.kickoff_time,
   })
   if (error) throw error
-  return data as Fixture
+  const fixture = data as Fixture
+  void recordAdminAudit('fixture_created', {
+    entityType: 'fixture',
+    entityId: fixture.id,
+    details: { opponent: input.opponent, match_date: input.match_date },
+  })
+  return fixture
 }
 
 export async function updateFixture(
@@ -732,7 +784,13 @@ export async function updateFixture(
 ): Promise<Fixture> {
   if (isMockDataMode()) {
     await delay()
-    return updateMockFixture(fixtureId, input)
+    const fixture = updateMockFixture(fixtureId, input)
+    void recordAdminAudit('fixture_updated', {
+      entityType: 'fixture',
+      entityId: fixtureId,
+      details: { opponent: input.opponent, match_date: input.match_date },
+    })
+    return fixture
   }
 
   const session = getClubSession()
@@ -750,6 +808,11 @@ export async function updateFixture(
     p_kickoff_time: input.kickoff_time,
   })
   if (error) throw error
+  void recordAdminAudit('fixture_updated', {
+    entityType: 'fixture',
+    entityId: fixtureId,
+    details: { opponent: input.opponent, match_date: input.match_date },
+  })
   return data as Fixture
 }
 
@@ -757,6 +820,7 @@ export async function deleteFixture(fixtureId: string): Promise<void> {
   if (isMockDataMode()) {
     await delay()
     removeMockFixture(fixtureId)
+    void recordAdminAudit('fixture_deleted', { entityType: 'fixture', entityId: fixtureId })
     return
   }
 
@@ -769,12 +833,18 @@ export async function deleteFixture(fixtureId: string): Promise<void> {
     p_fixture_id: fixtureId,
   })
   if (error) throw error
+  void recordAdminAudit('fixture_deleted', { entityType: 'fixture', entityId: fixtureId })
 }
 
 export async function regenerateInvite(userId: string): Promise<CreateInviteResult> {
   if (isMockDataMode()) {
     await delay()
     const row = regenerateMockInvite(userId)
+    void recordAdminAudit('invite_regenerated', {
+      entityType: 'profile',
+      entityId: userId,
+      details: { display_name: row.display_name },
+    })
     return { ...row, invite_expires_at: null }
   }
 
@@ -787,13 +857,23 @@ export async function regenerateInvite(userId: string): Promise<CreateInviteResu
     p_target_id: userId,
   })
   if (error) throw error
-  return data as CreateInviteResult
+  const result = data as CreateInviteResult
+  void recordAdminAudit('invite_regenerated', {
+    entityType: 'profile',
+    entityId: userId,
+    details: { display_name: result.display_name },
+  })
+  return result
 }
 
 export async function approveUser(userId: string, approved: boolean): Promise<void> {
   if (isMockDataMode()) {
     await delay()
     setMockUserApproved(userId, approved)
+    void recordAdminAudit(approved ? 'user_approved' : 'user_unapproved', {
+      entityType: 'profile',
+      entityId: userId,
+    })
     return
   }
 
@@ -807,6 +887,10 @@ export async function approveUser(userId: string, approved: boolean): Promise<vo
     p_approved: approved,
   })
   if (error) throw error
+  void recordAdminAudit(approved ? 'user_approved' : 'user_unapproved', {
+    entityType: 'profile',
+    entityId: userId,
+  })
 }
 
 /** Manual fixtures eligible for live matchday logging. */
@@ -819,6 +903,7 @@ export async function startLiveMatch(fixtureId: string): Promise<void> {
   if (isMockDataMode()) {
     await delay()
     startMockLiveMatch(fixtureId)
+    void recordAdminAudit('live_match_started', { entityType: 'fixture', entityId: fixtureId })
     return
   }
 
@@ -831,6 +916,7 @@ export async function startLiveMatch(fixtureId: string): Promise<void> {
     p_fixture_id: fixtureId,
   })
   if (error) throw error
+  void recordAdminAudit('live_match_started', { entityType: 'fixture', entityId: fixtureId })
 }
 
 export async function submitMatchResult(
@@ -844,6 +930,11 @@ export async function submitMatchResult(
   if (isMockDataMode()) {
     await delay(150)
     saveMockResult(fixtureId, goalsFor, goalsAgainst, notes, events, goalkeeperPlayerId ?? null)
+    void recordAdminAudit('match_result_submitted', {
+      entityType: 'fixture',
+      entityId: fixtureId,
+      details: { goals_for: goalsFor, goals_against: goalsAgainst },
+    })
     return
   }
 
@@ -866,6 +957,11 @@ export async function submitMatchResult(
     p_goalkeeper_player_id: goalkeeperPlayerId ?? null,
   })
   if (error) throw error
+  void recordAdminAudit('match_result_submitted', {
+    entityType: 'fixture',
+    entityId: fixtureId,
+    details: { goals_for: goalsFor, goals_against: goalsAgainst },
+  })
 }
 
 export async function getLiveMatchDraft(fixtureId: string): Promise<LiveMatchDraft> {
@@ -930,6 +1026,7 @@ export async function clearLiveMatchDraft(fixtureId: string): Promise<void> {
   if (isMockDataMode()) {
     await delay(40)
     clearMockLiveMatchDraft(fixtureId)
+    void recordAdminAudit('live_draft_cleared', { entityType: 'fixture', entityId: fixtureId })
     return
   }
 
@@ -942,6 +1039,7 @@ export async function clearLiveMatchDraft(fixtureId: string): Promise<void> {
     p_fixture_id: fixtureId,
   })
   if (error) throw error
+  void recordAdminAudit('live_draft_cleared', { entityType: 'fixture', entityId: fixtureId })
 }
 
 export async function createTrainingSession(
@@ -949,7 +1047,13 @@ export async function createTrainingSession(
 ): Promise<TrainingSession> {
   if (isMockDataMode()) {
     await delay()
-    return addMockTrainingSession(session)
+    const created = addMockTrainingSession(session)
+    void recordAdminAudit('training_created', {
+      entityType: 'training',
+      entityId: created.id,
+      details: { session_date: session.session_date },
+    })
+    return created
   }
 
   const clubSession = getClubSession()
@@ -963,7 +1067,13 @@ export async function createTrainingSession(
     p_notes: session.notes,
   })
   if (error) throw error
-  return data as TrainingSession
+  const created = data as TrainingSession
+  void recordAdminAudit('training_created', {
+    entityType: 'training',
+    entityId: created.id,
+    details: { session_date: session.session_date },
+  })
+  return created
 }
 
 export async function updateTrainingSession(
@@ -972,7 +1082,13 @@ export async function updateTrainingSession(
 ): Promise<TrainingSession> {
   if (isMockDataMode()) {
     await delay()
-    return updateMockTrainingSession(trainingId, session)
+    const updated = updateMockTrainingSession(trainingId, session)
+    void recordAdminAudit('training_updated', {
+      entityType: 'training',
+      entityId: trainingId,
+      details: { session_date: session.session_date },
+    })
+    return updated
   }
 
   const clubSession = getClubSession()
@@ -987,6 +1103,11 @@ export async function updateTrainingSession(
     p_notes: session.notes,
   })
   if (error) throw error
+  void recordAdminAudit('training_updated', {
+    entityType: 'training',
+    entityId: trainingId,
+    details: { session_date: session.session_date },
+  })
   return data as TrainingSession
 }
 
@@ -994,6 +1115,7 @@ export async function deleteTrainingSession(trainingId: string): Promise<void> {
   if (isMockDataMode()) {
     await delay()
     removeMockTrainingSession(trainingId)
+    void recordAdminAudit('training_deleted', { entityType: 'training', entityId: trainingId })
     return
   }
 
@@ -1006,6 +1128,7 @@ export async function deleteTrainingSession(trainingId: string): Promise<void> {
     p_training_id: trainingId,
   })
   if (error) throw error
+  void recordAdminAudit('training_deleted', { entityType: 'training', entityId: trainingId })
 }
 
 export async function fetchClubEvents(options?: { includeArchived?: boolean }): Promise<ClubEvent[]> {
@@ -1033,7 +1156,13 @@ export async function createClubEvent(
 ): Promise<ClubEvent> {
   if (isMockDataMode()) {
     await delay()
-    return addMockClubEvent(input)
+    const event = addMockClubEvent(input)
+    void recordAdminAudit('club_event_created', {
+      entityType: 'club_event',
+      entityId: event.id,
+      details: { event_title: input.title },
+    })
+    return event
   }
 
   const clubSession = getClubSession()
@@ -1049,7 +1178,13 @@ export async function createClubEvent(
     p_notes: input.notes,
   })
   if (error) throw error
-  return data as ClubEvent
+  const event = data as ClubEvent
+  void recordAdminAudit('club_event_created', {
+    entityType: 'club_event',
+    entityId: event.id,
+    details: { event_title: input.title },
+  })
+  return event
 }
 
 export async function updateClubEvent(
@@ -1058,7 +1193,13 @@ export async function updateClubEvent(
 ): Promise<ClubEvent> {
   if (isMockDataMode()) {
     await delay()
-    return updateMockClubEvent(eventId, input)
+    const event = updateMockClubEvent(eventId, input)
+    void recordAdminAudit('club_event_updated', {
+      entityType: 'club_event',
+      entityId: eventId,
+      details: { event_title: input.title },
+    })
+    return event
   }
 
   const clubSession = getClubSession()
@@ -1075,6 +1216,11 @@ export async function updateClubEvent(
     p_notes: input.notes,
   })
   if (error) throw error
+  void recordAdminAudit('club_event_updated', {
+    entityType: 'club_event',
+    entityId: eventId,
+    details: { event_title: input.title },
+  })
   return data as ClubEvent
 }
 
@@ -1082,6 +1228,7 @@ export async function deleteClubEvent(eventId: string): Promise<void> {
   if (isMockDataMode()) {
     await delay()
     removeMockClubEvent(eventId)
+    void recordAdminAudit('club_event_deleted', { entityType: 'club_event', entityId: eventId })
     return
   }
 
@@ -1094,12 +1241,19 @@ export async function deleteClubEvent(eventId: string): Promise<void> {
     p_event_id: eventId,
   })
   if (error) throw error
+  void recordAdminAudit('club_event_deleted', { entityType: 'club_event', entityId: eventId })
 }
 
 export async function setClubEventArchived(eventId: string, archived: boolean): Promise<ClubEvent> {
   if (isMockDataMode()) {
     await delay()
-    return setMockClubEventArchived(eventId, archived)
+    const event = setMockClubEventArchived(eventId, archived)
+    void recordAdminAudit(archived ? 'club_event_archived' : 'club_event_unarchived', {
+      entityType: 'club_event',
+      entityId: eventId,
+      details: { event_title: event.title },
+    })
+    return event
   }
 
   const clubSession = getClubSession()
@@ -1112,7 +1266,13 @@ export async function setClubEventArchived(eventId: string, archived: boolean): 
     p_archived: archived,
   })
   if (error) throw error
-  return data as ClubEvent
+  const event = data as ClubEvent
+  void recordAdminAudit(archived ? 'club_event_archived' : 'club_event_unarchived', {
+    entityType: 'club_event',
+    entityId: eventId,
+    details: { event_title: event.title },
+  })
+  return event
 }
 
 export async function fetchAvailablePlayersForFixture(fixtureId: string): Promise<AvailablePlayer[]> {
@@ -1159,7 +1319,9 @@ export async function saveLineup(
 ): Promise<Lineup> {
   if (isMockDataMode()) {
     await delay(80)
-    return saveMockLineup(fixtureId, formation, slots)
+    const lineup = saveMockLineup(fixtureId, formation, slots)
+    void recordAdminAudit('lineup_saved', { entityType: 'fixture', entityId: fixtureId, details: { formation } })
+    return lineup
   }
 
   const session = getClubSession()
@@ -1173,6 +1335,7 @@ export async function saveLineup(
     p_slots: slots,
   })
   if (error) throw error
+  void recordAdminAudit('lineup_saved', { entityType: 'fixture', entityId: fixtureId, details: { formation } })
   return data as Lineup
 }
 
@@ -1219,7 +1382,13 @@ export async function createFundraiser(
 ): Promise<Fundraiser> {
   if (isMockDataMode()) {
     await delay()
-    return addMockFundraiser(input)
+    const fundraiser = addMockFundraiser(input)
+    void recordAdminAudit('fundraiser_created', {
+      entityType: 'fundraiser',
+      entityId: fundraiser.id,
+      details: { title: input.name },
+    })
+    return fundraiser
   }
 
   const session = getClubSession()
@@ -1233,13 +1402,25 @@ export async function createFundraiser(
     p_notes: input.notes,
   })
   if (error) throw error
-  return data as Fundraiser
+  const fundraiser = data as Fundraiser
+  void recordAdminAudit('fundraiser_created', {
+    entityType: 'fundraiser',
+    entityId: fundraiser.id,
+    details: { title: input.name },
+  })
+  return fundraiser
 }
 
 export async function setFundraiserArchived(fundraiserId: string, archived: boolean): Promise<Fundraiser> {
   if (isMockDataMode()) {
     await delay()
-    return setMockFundraiserArchived(fundraiserId, archived)
+    const fundraiser = setMockFundraiserArchived(fundraiserId, archived)
+    void recordAdminAudit(archived ? 'fundraiser_archived' : 'fundraiser_unarchived', {
+      entityType: 'fundraiser',
+      entityId: fundraiserId,
+      details: { title: fundraiser.name },
+    })
+    return fundraiser
   }
 
   const session = getClubSession()
@@ -1252,13 +1433,20 @@ export async function setFundraiserArchived(fundraiserId: string, archived: bool
     p_archived: archived,
   })
   if (error) throw error
-  return data as Fundraiser
+  const fundraiser = data as Fundraiser
+  void recordAdminAudit(archived ? 'fundraiser_archived' : 'fundraiser_unarchived', {
+    entityType: 'fundraiser',
+    entityId: fundraiserId,
+    details: { title: fundraiser.name },
+  })
+  return fundraiser
 }
 
 export async function deleteFundraiser(fundraiserId: string): Promise<void> {
   if (isMockDataMode()) {
     await delay()
     removeMockFundraiser(fundraiserId)
+    void recordAdminAudit('fundraiser_deleted', { entityType: 'fundraiser', entityId: fundraiserId })
     return
   }
 
@@ -1271,6 +1459,7 @@ export async function deleteFundraiser(fundraiserId: string): Promise<void> {
     p_fundraiser_id: fundraiserId,
   })
   if (error) throw error
+  void recordAdminAudit('fundraiser_deleted', { entityType: 'fundraiser', entityId: fundraiserId })
 }
 
 export async function fetchFundraiserDetail(fundraiserId: string): Promise<FundraiserDetail> {
