@@ -31,6 +31,12 @@ export type SquadPosition = 'Forward' | 'Midfielder' | 'Defender' | 'Goalkeeper'
 export interface InvitePreview {
   expires_at: string | null
   invite_label?: string | null
+  is_team_invite?: boolean
+}
+
+export interface TeamInviteSettings {
+  enabled: boolean
+  token: string | null
 }
 
 export interface CreateInviteResult {

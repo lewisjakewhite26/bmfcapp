@@ -51,7 +51,7 @@ export function PwaAddToHomePrompt() {
           <p className="text-sm text-gray-500 mt-1">
             Install for quick access, full-screen view, and match reminders on your phone.
             If the Install button is not shown yet, your browser may need a little more browsing
-            first — use the Install link in the top bar when it becomes ready.
+            first. Use the Install link in the top bar when it becomes ready.
           </p>
         )}
         <div className="flex flex-wrap gap-2 mt-3">

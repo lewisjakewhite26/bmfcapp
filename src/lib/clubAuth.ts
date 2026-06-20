@@ -103,3 +103,29 @@ export async function rpcChangePasscode(
 export function inviteUrl(token: string): string {
   return `${window.location.origin}/invite/${token}`
 }
+
+export function teamInviteUrl(token: string): string {
+  return `${window.location.origin}/join/${token}`
+}
+
+export async function rpcGetTeamInvitePreview(token: string): Promise<InvitePreview> {
+  const { data, error } = await supabase.rpc('get_team_invite_preview', { p_token: token })
+  if (error) throw error
+  return data as InvitePreview
+}
+
+export async function rpcCompleteTeamInvite(
+  token: string,
+  firstName: string,
+  lastName: string,
+  passcode: string,
+): Promise<User> {
+  const { data, error } = await supabase.rpc('complete_team_invite', {
+    p_token: token,
+    p_first_name: firstName.trim(),
+    p_last_name: lastName.trim(),
+    p_passcode: passcode,
+  })
+  if (error) throw error
+  return mapRpcUser(data as Record<string, unknown>)
+}

@@ -35,7 +35,7 @@ export function getSupabaseConfigDiagnostic() {
 
   let urlStatus: string
   if (!url) urlStatus = rawUrl ? 'empty or whitespace only' : 'not set in this build'
-  else if (!isValidSupabaseUrl(url)) urlStatus = 'invalid — must be https://your-project.supabase.co'
+  else if (!isValidSupabaseUrl(url)) urlStatus = 'invalid (must be https://your-project.supabase.co)'
   else urlStatus = 'ok'
 
   let keyStatus: string

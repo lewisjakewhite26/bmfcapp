@@ -28,6 +28,7 @@ import {
   formatPlayerDisplayName,
   formatPlayerLoginName,
   formatPlayerUsernameBase,
+  normalizeNamePart,
   validateNamePart,
 } from './playerNames'
 import { DDSFL_ACTIVE_SEASON, DDSFL_LEAGUE_NAME, DDSFL_SEASONS } from './ddsflConstants'
@@ -72,14 +73,14 @@ export const MOCK_TRAINING: TrainingSession[] = [
   {
     id: 't1',
     session_date: daysFromNow(1, 19, 0),
-    location: 'Bishop Middleham Recreation Ground',
+    location: 'Bishop Middleham Park',
     notes: 'Tactical session, set pieces',
     created_at: daysAgo(5),
   },
   {
     id: 't2',
     session_date: daysFromNow(8, 19, 0),
-    location: 'Bishop Middleham Recreation Ground',
+    location: 'Bishop Middleham Park',
     notes: null,
     created_at: daysAgo(3),
   },
@@ -236,6 +237,11 @@ function seedMockFixtureAvailability() {
 
 seedMockFixtureAvailability()
 const mockInviteTokens = new Map<string, string>()
+
+let mockTeamInvite: { token: string | null; enabled: boolean } = {
+  token: null,
+  enabled: false,
+}
 
 /** Stable token for dev previews and screenshot capture (/invite/demoinvite0001). */
 export const MOCK_DEMO_INVITE_TOKEN = 'demoinvite0001'
@@ -691,6 +697,99 @@ export function completeMockInvite(
     is_committee: user.is_committee,
     is_approved: false,
     session_token: 'mock-invite-session',
+  }
+}
+
+export function getMockTeamInviteSettings(): import('../types').TeamInviteSettings {
+  return { enabled: mockTeamInvite.enabled && Boolean(mockTeamInvite.token), token: mockTeamInvite.token }
+}
+
+function assertMockTeamInviteToken(token: string) {
+  if (!mockTeamInvite.enabled || !mockTeamInvite.token || mockTeamInvite.token !== token) {
+    throw new Error('Invite link not found')
+  }
+}
+
+export function generateMockTeamInvite(): import('../types').TeamInviteSettings {
+  const token = crypto.randomUUID().replace(/-/g, '')
+  mockTeamInvite = { token, enabled: true }
+  persistE2eMockSnapshot()
+  return getMockTeamInviteSettings()
+}
+
+export function regenerateMockTeamInvite(): import('../types').TeamInviteSettings {
+  const token = crypto.randomUUID().replace(/-/g, '')
+  mockTeamInvite = { token, enabled: true }
+  persistE2eMockSnapshot()
+  return getMockTeamInviteSettings()
+}
+
+export function disableMockTeamInvite(): import('../types').TeamInviteSettings {
+  mockTeamInvite = { ...mockTeamInvite, enabled: false }
+  persistE2eMockSnapshot()
+  return getMockTeamInviteSettings()
+}
+
+export function enableMockTeamInvite(): import('../types').TeamInviteSettings {
+  if (!mockTeamInvite.token) throw new Error('Generate a team invite link first')
+  mockTeamInvite = { ...mockTeamInvite, enabled: true }
+  persistE2eMockSnapshot()
+  return getMockTeamInviteSettings()
+}
+
+export function getMockTeamInvitePreview(token: string): { expires_at: string | null; invite_label: string | null; is_team_invite: boolean } {
+  assertMockTeamInviteToken(token)
+  return { expires_at: null, invite_label: 'Team invite', is_team_invite: true }
+}
+
+export function completeMockTeamInvite(
+  token: string,
+  firstName: string,
+  lastName: string,
+  passcode: string,
+): import('../types').User {
+  if (!/^\d{4}$/.test(passcode)) throw new Error('Passcode must be exactly 4 digits')
+  assertMockTeamInviteToken(token)
+
+  const first = normalizeNamePart(firstName)
+  const last = normalizeNamePart(lastName)
+  const existing = adminUsers.find(
+    (u) =>
+      u.first_name?.toLowerCase() === first.toLowerCase() &&
+      u.last_name?.toLowerCase() === last.toLowerCase() &&
+      mockPasscodes.has(u.id),
+  )
+  if (existing) {
+    if (existing.is_approved) throw new Error('You\'ve already signed up. Go to login.')
+    throw new Error('You\'ve already signed up. Waiting for approval.')
+  }
+
+  const id = crypto.randomUUID()
+  const username = `inv_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
+  adminUsers.push({
+    id,
+    username,
+    display_name: 'New player',
+    invite_label: null,
+    is_admin: false,
+    is_committee: false,
+    is_approved: false,
+    created_at: new Date().toISOString(),
+    invite_pending: false,
+  })
+  applyMockPlayerNames(id, firstName, lastName)
+  mockPasscodes.set(id, passcode)
+  persistE2eMockSnapshot()
+
+  const user = adminUsers.find((u) => u.id === id)!
+  return {
+    id: user.id,
+    username: user.username,
+    display_name: user.display_name,
+    is_admin: user.is_admin,
+    is_committee: user.is_committee,
+    is_approved: false,
+    session_token: 'mock-team-invite-session',
   }
 }
 

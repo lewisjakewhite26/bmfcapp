@@ -205,7 +205,7 @@ export default function AdminEvents() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="input-field mt-1"
-              placeholder="e.g. End of season social"
+              placeholder="e.g. end of season social"
               required
             />
           </div>

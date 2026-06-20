@@ -218,7 +218,7 @@ export default function AdminFinance() {
         <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         <div>
           <h1 className="font-display text-2xl sm:text-3xl text-brand-navy">Finance</h1>
-          <p className="text-sm text-gray-500 mt-1">Sponsorship income and club expenses — every entry shows who logged it.</p>
+          <p className="text-sm text-gray-500 mt-1">Sponsorship income and club expenses. Every entry shows who logged it.</p>
         </div>
 
         {error && <DataErrorBanner message={error} onRetry={reload} />}
@@ -266,7 +266,7 @@ export default function AdminFinance() {
               value={spDetail}
               onChange={(e) => setSpDetail(e.target.value)}
               className="input-field sm:col-span-2"
-              placeholder="Details (optional), e.g. Home shirts"
+              placeholder="e.g. home shirts (optional)"
             />
             <input
               type="number"

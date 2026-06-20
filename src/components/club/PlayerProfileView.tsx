@@ -59,7 +59,7 @@ export function PlayerProfileView({
   const avgPoints =
     performances.length > 0
       ? (performances.reduce((s, p) => s + p.points, 0) / performances.length).toFixed(1)
-      : '—'
+      : '-'
 
   return (
     <div className="space-y-5">

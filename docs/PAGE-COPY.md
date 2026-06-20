@@ -3,6 +3,8 @@
 Complete UI copy for every screen and shared component.  
 **Dynamic values** (player names, opponents, dates, scores, counts, etc.) are shown in `{curly braces}`.
 
+Input field placeholders: [`INPUT-PLACEHOLDERS.md`](./INPUT-PLACEHOLDERS.md).
+
 ---
 
 ## Site meta (`index.html`)
@@ -23,10 +25,10 @@ Complete UI copy for every screen and shared component.
 | Club name | Bishop Middleham FC |
 | League name | Swinburne Maddison Second Division |
 | Current season | 2026/27 |
-| Default home venue | Bishop Middleham Recreation Ground |
+| Default home venue | Bishop Middleham Park |
 | Default match kick-off | 10:30 |
 | Default training time | 19:00 |
-| Default training location | Bishop Middleham Recreation Ground |
+| Default training location | Bishop Middleham Park |
 | Squad positions | Forward, Midfielder, Defender, Goalkeeper |
 
 ---
@@ -105,7 +107,7 @@ Accessibility labels:
 ### Availability form
 
 - Reason *(optional)*
-- Placeholder: e.g. away for the weekend, injured...
+- Placeholder: e.g. away for the weekend, injured
 
 ### Availability nudge (dashboard banner)
 
@@ -365,8 +367,9 @@ Own profile calendar:
 
 - Welcome back
 - Sign in to BMFC Club Hub
-- Your name
-- Placeholder: Chris Lee
+- Your display name and 4-digit passcode
+- Display name
+- Placeholder: ChrisL
 - Passcode
 - Placeholder: ••••
 - Log in / Signing in...
@@ -405,7 +408,7 @@ Own profile calendar:
 
 - ⏳
 - Awaiting approval
-- Hi {display_name or "there"} — your account is waiting for approval. A committee member will sort it shortly.
+- Hi {display_name or "there"}. Your account is waiting for approval. A committee member will sort it soon.
 - Once approved you'll be able to see fixtures, mark your availability and view squad stats.
 - Log out
 - Back to home
@@ -420,7 +423,7 @@ Own profile calendar:
 ### Summary cards
 
 - League position
-- {position or "—"}
+- {position or "-"}
 - {points} pts
 - Next match
 - vs / @ {opponent}
@@ -557,7 +560,7 @@ View tabs:
 ### Add a player
 
 - Add a player
-- Placeholder: Player name, e.g. Chris Lee
+- Placeholder: e.g. trialist A (optional)
 - {Forward | Midfielder | Defender | Goalkeeper}
 - Create invite / Creating...
 
@@ -569,7 +572,7 @@ View tabs:
 
 ### Reset passcode
 
-- Reset passcode — {display_name}
+- Reset passcode: {display_name}
 - Set a new 4-digit code and send it to them on WhatsApp.
 - Placeholder: ••••
 - Save new passcode
@@ -599,7 +602,7 @@ Role labels:
 
 Squad column:
 
-- {position} / Squad / —
+- {position} / Squad / -
 
 Status badges:
 
@@ -659,16 +662,16 @@ Confirm dialog:
 - Cup / trophy
 - Other
 - Competition name *(cup/other only)*
-- Placeholder: e.g. Alan Smith Memorial Trophy / e.g. Charity match
+- Placeholder: e.g. Alan Smith Memorial Trophy / e.g. charity match
 - Opponent
-- Placeholder: e.g. Shildon Town
+- Placeholder: -
 - Date
 - Kick-off
 - Home or away
 - home
 - away
 - Venue / Venue (opponent ground)
-- Placeholder: Bishop Middleham Recreation Ground / e.g. Willington Recreation Ground
+- Placeholder: Bishop Middleham Park / e.g. Willington Recreation Ground
 - Cancel
 - Add match / Save changes / Saving...
 
@@ -720,7 +723,7 @@ Fixture selector:
 - MOTM
 - Yellow
 - Red
-- Placeholder: Min
+- Placeholder: e.g. 67
 - Save result / Saving...
 
 ---
@@ -765,7 +768,7 @@ Confirm dialog:
 
 - Event type *(Team social, AGM, Committee meeting, Other event)*
 - Title
-- Placeholder: e.g. End of season social
+- Placeholder: e.g. end of season social
 - Date
 - Time
 - Location

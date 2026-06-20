@@ -23,7 +23,7 @@ export const COMPETITION_PRESETS: Record<
   },
   other: {
     label: 'Other',
-    placeholder: 'e.g. Charity match',
+    placeholder: 'e.g. charity match',
     needsCustomName: true,
   },
 }

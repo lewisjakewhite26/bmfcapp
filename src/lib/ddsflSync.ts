@@ -2,7 +2,7 @@ import type { ScrapedFixture, ScrapedLeagueRow } from './ddsflScraper'
 import { isBmfcTeam } from './ddsflScraper'
 
 const CLUB_NAME = 'Bishop Middleham FC'
-const DEFAULT_HOME_VENUE = 'Bishop Middleham Recreation Ground'
+const DEFAULT_HOME_VENUE = 'Bishop Middleham Park'
 const DEFAULT_KICKOFF = '10:30:00'
 
 export interface DdsflScrapePayload {

@@ -69,7 +69,7 @@ export default function Dashboard() {
             <div className="glass-card p-4 text-center">
               <p className="text-xs uppercase tracking-wide text-gray-500">League position</p>
               <p className="font-display text-3xl font-bold text-brand-blue mt-1">
-                {summary?.leaguePosition ?? '—'}
+                {summary?.leaguePosition ?? '-'}
               </p>
               <p className="text-sm text-gray-500">{summary?.leaguePoints ?? 0} pts</p>
             </div>

@@ -14,7 +14,7 @@ export interface DdsflScrapePayload {
   league_table: ScrapedLeagueRow[]
 }
 
-const DEFAULT_HOME_VENUE = 'Bishop Middleham Recreation Ground'
+const DEFAULT_HOME_VENUE = 'Bishop Middleham Park'
 const DEFAULT_KICKOFF = '10:30:00'
 
 function formatOpponentName(raw: string): string {

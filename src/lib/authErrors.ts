@@ -1,3 +1,7 @@
+export function isAlreadyRegisteredInviteError(message: string): boolean {
+  return message.toLowerCase().includes('already signed up')
+}
+
 /** Extract a user-facing message from Supabase PostgrestError or other thrown values */
 export function getAuthErrorMessage(error: unknown, fallback: string): string {
   if (error && typeof error === 'object') {

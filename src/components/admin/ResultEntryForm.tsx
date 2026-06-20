@@ -120,7 +120,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
           onChange={(e) => setGoalkeeperPlayerId(e.target.value)}
           className="input-field mt-1 w-full"
         >
-          <option value="">Not set — use live log or saved lineup if available</option>
+          <option value="">Not set (use live log or saved lineup if available)</option>
           {goalkeepers.map((g) => (
             <option key={g.player_id} value={g.player_id}>
               {g.display_name}
@@ -181,7 +181,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
             <input
               type="number"
               min={0}
-              placeholder="Min"
+              placeholder="e.g. 67"
               value={ev.minute}
               onChange={(e) => setEvents((prev) => prev.map((row, j) => (j === i ? { ...row, minute: e.target.value } : row)))}
               className="input-field text-sm"

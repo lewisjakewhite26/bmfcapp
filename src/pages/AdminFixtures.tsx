@@ -14,7 +14,7 @@ import { formatMatchDate, formatMatchTime } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
 import type { FixtureWithResult, HomeAway } from '../types'
 
-const DEFAULT_HOME_VENUE = 'Bishop Middleham Recreation Ground'
+const DEFAULT_HOME_VENUE = 'Bishop Middleham Park'
 const DEFAULT_TIME = '10:30'
 
 function formatOpponentName(raw: string): string {
@@ -247,7 +247,7 @@ export default function AdminFixtures() {
               value={opponent}
               onChange={(e) => setOpponent(e.target.value)}
               className="input-field mt-1"
-              placeholder="e.g. Shildon Town"
+              placeholder="-"
               required
             />
           </div>

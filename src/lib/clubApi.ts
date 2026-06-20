@@ -32,6 +32,11 @@ import {
   removeMockFixture,
   createMockInvite,
   regenerateMockInvite,
+  getMockTeamInviteSettings,
+  generateMockTeamInvite,
+  regenerateMockTeamInvite,
+  disableMockTeamInvite,
+  enableMockTeamInvite,
   updateMockPlayerNames,
   changeMockPasscode,
   getMockLineup,
@@ -101,9 +106,15 @@ import type {
   FinanceOverview,
   Sponsorship,
   SponsorshipCategory,
+  TeamInviteSettings,
 } from '../types'
 
-export { getMockInvitePreview, completeMockInvite } from './mockData'
+export {
+  getMockInvitePreview,
+  completeMockInvite,
+  getMockTeamInvitePreview,
+  completeMockTeamInvite,
+} from './mockData'
 
 /** Use mock data until the club hub Supabase project is wired up. E2E builds always use mock. */
 export function isMockDataMode(): boolean {
@@ -440,6 +451,91 @@ export async function createInvite(
   })
   if (error) throw error
   return data as CreateInviteResult
+}
+
+export async function fetchTeamInviteSettings(): Promise<TeamInviteSettings> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockTeamInviteSettings()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_get_team_invite', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return data as TeamInviteSettings
+}
+
+export async function generateTeamInvite(): Promise<TeamInviteSettings> {
+  if (isMockDataMode()) {
+    await delay()
+    return generateMockTeamInvite()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_generate_team_invite', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return data as TeamInviteSettings
+}
+
+export async function regenerateTeamInvite(): Promise<TeamInviteSettings> {
+  if (isMockDataMode()) {
+    await delay()
+    return regenerateMockTeamInvite()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_regenerate_team_invite', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return data as TeamInviteSettings
+}
+
+export async function disableTeamInvite(): Promise<TeamInviteSettings> {
+  if (isMockDataMode()) {
+    await delay()
+    return disableMockTeamInvite()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_disable_team_invite', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return data as TeamInviteSettings
+}
+
+export async function enableTeamInvite(): Promise<TeamInviteSettings> {
+  if (isMockDataMode()) {
+    await delay()
+    return enableMockTeamInvite()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_enable_team_invite', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return data as TeamInviteSettings
 }
 
 export async function updatePlayerNames(

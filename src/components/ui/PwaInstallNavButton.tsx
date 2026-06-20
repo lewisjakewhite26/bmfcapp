@@ -38,7 +38,7 @@ export function PwaInstallNavButton() {
 
     if (!canPrompt) {
       toast(
-        'Install will appear here once your browser is ready — try again after browsing a bit, or use the browser menu.',
+        'Install will appear here once your browser is ready. Try again after browsing a bit, or use the browser menu.',
         { duration: 5000 },
       )
       return

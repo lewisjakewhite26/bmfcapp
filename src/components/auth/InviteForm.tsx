@@ -3,9 +3,15 @@ import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
 import { saveSession } from '../../hooks/authContext'
-import { rpcGetInvitePreview } from '../../lib/clubAuth'
-import { completeMockInvite, getMockInvitePreview, isMockDataMode } from '../../lib/clubApi'
-import { getAuthErrorMessage } from '../../lib/authErrors'
+import { rpcGetInvitePreview, rpcGetTeamInvitePreview } from '../../lib/clubAuth'
+import {
+  completeMockInvite,
+  completeMockTeamInvite,
+  getMockInvitePreview,
+  getMockTeamInvitePreview,
+  isMockDataMode,
+} from '../../lib/clubApi'
+import { getAuthErrorMessage, isAlreadyRegisteredInviteError } from '../../lib/authErrors'
 import { validateNamePart } from '../../lib/playerNames'
 import type { InvitePreview } from '../../types'
 
@@ -13,18 +19,21 @@ const passcodeInputType = import.meta.env.VITE_E2E === 'true' ? 'text' : 'passwo
 
 interface InviteFormProps {
   token: string
+  variant?: 'individual' | 'team'
 }
 
-export function InviteForm({ token }: InviteFormProps) {
+export function InviteForm({ token, variant = 'individual' }: InviteFormProps) {
+  const isTeamInvite = variant === 'team'
   const [preview, setPreview] = useState<InvitePreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
+  const [alreadyRegistered, setAlreadyRegistered] = useState<string | null>(null)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [passcode, setPasscode] = useState('')
   const [confirmPasscode, setConfirmPasscode] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingPreview, setLoadingPreview] = useState(true)
-  const { completeInvite, refreshUser } = useAuth()
+  const { completeInvite, completeTeamInvite, refreshUser } = useAuth()
   const navigate = useNavigate()
   const mockMode = isMockDataMode()
 
@@ -32,10 +41,15 @@ export function InviteForm({ token }: InviteFormProps) {
     let cancelled = false
     ;(async () => {
       setLoadingPreview(true)
+      setAlreadyRegistered(null)
       try {
         const data = mockMode
-          ? await getMockInvitePreview(token)
-          : await rpcGetInvitePreview(token)
+          ? isTeamInvite
+            ? await getMockTeamInvitePreview(token)
+            : await getMockInvitePreview(token)
+          : isTeamInvite
+            ? await rpcGetTeamInvitePreview(token)
+            : await rpcGetInvitePreview(token)
         if (!cancelled) setPreview(data)
       } catch (err) {
         if (!cancelled) {
@@ -46,10 +60,11 @@ export function InviteForm({ token }: InviteFormProps) {
       }
     })()
     return () => { cancelled = true }
-  }, [token, mockMode])
+  }, [token, mockMode, isTeamInvite])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setAlreadyRegistered(null)
 
     const form = e.currentTarget
     const passEl = form.elements.namedItem('passcode') as HTMLInputElement | null
@@ -77,7 +92,9 @@ export function InviteForm({ token }: InviteFormProps) {
     setLoading(true)
     try {
       if (mockMode) {
-        const user = await completeMockInvite(token, firstName, lastName, effectivePasscode)
+        const user = isTeamInvite
+          ? await completeMockTeamInvite(token, firstName, lastName, effectivePasscode)
+          : await completeMockInvite(token, firstName, lastName, effectivePasscode)
         if (!user) throw new Error('Invalid invite link')
         saveSession(user)
         await refreshUser()
@@ -86,11 +103,20 @@ export function InviteForm({ token }: InviteFormProps) {
         return
       }
 
-      await completeInvite(token, firstName, lastName, effectivePasscode)
+      if (isTeamInvite) {
+        await completeTeamInvite(token, firstName, lastName, effectivePasscode)
+      } else {
+        await completeInvite(token, firstName, lastName, effectivePasscode)
+      }
       toast.success('Passcode saved. Waiting for approval')
       navigate('/pending')
     } catch (err) {
-      toast.error(getAuthErrorMessage(err, 'Setup failed'))
+      const message = getAuthErrorMessage(err, 'Setup failed')
+      if (isAlreadyRegisteredInviteError(message)) {
+        setAlreadyRegistered(message)
+        return
+      }
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -100,6 +126,16 @@ export function InviteForm({ token }: InviteFormProps) {
     return (
       <div className="glass-card p-8 w-full max-w-md text-center">
         <div className="w-8 h-8 border-2 border-brand-blue border-t-transparent rounded-full animate-spin mx-auto" />
+      </div>
+    )
+  }
+
+  if (alreadyRegistered) {
+    return (
+      <div className="glass-card p-8 text-center w-full max-w-md space-y-4">
+        <h1 className="font-display text-xl text-brand-navy">Already signed up</h1>
+        <p className="text-gray-500 text-sm">{alreadyRegistered}</p>
+        <Link to="/login" className="btn-primary inline-block">Go to login</Link>
       </div>
     )
   }

@@ -134,7 +134,7 @@ function LiveMatchLogger({
         goals_against: next.goals_against,
       })
     } catch {
-      toast.error("Couldn't save — check your connection")
+      toast.error("Couldn't save. Check your connection.")
       throw new Error('draft save failed')
     } finally {
       setSavingDraft(false)

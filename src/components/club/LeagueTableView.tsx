@@ -69,7 +69,7 @@ export function LeagueTableView({ rows, loading }: LeagueTableViewProps) {
         </table>
       </div>
       <p className="text-xs text-gray-400 px-4 py-3 border-t border-brand-blue/8">
-        Source: DDSFL · Updated {rows[0] ? new Date(rows[0].last_scraped_at).toLocaleString('en-GB') : '—'}
+        Source: DDSFL · Updated {rows[0] ? new Date(rows[0].last_scraped_at).toLocaleString('en-GB') : 'unknown'}
       </p>
     </div>
   )

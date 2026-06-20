@@ -3,12 +3,17 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
-import { inviteUrl } from '../lib/clubAuth'
+import { inviteUrl, teamInviteUrl } from '../lib/clubAuth'
 import {
   approveUser,
   createInvite,
+  disableTeamInvite,
+  enableTeamInvite,
   fetchAdminUsers,
+  fetchTeamInviteSettings,
+  generateTeamInvite,
   regenerateInvite,
+  regenerateTeamInvite,
   resetUserPasscode,
   setUserCommittee,
   updatePlayerNames,
@@ -16,7 +21,7 @@ import {
 import { validateNamePart } from '../lib/playerNames'
 import { SQUAD_POSITIONS } from '../lib/squadPositions'
 import { pageContainerClass } from '../lib/layout'
-import type { AdminUserRow, SquadPosition } from '../types'
+import type { AdminUserRow, SquadPosition, TeamInviteSettings } from '../types'
 
 function copyText(text: string) {
   navigator.clipboard.writeText(text).then(
@@ -42,6 +47,9 @@ export default function AdminUsers() {
   const [editFirstName, setEditFirstName] = useState('')
   const [editLastName, setEditLastName] = useState('')
   const [newPasscode, setNewPasscode] = useState('')
+  const [teamInvite, setTeamInvite] = useState<TeamInviteSettings | null>(null)
+  const [teamInviteLoading, setTeamInviteLoading] = useState(true)
+  const [teamInviteBusy, setTeamInviteBusy] = useState(false)
 
   const reload = async () => {
     setLoading(true)
@@ -53,6 +61,47 @@ export default function AdminUsers() {
   }
 
   useEffect(() => { reload() }, [])
+
+  const reloadTeamInvite = async () => {
+    setTeamInviteLoading(true)
+    try {
+      setTeamInvite(await fetchTeamInviteSettings())
+    } catch {
+      setTeamInvite(null)
+    } finally {
+      setTeamInviteLoading(false)
+    }
+  }
+
+  useEffect(() => { reloadTeamInvite() }, [])
+
+  const handleTeamInviteAction = async (action: 'generate' | 'regenerate' | 'disable' | 'enable') => {
+    setTeamInviteBusy(true)
+    try {
+      const next =
+        action === 'generate'
+          ? await generateTeamInvite()
+          : action === 'regenerate'
+            ? await regenerateTeamInvite()
+            : action === 'disable'
+              ? await disableTeamInvite()
+              : await enableTeamInvite()
+      setTeamInvite(next)
+      toast.success(
+        action === 'disable'
+          ? 'Team invite link turned off'
+          : action === 'enable'
+            ? 'Team invite link turned on'
+            : action === 'regenerate'
+              ? 'New team invite link created'
+              : 'Team invite link created',
+      )
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't update team invite link")
+    } finally {
+      setTeamInviteBusy(false)
+    }
+  }
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -149,7 +198,78 @@ export default function AdminUsers() {
       <div className={pageContainerClass()}>
         <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         <h1 className="font-display text-2xl text-brand-navy">Squad members</h1>
-        <p className="text-sm text-gray-500">Create invite links — players enter their name when they open the link. Position is optional but helps stats.</p>
+          <p className="text-sm text-gray-500">Create invite links. Players enter their name when they open the link. Position is optional but helps stats.</p>
+
+        <section className="glass-card p-5 space-y-4">
+          <h2 className="font-semibold text-brand-navy">Team invite link</h2>
+          <p className="text-sm text-gray-500">
+            One reusable link for the squad WhatsApp group. New joiners still need your approval before they get access.
+          </p>
+
+          {teamInviteLoading ? (
+            <div className="h-16 animate-pulse rounded-card bg-brand-light/60" />
+          ) : teamInvite?.token ? (
+            <div className="space-y-3">
+              <div className="rounded-card bg-brand-light/70 border border-brand-blue/15 p-4 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-medium text-brand-navy">Current link</p>
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-pill ${
+                    teamInvite.enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {teamInvite.enabled ? 'Active' : 'Off'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 break-all font-mono">{teamInviteUrl(teamInvite.token)}</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => copyText(teamInviteUrl(teamInvite.token!))}
+                    className="btn-secondary text-sm"
+                  >
+                    Copy link
+                  </button>
+                  {!teamInvite.enabled && (
+                    <button
+                      type="button"
+                      disabled={teamInviteBusy}
+                      onClick={() => handleTeamInviteAction('enable')}
+                      className="btn-primary text-sm"
+                    >
+                      Turn on
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={teamInviteBusy}
+                    onClick={() => handleTeamInviteAction('regenerate')}
+                    className="btn-secondary text-sm"
+                  >
+                    Regenerate
+                  </button>
+                  {teamInvite.enabled && (
+                    <button
+                      type="button"
+                      disabled={teamInviteBusy}
+                      onClick={() => handleTeamInviteAction('disable')}
+                      className="text-sm text-red-600 font-medium px-3 py-2"
+                    >
+                      Turn off
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={teamInviteBusy}
+              onClick={() => handleTeamInviteAction('generate')}
+              className="btn-primary text-sm"
+            >
+              {teamInviteBusy ? 'Creating...' : 'Generate team link'}
+            </button>
+          )}
+        </section>
 
         <section className="glass-card p-5 space-y-4">
           <h2 className="font-semibold text-brand-navy">Add a player</h2>
@@ -160,7 +280,7 @@ export default function AdminUsers() {
                 value={inviteLabel}
                 onChange={(e) => setInviteLabel(e.target.value)}
                 className="input-field flex-1"
-                placeholder="Label (optional), e.g. Trialist A"
+                placeholder="e.g. trialist A (optional)"
               />
               <select
                 value={newPosition}
@@ -325,7 +445,7 @@ export default function AdminUsers() {
                         </p>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell text-gray-600">
-                        {u.in_squad ? u.squad_position ?? 'Squad' : '—'}
+                        {u.in_squad ? u.squad_position ?? 'Squad' : '-'}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-semibold px-2 py-1 rounded-pill ${

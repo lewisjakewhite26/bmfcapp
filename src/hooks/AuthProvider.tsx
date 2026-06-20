@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isSupabaseConfigured } from '../lib/supabase'
-import { rpcCompleteInvite, rpcGetSessionUser, rpcLogin } from '../lib/clubAuth'
-import { isMockDataMode, completeMockInvite as completeMockInviteApi } from '../lib/clubApi'
+import { rpcCompleteInvite, rpcCompleteTeamInvite, rpcGetSessionUser, rpcLogin } from '../lib/clubAuth'
+import { isMockDataMode, completeMockInvite as completeMockInviteApi, completeMockTeamInvite as completeMockTeamInviteApi } from '../lib/clubApi'
 import { DEV_USER, DEV_ADMIN, DEV_PENDING, isDevBypassEnabled, isDevBypassSession } from '../lib/devBypass'
 import type { User } from '../types'
 import { AuthContext, loadSession, saveSession } from './authContext'
@@ -88,6 +88,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(profile)
   }
 
+  const completeTeamInvite = async (token: string, firstName: string, lastName: string, passcode: string) => {
+    if (isMockDataMode()) {
+      const profile = completeMockTeamInviteApi(token, firstName, lastName, passcode)
+      saveSession(profile)
+      setUser(profile)
+      return
+    }
+    if (!isSupabaseConfigured) {
+      throw new Error('Can\'t finish invite setup. Supabase isn\'t set up.')
+    }
+
+    const profile = await rpcCompleteTeamInvite(token, firstName, lastName, passcode)
+    saveSession(profile)
+    setUser(profile)
+  }
+
   const logout = async () => {
     saveSession(null)
     setUser(null)
@@ -102,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, completeInvite, devBypassLogin, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, completeInvite, completeTeamInvite, devBypassLogin, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

@@ -251,7 +251,7 @@ export default function AdminFundraisers() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="input-field flex-1"
-                    placeholder="Event name, e.g. Bag pack"
+                    placeholder="e.g. Last Man Standing"
                     required
                   />
                   <input

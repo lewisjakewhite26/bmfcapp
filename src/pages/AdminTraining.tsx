@@ -13,7 +13,7 @@ import { formatMatchDate, formatMatchTime } from '../lib/format'
 import type { TrainingSession } from '../types'
 import { pageContainerClass } from '../lib/layout'
 
-const DEFAULT_LOCATION = 'Bishop Middleham Recreation Ground'
+const DEFAULT_LOCATION = 'Bishop Middleham Park'
 const DEFAULT_TIME = '19:00'
 
 function sessionToForm(session: TrainingSession) {

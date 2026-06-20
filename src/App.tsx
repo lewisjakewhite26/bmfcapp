@@ -5,6 +5,7 @@ import { AuthProvider } from './hooks/AuthProvider'
 import { useAuth } from './hooks/useAuth'
 import Login from './pages/Login'
 import InvitePage from './pages/Invite'
+import JoinPage from './pages/Join'
 import Dashboard from './pages/Dashboard'
 import LeagueTablePage from './pages/LeagueTable'
 import ResultsPage from './pages/Results'
@@ -99,6 +100,7 @@ function AppRoutes() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
       <Route path="/invite/:token" element={<InvitePage />} />
+      <Route path="/join/:token" element={<JoinPage />} />
       {/* Legacy World Cup predictor URLs — keep for old bookmarks */}
       <Route path="/signup" element={<Navigate to="/login" replace />} />
       <Route path="/leaderboard" element={<Navigate to="/table" replace />} />

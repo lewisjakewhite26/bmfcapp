@@ -45,7 +45,7 @@ export function AvailabilityForm({ value, message, onSave, disabled }: Availabil
             onChange={(e) => setNote(e.target.value)}
             onBlur={handleNoteBlur}
             disabled={disabled}
-            placeholder="e.g. away for the weekend, injured..."
+            placeholder="e.g. away for the weekend, injured"
             className="input-field text-sm"
             maxLength={200}
           />
