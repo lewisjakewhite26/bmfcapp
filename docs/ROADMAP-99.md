@@ -1,8 +1,8 @@
 # BMFC Club Hub — Roadmap to 99 / 100
 
-**Baseline:** [AUDITNEW.md](../AUDITNEW.md) v8 — **94 / 100** (20 June 2026)  
+**Baseline:** [AUDIT.md](AUDIT.md) v10 — **96 / 100** (20 June 2026)  
 **Target:** **99 / 100** — polished private squad app with strong test coverage and ops closure  
-**Status:** **94 reached** — finance admin shipped; ops + testing remain
+**Status:** **96 reached** — GK fix + calendar polish shipped; apply 023–024, squad + E2E remain
 
 ---
 
@@ -13,19 +13,23 @@
 | v5 — lazy routes, live matchday, photos | 90 | ✅ |
 | v6 — invite onboarding, passcode self-service | 92 | ✅ |
 | v7 — prod fixes, ChrisL, photo grant | 93 | ✅ |
-| **v8 — finance admin (sponsorships + expenses)** | **94** | ✅ |
-| Ops closure (019–022 + squad + VAPID) | ~95 | In progress |
-| E2E + unit tests | ~96 | Open |
-| Polish (GK, canvas, a11y) | ~97 | Optional |
+| v8 — finance admin (sponsorships + expenses) | 94 | ✅ |
+| v9 — all migrations 001–022 on Club Hub | 95 | ✅ |
+| **v10 — GK clean sheets, calendar archive, PWA prompt** | **96** | ✅ |
+| Apply migrations 023–024 on Club Hub | — | ⚠️ Operator |
+| VAPID on Vercel | — | ✅ |
+| Ops closure (squad + DDSFL sync) | ~97 | In progress |
+| E2E + more unit tests | ~98 | Open |
+| Polish (canvas, a11y) | ~98 | Optional |
 | Audit log + Sentry | ~99 | Optional |
 
 Remaining lift to **99**:
 
 | Priority | Area | Notes |
 |----------|------|-------|
-| 1 | **Ops** | Migrations 019–022, populate squad, VAPID, DDSFL sync |
-| 2 | **Testing** | Playwright E2E (62 → 85 category score) |
-| 3 | **Polish** | Landing canvas pause, GK fix when relevant |
+| 1 | **Ops** | Apply 023–024, populate squad, DDSFL sync |
+| 2 | **Testing** | Playwright E2E (64 → 85 category score) |
+| 3 | **Polish** | Landing canvas pause |
 | 4 | **A11y** | Fieldset, focus trap, contrast (optional for closed squad) |
 | 5 | **Observability** | Sentry, admin audit log |
 
@@ -35,12 +39,14 @@ Remaining lift to **99**:
 
 | Milestone | Overall | Status |
 |-----------|--------:|--------|
-| v7 — hotfixes (7189fcc–f91371c) | 93 | ✅ |
-| **v8 — finance admin (79c9688 / 022)** | **94** | ✅ |
-| Ops: 019–022 + squad populated | ~95 | ⚠️ Operator |
-| E2E smoke tests | ~96 | Open |
-| GK fix + canvas pause | ~97 | Parked / optional |
-| Partial a11y | ~98 | Optional |
+| v8 — finance admin (79c9688 / 022) | 94 | ✅ |
+| v9 — migrations 001–022 applied | 95 | ✅ |
+| **v10 — GK fix + calendar + PWA prompt (`ed6bde1`)** | **96** | ✅ |
+| Apply migrations 023–024 on Club Hub | — | ⚠️ Operator |
+| `VITE_VAPID_PUBLIC_KEY` on Vercel | — | ✅ |
+| Ops: squad populated + DDSFL sync | ~97 | ⚠️ Operator |
+| E2E smoke tests | ~98 | Open |
+| Canvas pause + partial a11y | ~98 | Optional |
 | Audit log + Sentry | ~99 | Optional |
 
 ---
@@ -51,23 +57,27 @@ Remaining lift to **99**:
 gantt
     title Roadmap to 99 (revised 20 Jun 2026 PM)
     dateFormat  YYYY-MM-DD
-    section v6–v8 DONE
+    section v6–v10 DONE
     Onboarding + passcode (019)           :done, v6, 2026-06-20, 1d
     match_events FK fix (7189fcc)         :done, v7a, 2026-06-20, 1d
     ChrisL display name (020)             :done, v7b, 2026-06-20, 1d
     photo_url grant (021)                 :done, v7c, 2026-06-20, 1d
     Finance admin (022)                   :done, v8, 2026-06-20, 1d
-    section Ops — to 95
-    Apply migrations 019–022 Supabase     :active, ops1, 2026-06-20, 1d
-    Populate squad table (Admin)          :ops2, 2026-06-20, 1d
-    VITE_VAPID_PUBLIC_KEY on Vercel       :ops3, 2026-06-21, 1d
-    npm run sync:ddsfl                      :ops4, 2026-06-21, 1d
-    section Testing — to 96
+    Apply migrations 001–022 Supabase     :done, v9, 2026-06-20, 1d
+    VITE_VAPID_PUBLIC_KEY on Vercel       :done, v9b, 2026-06-20, 1d
+    PWA install prompt (207145f)          :done, v10a, 2026-06-20, 1d
+    Calendar archive + colours (6ea2216)  :done, v10b, 2026-06-20, 1d
+    GK clean-sheet fix (ed6bde1)          :done, v10c, 2026-06-20, 1d
+    section Ops — to 97
+    Apply migrations 023–024 Supabase     :active, ops0, 2026-06-20, 1d
+    Populate squad table (Admin)          :active, ops1, 2026-06-20, 1d
+    Brief squad on ChrisL login           :ops2, 2026-06-20, 1d
+    npm run sync:ddsfl                      :ops3, 2026-06-21, 1d
+    section Testing — to 98
     Playwright E2E login + availability   :t1, 2026-06-23, 2d
     Playwright E2E invite + admin result  :t2, 2026-06-25, 2d
     Unit tests formations + auth errors   :t3, 2026-06-26, 1d
-    section Polish — to 97
-    GK clean-sheet fix                    :p1, 2026-08-01, 1d
+    section Polish — to 98
     Pause landing canvas                  :p2, 2026-06-30, 1d
     section A11y — to 98
     Passcode fieldset + focus trap        :a1, 2026-07-05, 1d
@@ -88,7 +98,7 @@ gantt
 | Username **clee** + collision suffix | ✅ | 019 |
 | Admin edit names; player change passcode | ✅ | 019 |
 | Mock-mode parity | ✅ | |
-| Apply 019–020 on production | ⚠️ | Operator |
+| Apply 019–020 on production | ✅ | Operator |
 
 ---
 
@@ -99,7 +109,7 @@ gantt
 | Dashboard/calendar 400 — dual FK on `match_events` | ✅ | `7189fcc` |
 | Stats 400 — `photo_url` column not granted | ✅ | `f91371c`, 021 |
 | Calendar fundraisers skip admin RPC for players | ✅ | `7189fcc` |
-| Apply migration 021 on production | ⚠️ | Operator |
+| Apply migration 021 on production | ✅ | Operator |
 
 ---
 
@@ -113,7 +123,32 @@ gantt
 | Admin + committee access (not admin-only) | ✅ | `assert_finance_user` |
 | Server-side `logged_by` / `edited_by` (never client-supplied) | ✅ | 022 RPCs |
 | Mock-mode parity | ✅ | `mockFinance.ts` |
-| Apply migration 022 on production | ⚠️ | Operator |
+| Apply migration 022 on production | ✅ | Operator |
+
+---
+
+## Phase 6d — Calendar & PWA polish ✅
+
+| Task | Status | Ref |
+|------|--------|-----|
+| Archive vs delete for events and fundraisers | ✅ | `6ea2216`, 023 |
+| Match result colour coding on calendar | ✅ | `6ea2216` |
+| PWA “Add to home screen” dismissible prompt | ✅ | `207145f` |
+| Apply migration 023 on production | ⚠️ | Operator |
+
+---
+
+## Phase 6e — GK clean sheets ✅
+
+| Task | Status | Ref |
+|------|--------|-----|
+| Layered GK resolution: live log → lineup → manual override | ✅ | `ed6bde1`, `cleanSheet.ts` |
+| Keeper subs credited on shutouts (both keepers) | ✅ | |
+| Admin → Results optional goalkeeper field | ✅ | `ResultEntryForm.tsx` |
+| Admin banner for shutouts missing GK data | ✅ | `AdminResults.tsx` |
+| Live log snapshot on result save (`live_log_entries`) | ✅ | migration 024 |
+| Unit tests: live, lineup, manual, no-data | ✅ | `cleanSheet.test.ts` |
+| Apply migration 024 on production | ⚠️ | Operator |
 
 ---
 
@@ -123,29 +158,29 @@ Migrations 001–018, lazy routes, live matchday, photos, events, fundraisers, c
 
 ---
 
-## Phase 7 — Ops closure (94 → 95)
+## Phase 7 — Ops closure (96 → 97)
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Apply **019** on Club Hub | ⚠️ | 3-arg DROP + explicit GRANTs |
-| Apply **020** on Club Hub | ⚠️ | ChrisL format + backfill |
-| Apply **021** on Club Hub | ⚠️ | `GRANT SELECT (photo_url)` |
-| Apply **022** on Club Hub | ⚠️ | Finance tables + RPCs |
+| Apply **001–022** on Club Hub | ✅ | |
+| Apply **023–024** on Club Hub | ⚠️ | Calendar archive + GK fields |
+| `VITE_VAPID_PUBLIC_KEY` on Vercel | ✅ | Production push configured |
 | Add squad members (Admin → Squad) | ⚠️ | Required for stats + player profiles |
-| Brief squad on **ChrisL** login format | ⚠️ | After 020 |
-| `VITE_VAPID_PUBLIC_KEY` on Vercel | ⚠️ | |
+| Brief squad on **ChrisL** login format | ⚠️ | |
+| Push smoke test (Admin → Notifications) | ⚠️ | Optional |
 | `npm run sync:ddsfl` | ⚠️ | When fixtures publish |
 
 ---
 
-## Phase 2 — Testing depth (95 → 96)
+## Phase 2 — Testing depth (97 → 98)
 
-**Target:** Testing **62 → 85**
+**Target:** Testing **64 → 85**
 
 | Task | Status |
 |------|--------|
 | `playerNames.ts` unit tests (ChrisL format) | ✅ |
 | `liveMatchEvents` unit tests | ✅ |
+| `cleanSheet.ts` unit tests (GK attribution) | ✅ |
 | Playwright E2E: login → dashboard | Open |
 | Playwright E2E: availability | Open |
 | Playwright E2E: invite → name → passcode | Open |
@@ -156,28 +191,28 @@ Migrations 001–018, lazy routes, live matchday, photos, events, fundraisers, c
 
 ---
 
-## Phase 3 — Performance polish (96 → 97)
+## Phase 3 — Performance polish (98)
 
 | Task | Status |
 |------|--------|
-| Lazy admin routes (~180 kB gzip) | ✅ |
+| Lazy admin routes (~184 kB gzip) | ✅ |
 | `AdminFinance` lazy chunk (~3.5 kB gzip) | ✅ |
 | Pause landing canvas off-screen | Open |
 
 ---
 
-## Phase 8 — Data integrity (97)
+## Phase 8 — Data integrity ✅
 
 | Task | Status |
 |------|--------|
 | Unique `(first_name, last_name)` | ✅ 019 |
 | Display collision `ChrisL2`, `ChrisL3` | ✅ 020 |
 | Finance ledger audit trail | ✅ 022 |
-| GK clean-sheet over-count | ⏸️ Parked |
+| GK clean-sheet attribution | ✅ `ed6bde1`, 024 |
 
 ---
 
-## Phase 9 — Accessibility (97 → 98)
+## Phase 9 — Accessibility (98)
 
 Optional for ~25-player closed squad.
 
@@ -200,32 +235,32 @@ Optional for ~25-player closed squad.
 
 ---
 
-## Category score targets (v8 → 99)
+## Category score targets (v10 → 99)
 
-| Category | v7 | v8 | @99 | Phase |
-|----------|---:|---:|----:|-------|
-| Code Quality | 89 | 90 | 91 | 2, 10 |
+| Category | v9 | v10 | @99 | Phase |
+|----------|---:|----:|----:|-------|
+| Code Quality | 90 | 90 | 91 | 2, 10 |
 | Security | 69 | 69 | 70 | N/A |
 | Performance | 72 | 72 | 75 | 3 |
 | Accessibility | 53 | 53 | 65 | 9 |
-| User Experience | 97 | 98 | 99 | 7 |
-| Data Integrity | 80 | 81 | 83 | 8 |
+| User Experience | 98 | 98 | 99 | 7 |
+| Data Integrity | 81 | 85 | 86 | ✅ |
 | DDSFL Integration | 80 | 80 | 85 | 7 |
-| Database & Supabase | 96 | 97 | 97 | 7 |
-| Testing | 62 | 62 | 85 | 2 |
-| DevOps | 96 | 96 | 99 | 7, 10 |
-| UI & Design | 92 | 93 | 95 | 9 |
+| Database & Supabase | 98 | 98 | 98 | 7 |
+| Testing | 62 | 64 | 85 | 2 |
+| DevOps | 98 | 98 | 99 | 7, 10 |
+| UI & Design | 93 | 93 | 95 | 9 |
 | Copy & Content | 91 | 91 | 93 | ✅ |
 
 ---
 
 ## Recommended next 5 actions
 
-1. **Apply migrations 019, 020, 021, 022** on Club Hub Supabase (in order).
+1. **Apply migrations 023 and 024** on Club Hub Supabase (calendar archive + GK clean sheets).
 2. **Add squad members** via Admin → Squad (stats and profiles require a squad row).
-3. **Hard-refresh** production after Vercel deploy (`79c9688`) — Finance available at Admin → Finance after 022.
-4. **Add `VITE_VAPID_PUBLIC_KEY` on Vercel** and redeploy.
-5. **Playwright E2E** — biggest score lift toward 96+.
+3. **Brief the squad** on **ChrisL**-style display name login.
+4. **Run `npm run sync:ddsfl`** when 2026/27 fixtures publish.
+5. **Playwright E2E** — biggest score lift toward 98+.
 
 ---
 
@@ -240,9 +275,9 @@ Optional for ~25-player closed squad.
 ## Tracking progress
 
 1. Run `npm run lint`, `npm run build`, `npm run test:ci`
-2. Update [AUDITNEW.md](../AUDITNEW.md) — bump version and scores
+2. Update [AUDIT.md](AUDIT.md) — bump version and scores
 3. Mark items done in this file
 
 ---
 
-*Roadmap updated 20 June 2026 (PM). Baseline: AUDITNEW.md v8 (app at `79c9688`). **94/100 reached; target 99.*
+*Roadmap updated 20 June 2026 (PM). Baseline: AUDIT.md v10 (app at `ed6bde1`). **96/100 reached; target 99.*

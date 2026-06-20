@@ -1,6 +1,18 @@
 # BMFC Club Hub
 
-Squad app for **Bishop Middleham FC** — fixtures, league table, stats, calendar, and availability. Built with React, Vite, Tailwind, and Supabase.
+Squad app for **Bishop Middleham FC** — fixtures, league table, stats, player profiles, calendar, availability, and admin tools. Invite-only sign-up with display-name login (e.g. **ChrisL**). Built with React, Vite, Tailwind, and Supabase.
+
+**Audit:** [docs/AUDIT.md](docs/AUDIT.md) v10 — **96 / 100**
+
+## Features
+
+| Area | What’s included |
+|------|-----------------|
+| **Players** | Dashboard, DDSFL fixtures & table, results, squad stats (incl. accurate GK clean sheets), player profiles, calendar (training, matches, events, fundraisers), availability, PWA “Add to home screen” prompt |
+| **Admin / committee** | Squad list, fixtures, live matchday logging, results (optional manual GK for clean sheets), training, events, fundraisers (archive vs delete), **finance** (sponsorships & expenses), lineup builder, availability overview, push notifications |
+| **Admin only** | Squad member invites, passcode resets, name edits |
+
+Finance entries show **Logged by** (and **Edited by** when changed) for transparency. All writes are RPC-gated on Supabase.
 
 ## Quick start (mock mode)
 
@@ -22,12 +34,21 @@ To connect a real backend:
 1. Copy `.env.example` to `.env.local`
 2. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_CLUB_DATA_SOURCE=supabase`  
    Use the **Club Hub** Supabase project (not the World Cup predictor). Keys are under **Settings → API**.
-3. Follow **[docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md)** to run migrations, seed the admin, and deploy the push function
+3. Follow **[docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md)** to run migrations **001–024**, seed the admin, and deploy the push function
 4. Restart `npm run dev` after changing env vars
+
+New players join via an **invite link** (`/invite/:token`), enter their name, then set a 4-digit passcode.
 
 ### Deploy on Vercel
 
-Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_CLUB_DATA_SOURCE=supabase` under **Environment Variables**, then redeploy. See [docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md#vercel-bmfcapp).
+Add these under **Environment Variables**, then redeploy:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_CLUB_DATA_SOURCE=supabase`
+- `VITE_VAPID_PUBLIC_KEY` (optional — required for production push notifications)
+
+See [docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md#vercel-bmfcapp).
 
 ## Scripts
 
@@ -36,7 +57,10 @@ Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_CLUB_DATA_SOURCE=su
 | `npm run dev` | Start dev server |
 | `npm run build` | Typecheck + production build |
 | `npm run preview` | Preview production build |
-| `npm run test` | Run Vitest |
+| `npm run test` | Run Vitest (watch) — skip on Windows OneDrive; use CI instead |
+| `npm run test:vitest` | Run Vitest once (direct — used in CI container) |
+| `npm run test:ci` | Local test router (OneDrive → Docker or fail fast) |
+| `npm run test:docker` | Optional: Vitest in Node 20 container (same as CI) |
 | `npm run lint` | ESLint |
 | `npm run scrape:ddsfl` | Fetch live DDSFL fixtures + table → `src/data/ddsfl-scrape.json` |
 | `npm run scrape:ddsfl:save` | Same, also writes `scraped.json` |
@@ -55,40 +79,48 @@ npm run scrape:ddsfl
 
 Active season ID is set in `src/lib/ddsflConstants.ts` (`DDSFL_ACTIVE_SEASON`).
 
+## Testing
+
+Unit tests run in **GitHub Actions** (`.github/workflows/ci.yml`) inside a `node:20-bookworm-slim` container on every push/PR to `main`. That is the canonical test runner.
+
+Local Vitest on Windows OneDrive paths is unreliable (worker timeouts). For day-to-day dev, run `npm run lint` and `npm run build` locally; push to GitHub for tests. Optional: `npm run test:docker` if you have Docker and want to run tests before push.
+
 ## Roles
 
 | Role | Access |
 |------|--------|
-| **Player** | Dashboard, fixtures, stats, calendar, availability |
-| **Committee** | Admin tools: squad list, fixtures, results, training, availability overview, notifications |
-| **Admin** | Everything committee has, plus squad member invites, approvals, and passcode resets |
+| **Player** | Dashboard, fixtures, table, results, stats, player profiles, calendar, availability; change own passcode |
+| **Committee** | All admin tools except squad member invites and passcode resets — includes finance, live matchday, fundraisers, lineup, notifications |
+| **Admin** | Everything committee has, plus squad member invites, approvals, passcode resets, and name edits |
 
 ## Project structure
 
 ```
 src/
-  pages/          # Route screens
-  components/     # UI + club + admin components
+  pages/          # Route screens (player + lazy-loaded admin)
+  components/     # UI, club, admin, finance components
   hooks/          # Auth and data hooks
   lib/            # API, auth, scraper, mock data
   data/           # Committed DDSFL scrape JSON
 supabase-club/
-  migrations/     # Database schema (001–011)
+  migrations/     # Database schema (001–024)
   functions/      # Edge functions (send-push)
   seed.sql        # Initial admin account
 docs/
   PAGE-COPY.md    # All UI copy
+  COPY-RULES.md   # UK English and naming conventions
   SUPABASE-SETUP.md
-  ROADMAP-90.md   # Roadmap to 90+ audit score
-AUDITNEW.md         # Current project audit
+  AUDIT.md        # Current project audit
+  ROADMAP-99.md   # Roadmap to 99 audit score
 ```
 
 ## Documentation
 
 - [UI copy reference](docs/PAGE-COPY.md)
+- [Copy rules](docs/COPY-RULES.md)
 - [Supabase setup guide](docs/SUPABASE-SETUP.md)
-- [Project audit](AUDITNEW.md)
-- [Roadmap to 90+](docs/ROADMAP-90.md)
+- [Project audit](docs/AUDIT.md)
+- [Roadmap to 99](docs/ROADMAP-99.md)
 
 ## Tech stack
 

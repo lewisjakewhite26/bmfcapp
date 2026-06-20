@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { isMockDataMode } from './clubApi'
 import { getClubSession } from './clubAuth'
+import { isStandalonePwa } from './pwaInstall'
 
 export type PushPermission = NotificationPermission | 'unsupported'
 
@@ -30,13 +31,6 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 export function getVapidPublicKey(): string | null {
   const key = import.meta.env.VITE_VAPID_PUBLIC_KEY?.trim()
   return key || null
-}
-
-/** True when the app is running as an installed PWA (not a browser tab). */
-export function isStandalonePwa(): boolean {
-  if (typeof window === 'undefined') return false
-  const nav = navigator as Navigator & { standalone?: boolean }
-  return window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true
 }
 
 export const PWA_PUSH_PROMPT_DISMISS_KEY = 'bmfc_pwa_push_prompt_dismissed'
@@ -74,6 +68,13 @@ export async function subscribeToPush(playerId: string): Promise<{ ok: boolean; 
       return { ok: false, reason: 'Connect Supabase and VAPID keys to enable push notifications.' }
     }
 
+    const registration = (await navigator.serviceWorker.ready) as ServiceWorkerRegistration
+    const existingSubscription = await registration.pushManager.getSubscription()
+    if (!isStandalonePwa() && !existingSubscription) {
+      console.error('[push] subscribe blocked: not standalone PWA', logCtx)
+      return { ok: false, reason: 'Install the app first to enable notifications.' }
+    }
+
     const permissionBefore = Notification.permission
     console.error('[push] requesting notification permission', { ...logCtx, permissionBefore })
 
@@ -91,14 +92,13 @@ export async function subscribeToPush(playerId: string): Promise<{ ok: boolean; 
       registrations: (await navigator.serviceWorker.getRegistrations()).length,
     })
 
-    const registration = (await navigator.serviceWorker.ready) as ServiceWorkerRegistration
     console.error('[push] service worker ready', {
       ...logCtx,
       scope: registration.scope,
       activeState: registration.active?.state,
     })
 
-    let subscription = await registration.pushManager.getSubscription()
+    let subscription = existingSubscription
     console.error('[push] existing push subscription', { ...logCtx, hasSubscription: Boolean(subscription) })
 
     if (!subscription) {

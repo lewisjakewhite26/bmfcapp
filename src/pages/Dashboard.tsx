@@ -8,10 +8,10 @@ import { useCalendar, useDashboard } from '../hooks/useClubData'
 import { getTimeGreeting } from '../lib/greeting'
 import { formatMatchDate, formatMatchTime, formatScore } from '../lib/format'
 import { CLUB_NAME, LEAGUE_NAME } from '../lib/mockData'
-import { PushNotificationPrompt } from '../components/ui/PushNotificationPrompt'
+import { PushRequiresInstallPrompt } from '../components/ui/PushRequiresInstallPrompt'
 import { PwaInstallNotificationPrompt } from '../components/ui/PwaInstallNotificationPrompt'
 import { PwaAddToHomePrompt } from '../components/ui/PwaAddToHomePrompt'
-import { isStandalonePwa } from '../lib/pushNotifications'
+import { usePwaInstall } from '../hooks/usePwaInstall'
 import { DataErrorBanner } from '../components/ui/DataErrorBanner'
 import { AvailabilityNudge } from '../components/club/AvailabilityNudge'
 import { pageContainerClass } from '../lib/layout'
@@ -19,6 +19,7 @@ import { DashboardSkeleton } from '../components/ui/Skeleton'
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const { standalone } = usePwaInstall()
   const { summary, loading, error: dashboardError, reload: reloadDashboard } = useDashboard()
   const {
     availability,
@@ -38,10 +39,10 @@ export default function Dashboard() {
       <div className={pageContainerClass()}>
         {user?.is_approved && <PwaAddToHomePrompt />}
 
-        {isStandalonePwa() ? (
+        {standalone ? (
           <PwaInstallNotificationPrompt playerId={user?.id} />
         ) : (
-          <PushNotificationPrompt playerId={user?.id} />
+          <PushRequiresInstallPrompt playerId={user?.id} />
         )}
 
         {dashboardError && (

@@ -1,6 +1,6 @@
 # BMFC Club Hub — Pages & How They Connect
 
-**24 routed pages** (+ 6 legacy redirects). Admin routes are lazy-loaded. All routes live in `src/App.tsx`.
+**25 routed pages** (+ 6 legacy redirects). Admin routes are lazy-loaded. All routes live in `src/App.tsx`.
 
 ---
 
@@ -11,8 +11,8 @@
 | Route | File | Purpose |
 |-------|------|---------|
 | `/` | `Landing.tsx` | Marketing home — features, login CTA |
-| `/login` | `Login.tsx` | Name + 4-digit passcode sign-in |
-| `/invite/:token` | `Invite.tsx` | One-time passcode setup from admin invite link |
+| `/login` | `Login.tsx` | Display name (e.g. **ChrisL**) + 4-digit passcode sign-in |
+| `/invite/:token` | `Invite.tsx` | Enter first/last name, then set passcode from admin invite link |
 | `*` (catch-all) | `NotFound.tsx` | Branded 404 |
 
 ### Auth gate (special)
@@ -31,23 +31,26 @@
 | `/results` | `Results.tsx` | `ProtectedRoute` | Upcoming fixtures + completed results |
 | `/stats` | `Stats.tsx` | `ProtectedRoute` | Squad stats (goals, assists, MOTM, etc.) |
 | `/calendar` | `Calendar.tsx` | `ProtectedRoute` | Matches, training, events, fundraisers + availability |
-| `/player/:playerId` | `PlayerProfile.tsx` | `ProtectedRoute` | Individual player stats + own availability |
+| `/player/:playerId` | `PlayerProfile.tsx` | `ProtectedRoute` | Individual player stats, photo, performance chart, own availability & passcode |
 
 ### Admin (committee or admin)
 
 | Route | File | Guard | Who can access |
 |-------|------|-------|----------------|
 | `/admin` | `Admin.tsx` | `adminOnly` | Admin + committee — hub of admin tools |
+| `/admin/finance` | `AdminFinance.tsx` | `adminOnly` | Admin + committee — sponsorships, expenses, balance dashboard |
+| `/admin/fundraisers` | `AdminFundraisers.tsx` | `adminOnly` | Admin + committee — fundraiser participation |
 | `/admin/squad` | `AdminSquad.tsx` | `adminOnly` | Admin + committee — squad list & positions |
 | `/admin/fixtures` | `AdminFixtures.tsx` | `adminOnly` | Admin + committee — add/edit matches |
+| `/admin/live` | `AdminLive.tsx` | `adminOnly` | Admin + committee — pick fixture for live matchday |
+| `/admin/live/:fixtureId` | `AdminLive.tsx` | `adminOnly` | Admin + committee — log goals, cards & subs in real time |
 | `/admin/results` | `AdminResults.tsx` | `adminOnly` | Admin + committee — enter scores, goals, MOTM |
 | `/admin/training` | `AdminTraining.tsx` | `adminOnly` | Admin + committee — training sessions |
 | `/admin/events` | `AdminEvents.tsx` | `adminOnly` | Admin + committee — socials, AGM, committee meetings |
-| `/admin/fundraisers` | `AdminFundraisers.tsx` | `adminOnly` | Admin + committee — fundraiser participation |
 | `/admin/availability` | `AdminAvailability.tsx` | `adminOnly` | Admin + committee — who's in/out per event |
 | `/admin/lineup` | `AdminLineup.tsx` | `adminOnly` | Admin + committee — pick formation & XI |
 | `/admin/notifications` | `AdminNotifications.tsx` | `adminOnly` | Admin + committee — push notifications |
-| `/admin/users` | `AdminUsers.tsx` | `adminOnly` + `requireAdmin` | **Admin only** — invites, approval, passcodes |
+| `/admin/users` | `AdminUsers.tsx` | `adminOnly` + `requireAdmin` | **Admin only** — invites, approval, passcodes, name edits |
 
 ### Legacy redirects (old World Cup predictor URLs)
 
@@ -88,10 +91,14 @@ flowchart TD
   subgraph admin [Admin / Committee]
     A[Admin hub]
     AU[Admin Users - admin only]
+    AFN[Admin Finance]
+    AFR[Admin Fundraisers]
     AS[Admin Squad]
     AF[Admin Fixtures]
+    ALV[Admin Live]
     AR[Admin Results]
     AT[Admin Training]
+    AE[Admin Events]
     AA[Admin Availability]
     AL[Admin Lineup]
     AN[Admin Notifications]
@@ -101,13 +108,13 @@ flowchart TD
   L --> INV
   LG -->|GuestRoute: approved| D
   LG -->|GuestRoute: unapproved| P
-  INV -->|after passcode| P
+  INV -->|after name + passcode| P
   P -->|after admin Approve + refresh/login| D
 
   D --> T & R & S & C & PP
   D --> A
   S --> PP
-  A --> AU & AS & AF & AR & AT & AA & AL & AN
+  A --> AU & AFN & AFR & AS & AF & ALV & AR & AT & AE & AA & AL & AN
 
   squad -->|not logged in| LG
   squad -->|logged in, not approved| P
@@ -140,7 +147,7 @@ flowchart TD
 
 - Only shown when `user.is_approved`
 - Tabs: **Home** (`/dashboard`), **Results**, **Table**, **Calendar**, **Stats**
-- Account menu (FAB): My profile, push toggle, Admin (committee/admin), Logout
+- Account menu (FAB): My profile, change passcode, push toggle, Admin (committee/admin), Logout
 
 ---
 
@@ -153,17 +160,18 @@ sequenceDiagram
   participant App
   participant Supabase
 
-  Admin->>App: /admin/users — Create invite
+  Admin->>App: /admin/users — Create invite (no name pre-entered)
   App->>Supabase: admin_create_invite
   Admin->>Player: WhatsApp invite link
   Player->>App: /invite/:token
   App->>Supabase: get_invite_preview
+  Player->>App: Enter first + last name
   Player->>App: Set 4-digit passcode
-  App->>Supabase: complete_invite (is_approved=false)
+  App->>Supabase: complete_invite (display name ChrisL, is_approved=false)
   App->>Player: /pending
   Admin->>App: Approve in Squad members
   App->>Supabase: admin_set_user_approved
-  Player->>App: Refresh or /login
+  Player->>App: Refresh or /login as ChrisL
   App->>Player: /dashboard + full squad nav
 ```
 
@@ -178,7 +186,7 @@ sequenceDiagram
 | `/` | `/login` | Hero CTA |
 | `/login` | `/dashboard` | Successful login (if approved) |
 | `/login` | `/pending` | GuestRoute if session exists but not approved |
-| `/invite/:token` | `/pending` | After passcode saved |
+| `/invite/:token` | `/pending` | After name + passcode saved |
 | `/invite/:token` | `/login` | Invalid/expired link, or “Already set up?” |
 | `/pending` | `/` | “Back to home” |
 | `/pending` | `/dashboard` | After admin approval + refresh/login |
@@ -202,7 +210,7 @@ sequenceDiagram
 | `/player/:id` | `/stats` | “← Squad stats” |
 | Navbar / account menu | `/player/:yourId` | Your name / “My profile” |
 
-**Player profile** shows stats for any squad member; availability editing only when viewing **your own** profile.
+**Player profile** shows stats, photo, and performance radar for any squad member. On **your own** profile: availability editing and change-passcode modal.
 
 ### Calendar & availability
 
@@ -212,6 +220,8 @@ sequenceDiagram
 | `/calendar` | Mark for all upcoming fixtures + training (list or month view) |
 | `/player/:yourId` | Same calendar items on own profile |
 
+Calendar also shows **events** (socials, AGM) and **fundraisers** (committee-managed participation).
+
 **Admin availability** (`/admin/availability`) reads everyone’s responses for a selected fixture/training — committee overview, not player-facing.
 
 ### Results & fixtures
@@ -219,9 +229,11 @@ sequenceDiagram
 | Page | Content |
 |------|---------|
 | `/results` | Player view — upcoming vs completed tabs |
-| `/admin/fixtures` | Create/edit manual fixtures; link to enter result |
+| `/admin/fixtures` | Create/edit manual fixtures; link to enter result or live matchday |
 | `/admin/fixtures` → `/admin/results` | “Edit result” for a fixture |
+| `/admin/fixtures` → `/admin/live/:id` | Start live logging during a match |
 | `/admin/results` | Enter scores, scorers, MOTM, cards — feeds **Stats** |
+| `/admin/live/:fixtureId` | Real-time goals, cards, subs; draft auto-saved; submit → **Results** |
 
 ### League table
 
@@ -230,45 +242,68 @@ sequenceDiagram
 | `/table` | DDSFL standings (synced via `npm run sync:ddsfl`) |
 | `/dashboard` | Summary card — position + points |
 
+### Finance (admin/committee)
+
+| Page | Content |
+|------|---------|
+| `/admin/finance` | Overview: paid/pending sponsorship income, total expenses, net balance, category breakdown charts |
+| `/admin/finance` | Sponsorships list — filter by paid status; add/edit/delete with **Logged by** / **Edited by** ledger notes |
+| `/admin/finance` | Expenses list — by category; same ledger transparency |
+
+Finance writes are RPC-gated; `logged_by` is captured server-side from the session.
+
 ---
 
 ## Admin hub structure
 
-**`/admin`** is the index. All sub-pages have “← Admin” back link.
+**`/admin`** is the index. All sub-pages have “← Admin” back link. Tile order matches `Admin.tsx`.
 
 ```mermaid
 flowchart LR
   A[/admin hub]
 
   A --> AU[/admin/users<br/>admin only]
+  A --> AFN[/admin/finance]
+  A --> AFR[/admin/fundraisers]
   A --> AS[/admin/squad]
   A --> AF[/admin/fixtures]
+  A --> ALV[/admin/live]
   A --> AR[/admin/results]
   A --> AT[/admin/training]
+  A --> AE[/admin/events]
   A --> AA[/admin/availability]
   A --> AL[/admin/lineup]
   A --> AN[/admin/notifications]
 
   AU -->|creates| INV[/invite/:token]
   AS -->|positions for| S[/stats]
+  AF --> ALV
   AF --> AR
+  ALV --> AR
   AR --> S
   AT --> C[/calendar]
+  AE --> C
+  AFR --> C
   AA --> C
   AL --> C
   AN -->|deep link default| C
+  AFN -->|standalone| AFN
 ```
 
 | Admin page | Feeds into |
 |------------|------------|
-| **Squad members** | Accounts, invites, approval, passcode reset |
-| **Squad list** | Who appears in stats/result entry/lineup picker |
-| **Add match** | Calendar, results, availability, lineup |
+| **Squad members** | Accounts, invites (no pre-entered name), approval, passcode reset, name edits |
+| **Finance** | Sponsorship & expense ledger; overview dashboard |
+| **Fundraisers** | Calendar fundraiser events + participation tracking |
+| **Squad list** | Who appears in stats/result entry/lineup picker (requires squad row for profiles) |
+| **Add match** | Calendar, results, availability, lineup, live matchday |
+| **Live matchday** | In-game logging; drafts persist; submits to results |
 | **Enter results** | Stats, player profiles, league table (via points) |
 | **Training** | Calendar, availability |
+| **Other events** | Calendar (socials, AGM, committee meetings) |
 | **Availability overview** | Read-only view of player responses |
-| **Lineup** | Saved lineups per fixture (migration 011) |
-| **Notifications** | Push to squad (needs VAPID setup) |
+| **Lineup** | Saved lineups per fixture |
+| **Notifications** | Push to squad (`VITE_VAPID_PUBLIC_KEY` on Vercel + `send-push` edge fn) |
 
 ---
 
@@ -300,8 +335,8 @@ Almost every page uses:
 
 ```
 /                          Landing
-/login                     Login
-/invite/:token             Invite setup
+/login                     Login (display name + passcode)
+/invite/:token             Invite — name + passcode setup
 /pending                   Awaiting approval
 /dashboard                 Home
 /table                     League table
@@ -311,10 +346,15 @@ Almost every page uses:
 /player/:playerId          Player profile
 /admin                     Admin hub
 /admin/users               Squad members (admin only)
+/admin/finance             Sponsorships, expenses & balance
+/admin/fundraisers         Fundraiser participation
 /admin/squad               Squad list
 /admin/fixtures            Add match
+/admin/live                Live matchday — pick fixture
+/admin/live/:fixtureId     Live matchday — log events
 /admin/results             Enter results
 /admin/training            Training sessions
+/admin/events              Other events
 /admin/availability        Availability overview
 /admin/lineup              Lineup picker
 /admin/notifications       Push notifications
@@ -326,4 +366,4 @@ Config: entire app → ConfigRequired (bad Supabase env at build)
 
 ---
 
-*Last updated: June 2026 · App at `2f8d68d` (invite approval) · migration 012 applied*
+*Last updated: 20 June 2026 · App at `932308b` · migrations 001–022 applied · [AUDIT.md](AUDIT.md) v9 (95/100)*

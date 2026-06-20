@@ -30,3 +30,15 @@ scraped.json
 .env
 .env.local
 .env.*.local
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright-last-run.txt
+
+# One-off local scripts (never commit)
+_oneoff-*.mjs
+
+# Supabase CLI temp
+supabase/.temp/

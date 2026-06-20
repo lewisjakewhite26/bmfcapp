@@ -1,41 +1,50 @@
-import { Component, type ReactNode } from 'react'
+import { Component, Fragment, type ErrorInfo, type ReactNode } from 'react'
+import { GlobalErrorFallback } from './GlobalErrorFallback'
 
 interface Props {
   children: ReactNode
+  /** Optional inline fallback (e.g. section-level boundary). Omit for full-page UI. */
   fallback?: ReactNode
 }
 
 interface State {
   hasError: boolean
+  retryKey: number
+  error: Error | null
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props)
-    this.state = { hasError: false }
+  state: State = {
+    hasError: false,
+    retryKey: 0,
+    error: null,
   }
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true }
+  static getDerivedStateFromError(error: Error): Partial<State> {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[ErrorBoundary] Unhandled render error:', error, info.componentStack)
+  }
+
+  handleRetry = () => {
+    this.setState((prev) => ({
+      hasError: false,
+      error: null,
+      retryKey: prev.retryKey + 1,
+    }))
   }
 
   render() {
     if (this.state.hasError) {
-      return (
-        this.props.fallback ?? (
-          <div className="glass-card p-8 text-center">
-            <p className="text-gray-500 mb-4">Couldn&apos;t load this section.</p>
-            <button
-              onClick={() => this.setState({ hasError: false })}
-              className="btn-secondary text-sm"
-            >
-              Try again
-            </button>
-          </div>
-        )
-      )
+      if (this.props.fallback) {
+        return this.props.fallback
+      }
+
+      return <GlobalErrorFallback error={this.state.error} onRetry={this.handleRetry} />
     }
 
-    return this.props.children
+    return <Fragment key={this.state.retryKey}>{this.props.children}</Fragment>
   }
 }

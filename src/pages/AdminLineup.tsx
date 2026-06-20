@@ -335,7 +335,7 @@ export default function AdminLineup() {
                 fixtures.map((f) => (
                   <option key={f.id} value={f.id}>
                     vs {f.opponent.replace(' FC', '')} · {formatMatchDate(f.match_date)}
-                    {f.kickoff_time ? ` · ${formatMatchTime(f.kickoff_time)}` : ''}
+                    {f.kickoff_time ? ` · ${formatMatchTime(f.match_date, f.kickoff_time)}` : ''}
                   </option>
                 ))
               )}

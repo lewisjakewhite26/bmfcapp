@@ -1,17 +1,24 @@
 import toast from 'react-hot-toast'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
+import { usePwaInstall } from '../../hooks/usePwaInstall'
+import { PushRequiresInstallMessage } from './PushRequiresInstallMessage'
 
 interface NotificationToggleProps {
   playerId?: string
 }
 
 export function NotificationToggle({ playerId }: NotificationToggleProps) {
+  const { standalone } = usePwaInstall()
   const { supported, permission, subscribed, loading, enable, disable } = usePushNotifications(playerId)
 
   if (!supported) {
     return (
       <p className="px-3 py-2 text-sm text-gray-500">Notifications not supported on this device.</p>
     )
+  }
+
+  if (!standalone && !subscribed) {
+    return <PushRequiresInstallMessage layout="menu" />
   }
 
   if (permission === 'denied') {

@@ -5,6 +5,8 @@ import { useAuth } from '../../hooks/useAuth'
 import { isMockDataMode } from '../../lib/clubApi'
 import { getAuthErrorMessage } from '../../lib/authErrors'
 
+const passcodeInputType = import.meta.env.VITE_E2E === 'true' ? 'text' : 'password'
+
 export function LoginForm() {
   const [displayName, setDisplayName] = useState('')
   const [passcode, setPasscode] = useState('')
@@ -13,17 +15,21 @@ export function LoginForm() {
   const navigate = useNavigate()
   const mockMode = isMockDataMode()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    if (!/^\d{4}$/.test(passcode)) {
+    const form = e.currentTarget
+    const passEl = form.elements.namedItem('passcode') as HTMLInputElement | null
+    const effectivePasscode = passcode || passEl?.value || ''
+
+    if (!/^\d{4}$/.test(effectivePasscode)) {
       toast.error('Passcode must be 4 digits')
       return
     }
 
     setLoading(true)
     try {
-      await login(displayName.trim(), passcode)
+      await login(displayName.trim(), effectivePasscode)
       toast.success('Signed in')
       navigate('/dashboard')
     } catch (err) {
@@ -68,7 +74,8 @@ export function LoginForm() {
         <label htmlFor="login-passcode" className="block text-sm text-gray-500 mb-2">Passcode</label>
         <input
           id="login-passcode"
-          type="password"
+          name="passcode"
+          type={passcodeInputType}
           inputMode="numeric"
           pattern="\d{4}"
           maxLength={4}

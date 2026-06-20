@@ -62,8 +62,29 @@ export function LandingHeroBackdrop({ containerRef }: { containerRef: RefObject<
     let raf = 0
     let time = 0
     let lastFrame = performance.now()
-    let visible = !document.hidden
+    let docVisible = !document.hidden
+    let inView = true
     let lastMoveTime = performance.now()
+
+    const shouldAnimate = () => docVisible && inView
+
+    const stopLoop = () => {
+      if (raf) {
+        cancelAnimationFrame(raf)
+        raf = 0
+      }
+    }
+
+    const startLoop = () => {
+      if (raf || !shouldAnimate()) return
+      lastFrame = performance.now()
+      raf = requestAnimationFrame(draw)
+    }
+
+    const syncLoop = () => {
+      if (shouldAnimate()) startLoop()
+      else stopLoop()
+    }
 
     const rebuildGrid = () => {
       cells = []
@@ -122,11 +143,8 @@ export function LandingHeroBackdrop({ containerRef }: { containerRef: RefObject<
     }
 
     const onVisibility = () => {
-      visible = !document.hidden
-      if (visible) {
-        lastFrame = performance.now()
-        raf = requestAnimationFrame(draw)
-      }
+      docVisible = !document.hidden
+      syncLoop()
     }
 
     const onMove = (e: MouseEvent) => {
@@ -154,7 +172,10 @@ export function LandingHeroBackdrop({ containerRef }: { containerRef: RefObject<
     }
 
     const draw = (now: number) => {
-      if (!visible) return
+      if (!shouldAnimate()) {
+        raf = 0
+        return
+      }
 
       const dt = Math.min((now - lastFrame) / 1000, 0.05)
       lastFrame = now
@@ -260,6 +281,15 @@ export function LandingHeroBackdrop({ containerRef }: { containerRef: RefObject<
     const ro = new ResizeObserver(resize)
     ro.observe(container)
 
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        inView = entry?.isIntersecting ?? false
+        syncLoop()
+      },
+      { threshold: 0 },
+    )
+    io.observe(container)
+
     if (finePointer) {
       container.addEventListener('mousemove', onMove, { passive: true })
       container.addEventListener('mouseleave', onLeave)
@@ -272,11 +302,11 @@ export function LandingHeroBackdrop({ containerRef }: { containerRef: RefObject<
 
     document.addEventListener('visibilitychange', onVisibility)
 
-    lastFrame = performance.now()
-    raf = requestAnimationFrame(draw)
+    startLoop()
 
     return () => {
       ro.disconnect()
+      io.disconnect()
       container.removeEventListener('mousemove', onMove)
       container.removeEventListener('mouseleave', onLeave)
       container.removeEventListener('touchstart', onTouchStart)
@@ -284,7 +314,7 @@ export function LandingHeroBackdrop({ containerRef }: { containerRef: RefObject<
       container.removeEventListener('touchend', onTouchEnd)
       container.removeEventListener('touchcancel', onTouchEnd)
       document.removeEventListener('visibilitychange', onVisibility)
-      cancelAnimationFrame(raf)
+      stopLoop()
     }
   }, [containerRef])
 

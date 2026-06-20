@@ -1,5 +1,3 @@
-import { isStandalonePwa } from './pushNotifications'
-
 export const PWA_A2HS_DISMISS_KEY = 'bmfc_a2hs_prompt_dismissed_at'
 export const PWA_A2HS_DISMISS_DAYS = 4
 
@@ -10,7 +8,12 @@ export interface BeforeInstallPromptEvent extends Event {
 
 export type PwaInstallOutcome = 'accepted' | 'dismissed' | 'unavailable'
 
-export { isStandalonePwa }
+/** True when the app is running as an installed PWA (not a browser tab). */
+export function isStandalonePwa(): boolean {
+  if (typeof window === 'undefined') return false
+  const nav = navigator as Navigator & { standalone?: boolean }
+  return window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true
+}
 
 export function isIosDevice(): boolean {
   if (typeof navigator === 'undefined') return false

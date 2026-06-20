@@ -3,16 +3,17 @@ import toast from 'react-hot-toast'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
 import {
   getPushPermission,
-  isStandalonePwa,
   PWA_PUSH_PROMPT_DISMISS_KEY,
   pushEnableFailureMessage,
 } from '../../lib/pushNotifications'
+import { usePwaInstall } from '../../hooks/usePwaInstall'
 
 interface PwaInstallNotificationPromptProps {
   playerId?: string
 }
 
 export function PwaInstallNotificationPrompt({ playerId }: PwaInstallNotificationPromptProps) {
+  const { standalone } = usePwaInstall()
   const { supported, permission, subscribed, loading, enable } = usePushNotifications(playerId)
   const [dismissed, setDismissed] = useState(
     () => localStorage.getItem(PWA_PUSH_PROMPT_DISMISS_KEY) === '1'
@@ -21,7 +22,7 @@ export function PwaInstallNotificationPrompt({ playerId }: PwaInstallNotificatio
 
   if (
     dismissed ||
-    !isStandalonePwa() ||
+    !standalone ||
     !playerId ||
     !supported ||
     subscribed
