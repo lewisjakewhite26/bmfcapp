@@ -6,6 +6,8 @@ ALTER TABLE public.profiles
 COMMENT ON COLUMN public.profiles.photo_url IS
   'Relative storage path in player-photos bucket (e.g. {uuid}/photo.jpg), or null.';
 
+GRANT SELECT (photo_url) ON public.profiles TO anon, authenticated;
+
 CREATE TABLE public.photo_upload_grants (
   player_id uuid PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
   storage_path text NOT NULL,
