@@ -7,8 +7,8 @@ import {
 } from './playerNames'
 
 describe('playerNames', () => {
-  it('formats display name as First L.', () => {
-    expect(formatPlayerDisplayName('Chris', 'Lee')).toBe('Chris L.')
+  it('formats display name as FirstInitial', () => {
+    expect(formatPlayerDisplayName('Chris', 'Lee')).toBe('ChrisL')
   })
 
   it('formats username as first initial + surname', () => {
@@ -21,9 +21,9 @@ describe('playerNames', () => {
   })
 
   it('resolves display name collisions', () => {
-    const taken = new Set(['chris l.'])
+    const taken = new Set(['chrisl'])
     expect(
-      allocateUniqueDisplayName('Chris L.', (c) => taken.has(c.toLowerCase())),
-    ).toBe('Chris L. 2')
+      allocateUniqueDisplayName('ChrisL', (c) => taken.has(c.toLowerCase())),
+    ).toBe('ChrisL2')
   })
 })

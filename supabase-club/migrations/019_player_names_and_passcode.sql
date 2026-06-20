@@ -1,5 +1,6 @@
 -- Player names on invite completion + passcode self-service
 
+DROP FUNCTION IF EXISTS public.admin_create_invite(uuid, text, text);
 DROP FUNCTION IF EXISTS public.admin_create_invite(uuid, text, text, text);
 DROP FUNCTION IF EXISTS public.complete_invite(text, text);
 
@@ -29,8 +30,8 @@ AS $$
     CASE
       WHEN public.normalize_name_part(p_first_name) = ''
         OR public.normalize_name_part(p_last_name) = '' THEN ''
-      ELSE public.normalize_name_part(p_first_name) || ' ' ||
-        upper(left(public.normalize_name_part(p_last_name), 1)) || '.'
+      ELSE public.normalize_name_part(p_first_name) ||
+        upper(left(public.normalize_name_part(p_last_name), 1))
     END;
 $$;
 
@@ -110,7 +111,7 @@ BEGIN
     WHERE lower(display_name) = lower(candidate)
       AND (p_exclude_id IS NULL OR id <> p_exclude_id)
   ) LOOP
-    candidate := base || ' ' || n::text;
+    candidate := base || n::text;
     n := n + 1;
   END LOOP;
 
@@ -474,7 +475,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.admin_create_invite TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.complete_invite TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_update_player_names TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.change_player_passcode TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_create_invite(uuid, text, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.complete_invite(text, text, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_update_player_names(uuid, text, uuid, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.change_player_passcode(uuid, text, text, text) TO anon, authenticated;

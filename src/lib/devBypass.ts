@@ -5,7 +5,7 @@ export const DEV_BYPASS_TOKEN = 'dev-bypass-token'
 export const DEV_USER: User = {
   id: '00000000-0000-0000-0000-000000000001',
   username: 'clee',
-  display_name: 'Chris L.',
+  display_name: 'ChrisL',
   is_admin: false,
   is_committee: false,
   is_approved: true,

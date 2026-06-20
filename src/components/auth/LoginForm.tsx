@@ -59,7 +59,7 @@ export function LoginForm() {
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
           className="input-field"
-          placeholder="Chris L."
+          placeholder="ChrisL"
           autoComplete="name"
           required={!mockMode}
         />

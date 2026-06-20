@@ -1,10 +1,10 @@
-/** Display/login name: "Chris L." */
+/** Display/login name: "ChrisL" (first name + surname initial, no space) */
 export function formatPlayerDisplayName(firstName: string, lastName: string): string {
   const first = firstName.trim()
   const last = lastName.trim()
   if (!first || !last) return ''
   const initial = last.charAt(0).toUpperCase()
-  return `${first} ${initial}.`
+  return `${first}${initial}`
 }
 
 /** @username base: first initial + surname, e.g. clee */
@@ -34,10 +34,10 @@ export function allocateUniqueDisplayName(
 ): string {
   if (!isTaken(base)) return base
   let n = 2
-  while (isTaken(`${base} ${n}`)) {
+  while (isTaken(`${base}${n}`)) {
     n += 1
   }
-  return `${base} ${n}`
+  return `${base}${n}`
 }
 
 export function normalizeNamePart(value: string): string {

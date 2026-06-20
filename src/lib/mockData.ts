@@ -57,12 +57,12 @@ function dateOnlyFromNow(days: number): string {
 export const MANUAL_FIXTURES: Fixture[] = []
 
 export const MOCK_SQUAD: SquadMember[] = [
-  { id: 's1', player_id: 'p1', display_name: 'Tom H.', squad_number: null, position: 'Goalkeeper', joined_date: '2023-08-01', active: true },
-  { id: 's2', player_id: 'p2', display_name: 'James W.', squad_number: null, position: 'Defender', joined_date: '2022-08-01', active: true },
-  { id: 's3', player_id: 'p3', display_name: 'Mark D.', squad_number: null, position: 'Midfielder', joined_date: '2021-08-01', active: true },
-  { id: 's4', player_id: PREVIEW_PLAYER_ID, display_name: 'Chris L.', squad_number: null, position: 'Forward', joined_date: '2020-08-01', active: true },
-  { id: 's5', player_id: 'p5', display_name: 'Sam P.', squad_number: null, position: 'Forward', joined_date: '2024-01-01', active: true },
-  { id: 's6', player_id: 'p6', display_name: 'Alex M.', squad_number: null, position: 'Midfielder', joined_date: '2023-01-01', active: true },
+  { id: 's1', player_id: 'p1', display_name: 'TomH', squad_number: null, position: 'Goalkeeper', joined_date: '2023-08-01', active: true },
+  { id: 's2', player_id: 'p2', display_name: 'JamesW', squad_number: null, position: 'Defender', joined_date: '2022-08-01', active: true },
+  { id: 's3', player_id: 'p3', display_name: 'MarkD', squad_number: null, position: 'Midfielder', joined_date: '2021-08-01', active: true },
+  { id: 's4', player_id: PREVIEW_PLAYER_ID, display_name: 'ChrisL', squad_number: null, position: 'Forward', joined_date: '2020-08-01', active: true },
+  { id: 's5', player_id: 'p5', display_name: 'SamP', squad_number: null, position: 'Forward', joined_date: '2024-01-01', active: true },
+  { id: 's6', player_id: 'p6', display_name: 'AlexM', squad_number: null, position: 'Midfielder', joined_date: '2023-01-01', active: true },
 ]
 
 export const MOCK_TRAINING: TrainingSession[] = [
@@ -124,7 +124,7 @@ export const MOCK_ADMIN_USERS: AdminUserRow[] = [
   {
     id: '00000000-0000-0000-0000-000000000001',
     username: 'clee',
-    display_name: 'Chris L.',
+    display_name: 'ChrisL',
     first_name: 'Chris',
     last_name: 'Lee',
     is_admin: false,
