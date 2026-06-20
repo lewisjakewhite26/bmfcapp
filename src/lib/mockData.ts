@@ -29,6 +29,7 @@ import {
   validateNamePart,
 } from './playerNames'
 import { DDSFL_ACTIVE_SEASON, DDSFL_LEAGUE_NAME, DDSFL_SEASONS } from './ddsflConstants'
+import { aggregatePlayerStats } from './playerStats'
 
 export const CLUB_NAME = 'Bishop Middleham FC'
 /** Matches DEV_USER.id in devBypass — preview login sees own profile + calendar */
@@ -343,52 +344,11 @@ export function deleteMockPlayerPhoto(playerId: string): void {
 }
 
 export function getMockPlayerStats(): PlayerStats[] {
-  const stats = new Map<string, PlayerStats>()
-
-  for (const member of squad.filter((s) => s.active)) {
-    stats.set(member.player_id, {
-      player_id: member.player_id,
-      display_name: member.display_name,
-      squad_number: member.squad_number,
-      position: member.position,
-      appearances: 0,
-      goals: 0,
-      assists: 0,
-      motm: 0,
-      yellow_cards: 0,
-      red_cards: 0,
-      clean_sheets: 0,
-    })
-  }
-
-  const completedIds = new Set(results.map((r) => r.fixture_id))
-  const appearances = new Map<string, Set<string>>()
-
-  for (const event of matchEvents) {
-    const player = stats.get(event.player_id)
-    if (!player) continue
-
-    if (!appearances.has(event.player_id)) appearances.set(event.player_id, new Set())
-    appearances.get(event.player_id)!.add(event.fixture_id)
-
-    if (event.event_type === 'goal') player.goals++
-    if (event.event_type === 'assist') player.assists++
-    if (event.event_type === 'motm') player.motm++
-    if (event.event_type === 'yellow_card') player.yellow_cards++
-    if (event.event_type === 'red_card') player.red_cards++
-  }
-
-  for (const [playerId, set] of appearances) {
-    const player = stats.get(playerId)
-    if (player) player.appearances = set.size
-  }
-
-  const gk = stats.get('p1')
-  if (gk) {
-    gk.clean_sheets = results.filter((r) => r.goals_against === 0 && completedIds.has(r.fixture_id)).length
-  }
-
-  return Array.from(stats.values()).sort((a, b) => b.goals - a.goals || a.display_name.localeCompare(b.display_name))
+  return aggregatePlayerStats(
+    squad.filter((s) => s.active),
+    getMockFixturesWithResults(),
+    { lineupsByFixtureId: getMockLineupsByFixtureId() },
+  ).stats
 }
 
 export function getMockAvailability(playerId: string): Availability[] {
@@ -757,16 +717,22 @@ export function saveMockResult(
   goalsFor: number,
   goalsAgainst: number,
   notes: string | null,
-  events: Omit<MatchEvent, 'id' | 'created_at'>[]
+  events: Omit<MatchEvent, 'id' | 'created_at'>[],
+  goalkeeperPlayerId: string | null = null,
 ) {
   const fixture = fixtures.find((f) => f.id === fixtureId)
   if (fixture) fixture.status = 'completed'
+
+  const draft = mockLiveDrafts.get(fixtureId)
+  const liveLogEntries = draft?.entries?.length ? [...draft.entries] : null
 
   const existing = results.find((r) => r.fixture_id === fixtureId)
   if (existing) {
     existing.goals_for = goalsFor
     existing.goals_against = goalsAgainst
     existing.notes = notes
+    existing.goalkeeper_player_id = goalkeeperPlayerId
+    if (liveLogEntries) existing.live_log_entries = liveLogEntries
   } else {
     results.push({
       id: crypto.randomUUID(),
@@ -774,6 +740,8 @@ export function saveMockResult(
       goals_for: goalsFor,
       goals_against: goalsAgainst,
       notes,
+      goalkeeper_player_id: goalkeeperPlayerId,
+      live_log_entries: liveLogEntries,
       created_at: new Date().toISOString(),
     })
   }
@@ -966,6 +934,10 @@ export function getMockFundraiserParticipationSummary(): FundraiserParticipation
     })
 
   return { total_fundraisers: total, members }
+}
+
+export function getMockLineupsByFixtureId(): Map<string, Lineup | null> {
+  return new Map(mockLineups.entries())
 }
 
 export function getMockLineup(fixtureId: string): Lineup | null {

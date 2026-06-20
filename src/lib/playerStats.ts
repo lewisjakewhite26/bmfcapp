@@ -1,11 +1,23 @@
-import type { FixtureWithResult, PlayerStats, SquadMember } from '../types'
+import { applyCleanSheetCredits } from './cleanSheet'
+import type { FixtureWithResult, Lineup, PlayerStats, SquadMember } from '../types'
+
+export interface AggregatePlayerStatsOptions {
+  lineupsByFixtureId?: Map<string, Lineup | null>
+}
+
+export interface AggregatePlayerStatsResult {
+  stats: PlayerStats[]
+  cleanSheetMissingFixtureIds: string[]
+}
 
 /** Aggregate squad stats from completed fixtures and match events (live + mock). */
 export function aggregatePlayerStats(
   squad: SquadMember[],
   fixtures: FixtureWithResult[],
-): PlayerStats[] {
+  options?: AggregatePlayerStatsOptions,
+): AggregatePlayerStatsResult {
   const stats = new Map<string, PlayerStats>()
+  const lineupsByFixtureId = options?.lineupsByFixtureId ?? new Map<string, Lineup | null>()
 
   for (const member of squad) {
     stats.set(member.player_id, {
@@ -49,17 +61,17 @@ export function aggregatePlayerStats(
     if (player) player.appearances = fixtureIds.size
   }
 
-  for (const member of squad) {
-    if (member.position !== 'Goalkeeper') continue
-    const player = stats.get(member.player_id)
-    if (!player) continue
-
-    player.clean_sheets = completedFixtures.filter(
-      (f) => f.result!.goals_against === 0,
-    ).length
-  }
-
-  return Array.from(stats.values()).sort(
-    (a, b) => b.goals - a.goals || a.display_name.localeCompare(b.display_name),
+  const cleanSheetMissingFixtureIds = applyCleanSheetCredits(
+    stats,
+    squad,
+    fixtures,
+    lineupsByFixtureId,
   )
+
+  return {
+    stats: Array.from(stats.values()).sort(
+      (a, b) => b.goals - a.goals || a.display_name.localeCompare(b.display_name),
+    ),
+    cleanSheetMissingFixtureIds,
+  }
 }

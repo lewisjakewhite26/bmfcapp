@@ -2,6 +2,7 @@ import { isUpcomingScheduledFixture } from './fixtureFilters'
 import { supabase, isSupabaseConfigured } from './supabase'
 import { findClubTableRow } from './clubTeams'
 import { aggregatePlayerStats } from './playerStats'
+import { auditCleanSheetFixtures } from './cleanSheet'
 import { getClubSession } from './clubAuth'
 import { loadSession } from '../hooks/authContext'
 import {
@@ -33,6 +34,7 @@ import {
   updateMockPlayerNames,
   changeMockPasscode,
   getMockLineup,
+  getMockLineupsByFixtureId,
   removeMockSquad,
   resetMockPasscode,
   saveMockLineup,
@@ -131,7 +133,16 @@ export async function fetchFixturesWithResults(): Promise<FixtureWithResult[]> {
 
   return (fixtures ?? []).map((f) => ({
     ...f,
-    result: (results ?? []).find((r) => r.fixture_id === f.id),
+    result: (() => {
+      const row = (results ?? []).find((r) => r.fixture_id === f.id)
+      if (!row) return undefined
+      return {
+        ...row,
+        live_log_entries: row.live_log_entries
+          ? parseLiveDraftEntries(row.live_log_entries)
+          : null,
+      }
+    })(),
     events: (events ?? [])
       .filter((e) => e.fixture_id === f.id)
       .map((e) => {
@@ -228,15 +239,43 @@ export async function fetchSquad(): Promise<SquadMember[]> {
   }))
 }
 
+export async function fetchLineupsByFixtureId(): Promise<Map<string, Lineup | null>> {
+  if (isMockDataMode()) {
+    await delay(40)
+    return getMockLineupsByFixtureId()
+  }
+
+  const { data, error } = await supabase.from('lineups').select('*')
+  if (error) throw error
+
+  const map = new Map<string, Lineup | null>()
+  for (const row of data ?? []) {
+    map.set(row.fixture_id, row as Lineup)
+  }
+  return map
+}
+
 export async function fetchPlayerStats(): Promise<PlayerStats[]> {
   if (isMockDataMode()) {
     await delay()
     return getMockPlayerStats()
   }
 
-  const squad = await fetchSquad()
-  const fixtures = await fetchFixturesWithResults()
-  return aggregatePlayerStats(squad, fixtures)
+  const [squad, fixtures, lineupsByFixtureId] = await Promise.all([
+    fetchSquad(),
+    fetchFixturesWithResults(),
+    fetchLineupsByFixtureId(),
+  ])
+  return aggregatePlayerStats(squad, fixtures, { lineupsByFixtureId }).stats
+}
+
+export async function fetchCleanSheetAudit() {
+  const [squad, fixtures, lineupsByFixtureId] = await Promise.all([
+    fetchSquad(),
+    fetchFixturesWithResults(),
+    fetchLineupsByFixtureId(),
+  ])
+  return auditCleanSheetFixtures(squad, fixtures, lineupsByFixtureId)
 }
 
 export async function fetchPlayerProfile(playerId: string): Promise<PlayerProfile | null> {
@@ -676,11 +715,12 @@ export async function submitMatchResult(
   goalsFor: number,
   goalsAgainst: number,
   notes: string | null,
-  events: Omit<MatchEvent, 'id' | 'created_at'>[]
+  events: Omit<MatchEvent, 'id' | 'created_at'>[],
+  goalkeeperPlayerId?: string | null,
 ): Promise<void> {
   if (isMockDataMode()) {
     await delay(150)
-    saveMockResult(fixtureId, goalsFor, goalsAgainst, notes, events)
+    saveMockResult(fixtureId, goalsFor, goalsAgainst, notes, events, goalkeeperPlayerId ?? null)
     return
   }
 
@@ -700,6 +740,7 @@ export async function submitMatchResult(
       minute: e.minute,
       ...(e.related_player_id ? { related_player_id: e.related_player_id } : {}),
     })),
+    p_goalkeeper_player_id: goalkeeperPlayerId ?? null,
   })
   if (error) throw error
 }

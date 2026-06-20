@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { submitMatchResult } from '../../lib/clubApi'
 import type { FixtureWithResult, MatchEventType, SquadMember } from '../../types'
@@ -20,6 +20,9 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
   const [goalsFor, setGoalsFor] = useState(fixture.result?.goals_for?.toString() ?? '')
   const [goalsAgainst, setGoalsAgainst] = useState(fixture.result?.goals_against?.toString() ?? '')
   const [notes, setNotes] = useState(fixture.result?.notes ?? '')
+  const [goalkeeperPlayerId, setGoalkeeperPlayerId] = useState(
+    fixture.result?.goalkeeper_player_id ?? '',
+  )
   const [events, setEvents] = useState<EventRow[]>(
     (fixture.events ?? []).map((e) => ({
       player_id: e.player_id,
@@ -29,6 +32,25 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
     }))
   )
   const [saving, setSaving] = useState(false)
+
+  const goalkeepers = squad.filter((s) => s.position === 'Goalkeeper')
+  const goalsAgainstNum = parseInt(goalsAgainst, 10)
+  const isShutout = !isNaN(goalsAgainstNum) && goalsAgainstNum === 0
+
+  useEffect(() => {
+    setGoalsFor(fixture.result?.goals_for?.toString() ?? '')
+    setGoalsAgainst(fixture.result?.goals_against?.toString() ?? '')
+    setNotes(fixture.result?.notes ?? '')
+    setGoalkeeperPlayerId(fixture.result?.goalkeeper_player_id ?? '')
+    setEvents(
+      (fixture.events ?? []).map((e) => ({
+        player_id: e.player_id,
+        event_type: e.event_type,
+        minute: e.minute?.toString() ?? '',
+        related_player_id: e.related_player_id ?? undefined,
+      })),
+    )
+  }, [fixture.id, fixture.result, fixture.events])
 
   const addEvent = () => {
     setEvents((prev) => [...prev, { player_id: squad[0]?.player_id ?? '', event_type: 'goal', minute: '' }])
@@ -57,7 +79,8 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
             event_type: e.event_type,
             minute: e.minute ? parseInt(e.minute, 10) : null,
             ...(e.related_player_id ? { related_player_id: e.related_player_id } : {}),
-          }))
+          })),
+        goalkeeperPlayerId || null,
       )
       toast.success('Result saved')
       onSaved()
@@ -88,6 +111,27 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
       <div>
         <label className="text-xs text-gray-500">Notes</label>
         <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} className="input-field mt-1" placeholder="Optional" />
+      </div>
+
+      <div>
+        <label className="text-xs text-gray-500">Goalkeeper (optional)</label>
+        <select
+          value={goalkeeperPlayerId}
+          onChange={(e) => setGoalkeeperPlayerId(e.target.value)}
+          className="input-field mt-1 w-full"
+        >
+          <option value="">Not set — use live log or saved lineup if available</option>
+          {goalkeepers.map((g) => (
+            <option key={g.player_id} value={g.player_id}>
+              {g.display_name}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-500 mt-1">
+          {isShutout
+            ? 'Clean-sheet credit uses live matchday log first, then saved lineup, then this field.'
+            : 'Only needed for clean-sheet stats when the match was not logged live and no lineup was saved.'}
+        </p>
       </div>
 
       <div className="space-y-2">

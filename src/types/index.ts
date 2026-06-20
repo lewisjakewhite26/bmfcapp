@@ -64,6 +64,8 @@ export interface Result {
   goals_for: number
   goals_against: number
   notes: string | null
+  goalkeeper_player_id?: string | null
+  live_log_entries?: unknown[] | null
   created_at: string
 }
 
