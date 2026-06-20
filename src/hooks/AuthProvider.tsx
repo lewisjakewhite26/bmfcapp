@@ -31,15 +31,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const profile = await rpcGetSessionUser(session.id, session.session_token)
-    if (!profile) {
+    const result = await rpcGetSessionUser(session.id, session.session_token)
+    if (result.status === 'invalid') {
       saveSession(null)
       setUser(null)
       return
     }
+    if (result.status === 'unavailable') {
+      setUser(session)
+      return
+    }
 
-    saveSession(profile)
-    setUser(profile)
+    saveSession(result.user)
+    setUser(result.user)
   }, [])
 
   useEffect(() => {
@@ -48,6 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (displayName: string, passcode: string) => {
     if (isMockDataMode()) {
+      if (import.meta.env.VITE_E2E === 'true') {
+        const { mockLoginByCredentials } = await import('../lib/mockData')
+        const profile = mockLoginByCredentials(displayName, passcode)
+        if (!profile) throw new Error('Wrong display name or passcode.')
+        saveSession(profile)
+        setUser(profile)
+        return
+      }
       throw new Error('Use dev preview login while mock data mode is active.')
     }
     if (!isSupabaseConfigured) {

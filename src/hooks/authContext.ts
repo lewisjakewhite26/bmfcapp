@@ -15,6 +15,8 @@ export const AuthContext = createContext<AuthContextType | null>(null)
 
 export const STORAGE_KEY = 'bmfc_club_session'
 
+/** Session persists in localStorage with no client-side TTL until logout or server invalidation. */
+
 export function loadSession(): User | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)

@@ -7,6 +7,20 @@ export interface ClubSession {
   sessionToken: string
 }
 
+export type SessionLookupResult =
+  | { status: 'ok'; user: User }
+  | { status: 'invalid' }
+  | { status: 'unavailable' }
+
+function isInvalidSessionError(error: { message?: string; code?: string }): boolean {
+  const message = (error.message ?? '').toLowerCase()
+  return (
+    message.includes('invalid session') ||
+    message.includes('unauthorized') ||
+    error.code === 'P0001'
+  )
+}
+
 export function getClubSession(): ClubSession | null {
   const user = loadSession()
   if (!user?.id || !user?.session_token) return null
@@ -34,13 +48,19 @@ export async function rpcLogin(displayName: string, passcode: string): Promise<U
   return mapRpcUser(data as Record<string, unknown>)
 }
 
-export async function rpcGetSessionUser(userId: string, sessionToken: string): Promise<User | null> {
+export async function rpcGetSessionUser(
+  userId: string,
+  sessionToken: string,
+): Promise<SessionLookupResult> {
   const { data, error } = await supabase.rpc('get_session_user', {
     p_user_id: userId,
     p_session_token: sessionToken,
   })
-  if (error) return null
-  return mapRpcUser(data as Record<string, unknown>)
+  if (error) {
+    if (isInvalidSessionError(error)) return { status: 'invalid' }
+    return { status: 'unavailable' }
+  }
+  return { status: 'ok', user: mapRpcUser(data as Record<string, unknown>) }
 }
 
 export async function rpcGetInvitePreview(token: string): Promise<InvitePreview> {
