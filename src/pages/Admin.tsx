@@ -5,18 +5,18 @@ import { useAuth } from '../hooks/useAuth'
 import { pageContainerClass } from '../lib/layout'
 
 const LINKS = [
-  { to: '/admin/users', title: 'Squad members', desc: 'Create accounts, invite links & passcodes', adminOnly: true },
-  { to: '/admin/finance', title: 'Finance', desc: 'Sponsorship income, expenses & club balance' },
-  { to: '/admin/fundraisers', title: 'Fundraisers', desc: 'Track squad participation in fundraising events' },
-  { to: '/admin/squad', title: 'Squad list', desc: 'Positions for stats and result entry' },
-  { to: '/admin/fixtures', title: 'Add match', desc: 'Friendlies, cups & pre-season games' },
   { to: '/admin/live', title: 'Live matchday', desc: 'Log goals, cards & subs during the game' },
   { to: '/admin/results', title: 'Enter results', desc: 'Scores, goalscorers, MOTM & cards' },
-  { to: '/admin/training', title: 'Training sessions', desc: 'Add, edit & remove training on the calendar' },
-  { to: '/admin/events', title: 'Other events', desc: 'Socials, AGM, committee meetings & more' },
-  { to: '/admin/availability', title: 'Availability overview', desc: 'See who\'s in for upcoming events' },
   { to: '/admin/lineup', title: 'Pick a lineup', desc: 'Choose formation and select available players' },
+  { to: '/admin/availability', title: 'Availability overview', desc: 'See who\'s in for upcoming events' },
+  { to: '/admin/training', title: 'Training sessions', desc: 'Add, edit & remove training on the calendar' },
   { to: '/admin/notifications', title: 'Send notification', desc: 'Push to the whole squad or selected players' },
+  { to: '/admin/fixtures', title: 'Add match', desc: 'Friendlies, cups & pre-season games' },
+  { to: '/admin/squad', title: 'Squad list', desc: 'Positions for stats and result entry' },
+  { to: '/admin/events', title: 'Other events', desc: 'Socials, AGM, committee meetings & more' },
+  { to: '/admin/fundraisers', title: 'Fundraisers', desc: 'Track squad participation in fundraising events' },
+  { to: '/admin/finance', title: 'Finance', desc: 'Sponsorship income, expenses & club balance' },
+  { to: '/admin/users', title: 'Squad members', desc: 'Create accounts, invite links & passcodes', adminOnly: true },
 ]
 
 export default function Admin() {
