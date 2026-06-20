@@ -10,6 +10,7 @@ import { formatMatchDate, formatMatchTime, formatScore } from '../lib/format'
 import { CLUB_NAME, LEAGUE_NAME } from '../lib/mockData'
 import { PushNotificationPrompt } from '../components/ui/PushNotificationPrompt'
 import { PwaInstallNotificationPrompt } from '../components/ui/PwaInstallNotificationPrompt'
+import { PwaAddToHomePrompt } from '../components/ui/PwaAddToHomePrompt'
 import { isStandalonePwa } from '../lib/pushNotifications'
 import { DataErrorBanner } from '../components/ui/DataErrorBanner'
 import { AvailabilityNudge } from '../components/club/AvailabilityNudge'
@@ -35,6 +36,8 @@ export default function Dashboard() {
     <PageShell>
       <Navbar />
       <div className={pageContainerClass()}>
+        {user?.is_approved && <PwaAddToHomePrompt />}
+
         {isStandalonePwa() ? (
           <PwaInstallNotificationPrompt playerId={user?.id} />
         ) : (
