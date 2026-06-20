@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from './supabase'
 import { findClubTableRow } from './clubTeams'
 import { aggregatePlayerStats } from './playerStats'
 import { getClubSession } from './clubAuth'
+import { loadSession } from '../hooks/authContext'
 import {
   addMockTrainingSession,
   updateMockTrainingSession,
@@ -103,7 +104,9 @@ export async function fetchFixturesWithResults(): Promise<FixtureWithResult[]> {
   const { data: results, error: rErr } = await supabase.from('results').select('*')
   if (rErr) throw rErr
 
-  const { data: events, error: eErr } = await supabase.from('match_events').select('*, profiles(display_name)')
+  const { data: events, error: eErr } = await supabase
+    .from('match_events')
+    .select('*, profiles!match_events_player_id_fkey(display_name), related:profiles!match_events_related_player_id_fkey(display_name)')
   if (eErr) throw eErr
 
   return (fixtures ?? []).map((f) => ({
@@ -111,10 +114,17 @@ export async function fetchFixturesWithResults(): Promise<FixtureWithResult[]> {
     result: (results ?? []).find((r) => r.fixture_id === f.id),
     events: (events ?? [])
       .filter((e) => e.fixture_id === f.id)
-      .map((e) => ({
-        ...e,
-        player_name: (e as { profiles?: { display_name: string } }).profiles?.display_name,
-      })),
+      .map((e) => {
+        const row = e as {
+          profiles?: { display_name: string }
+          related?: { display_name: string } | null
+        }
+        return {
+          ...e,
+          player_name: row.profiles?.display_name,
+          related_player_name: row.related?.display_name,
+        }
+      }),
   }))
 }
 
@@ -966,6 +976,11 @@ export async function fetchFundraisers(): Promise<Fundraiser[]> {
 
   const session = getClubSession()
   if (!session) throw new Error('Not signed in')
+
+  const user = loadSession()
+  if (!user?.is_admin && !user?.is_committee) {
+    return []
+  }
 
   const { data, error } = await supabase.rpc('admin_list_fundraisers', {
     p_admin_id: session.userId,
