@@ -15,6 +15,7 @@ import PlayerProfilePage from './pages/PlayerProfile'
 import PendingApproval from './pages/PendingApproval'
 import { PageBackground } from './components/ui/PageBackground'
 import { MobileBottomNav } from './components/ui/MobileBottomNav'
+import { InAppBrowserBanner } from './components/ui/InAppBrowserBanner'
 import { isSupabaseConfigured } from './lib/supabase'
 import ConfigRequired from './pages/ConfigRequired'
 import NotFound from './pages/NotFound'
@@ -299,6 +300,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <InAppBrowserBanner />
         <AppRoutes />
         <MobileBottomNav />
         <Toaster

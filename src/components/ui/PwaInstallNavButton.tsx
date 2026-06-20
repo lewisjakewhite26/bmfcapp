@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
-import { PwaIosInstallInstructions } from './PwaIosInstallInstructions'
+import { PwaIosInstallDialog } from './PwaIosInstallDialog'
 import { triggerPwaInstall } from '../../lib/pwaInstall'
 
 function InstallIcon() {
@@ -65,32 +65,7 @@ export function PwaInstallNavButton() {
         <span>{installing ? '…' : 'Install'}</span>
       </button>
 
-      {iosOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/40"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="pwa-ios-install-title"
-          onClick={() => setIosOpen(false)}
-        >
-          <div
-            className="glass-card w-full max-w-sm p-4 shadow-xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <p id="pwa-ios-install-title" className="font-semibold text-brand-navy">
-              Add BMFC Club Hub to your home screen
-            </p>
-            <PwaIosInstallInstructions />
-            <button
-              type="button"
-              onClick={() => setIosOpen(false)}
-              className="btn-primary text-sm py-2 px-4 min-h-0 mt-4 w-full sm:w-auto"
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
+      {iosOpen && <PwaIosInstallDialog onClose={() => setIosOpen(false)} titleId="pwa-ios-install-title" />}
     </>
   )
 }

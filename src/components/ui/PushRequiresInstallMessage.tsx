@@ -2,7 +2,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
 import { triggerPwaInstall } from '../../lib/pwaInstall'
-import { PwaIosInstallInstructions } from './PwaIosInstallInstructions'
+import { PwaIosInstallDialog } from './PwaIosInstallDialog'
 
 interface PushRequiresInstallMessageProps {
   layout?: 'menu' | 'banner'
@@ -69,7 +69,7 @@ export function PushRequiresInstallMessage({ layout = 'menu' }: PushRequiresInst
         </div>
 
         {iosOpen && (
-          <IosInstallDialog onClose={() => setIosOpen(false)} />
+          <PwaIosInstallDialog onClose={() => setIosOpen(false)} titleId="push-ios-install-title" />
         )}
       </>
     )
@@ -83,37 +83,8 @@ export function PushRequiresInstallMessage({ layout = 'menu' }: PushRequiresInst
       </div>
 
       {iosOpen && (
-        <IosInstallDialog onClose={() => setIosOpen(false)} />
+        <PwaIosInstallDialog onClose={() => setIosOpen(false)} titleId="push-ios-install-title" />
       )}
     </>
-  )
-}
-
-function IosInstallDialog({ onClose }: { onClose: () => void }) {
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/40"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="push-ios-install-title"
-      onClick={onClose}
-    >
-      <div
-        className="glass-card w-full max-w-sm p-4 shadow-xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <p id="push-ios-install-title" className="font-semibold text-brand-navy">
-          Add BMFC Club Hub to your home screen
-        </p>
-        <PwaIosInstallInstructions />
-        <button
-          type="button"
-          onClick={onClose}
-          className="btn-primary text-sm py-2 px-4 min-h-0 mt-4 w-full sm:w-auto"
-        >
-          Got it
-        </button>
-      </div>
-    </div>
   )
 }
