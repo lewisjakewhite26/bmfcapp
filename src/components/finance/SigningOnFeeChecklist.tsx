@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { CollapsibleCard } from '../ui/CollapsibleCard'
 import { fetchSigningOnFees, setSigningOnPaid } from '../../lib/clubApi'
 import { DDSFL_ACTIVE_SEASON, DDSFL_SEASONS } from '../../lib/ddsflConstants'
 import type { SigningOnFeeRow } from '../../types'
@@ -73,30 +74,33 @@ export function SigningOnFeeChecklist() {
     }
   }
 
+  const summary = loading
+    ? `${CURRENT_SEASON} — loading…`
+    : totalCount === 0
+      ? `${CURRENT_SEASON} — no squad members yet`
+      : `${paidCount}/${totalCount} paid · ${CURRENT_SEASON}`
+
   return (
-    <section className="glass-card p-5 sm:p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
-          <h2 className="font-display text-lg text-brand-navy">Signing-on fees</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {CURRENT_SEASON} — tap a name when their fee is in.
-          </p>
-        </div>
-        {!loading && totalCount > 0 && (
-          <p className="font-display text-2xl font-bold text-brand-navy tabular-nums">
-            {paidCount}<span className="text-gray-400 font-normal text-lg">/{totalCount}</span>
-            <span className="text-sm font-normal text-gray-500 ml-2">paid</span>
-          </p>
-        )}
-      </div>
+    <CollapsibleCard title="Signing-on fees" summary={summary}>
+      <p className="text-sm text-gray-500 -mt-1">
+        Tap a name when their fee is in.
+      </p>
 
       {!loading && totalCount > 0 && (
-        <div className="h-2 rounded-full bg-brand-light overflow-hidden">
-          <div
-            className="h-full rounded-full bg-emerald-500 transition-all duration-300"
-            style={{ width: `${Math.round(progress * 100)}%` }}
-          />
-        </div>
+        <>
+          <div className="flex justify-end">
+            <p className="font-display text-2xl font-bold text-brand-navy tabular-nums">
+              {paidCount}<span className="text-gray-400 font-normal text-lg">/{totalCount}</span>
+              <span className="text-sm font-normal text-gray-500 ml-2">paid</span>
+            </p>
+          </div>
+          <div className="h-2 rounded-full bg-brand-light overflow-hidden">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+              style={{ width: `${Math.round(progress * 100)}%` }}
+            />
+          </div>
+        </>
       )}
 
       <div className="flex flex-wrap gap-2">
@@ -167,6 +171,6 @@ export function SigningOnFeeChecklist() {
           })}
         </ul>
       )}
-    </section>
+    </CollapsibleCard>
   )
 }

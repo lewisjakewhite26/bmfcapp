@@ -53,7 +53,7 @@ function HorizontalBars({
 }
 
 export function FinanceBreakdownChart({ overview }: FinanceBreakdownChartProps) {
-  const incomeRows = overview.sponsorship_by_category.flatMap((row) => {
+  const sponsorshipRows = overview.sponsorship_by_category.flatMap((row) => {
     const label = sponsorshipCategoryLabel(row.category as Parameters<typeof sponsorshipCategoryLabel>[0])
     const items: { label: string; value: number; color: string; sub?: string }[] = []
     const paid = Number(row.paid_amount ?? 0)
@@ -75,7 +75,7 @@ export function FinanceBreakdownChart({ overview }: FinanceBreakdownChartProps) 
 
   return (
     <div className="grid md:grid-cols-2 gap-6">
-      <HorizontalBars title="Sponsorship by category" rows={incomeRows} />
+      <HorizontalBars title="Sponsorship by category" rows={sponsorshipRows} />
       <HorizontalBars title="Expenses by category" rows={expenseRows} />
     </div>
   )

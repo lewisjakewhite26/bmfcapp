@@ -1,114 +1,248 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Navbar } from '../components/ui/Navbar'
-import { PageShell } from '../components/ui/PageBackground'
-import { LandingHeroBackdrop } from '../components/ui/LandingHeroBackdrop'
-import { CLUB_NAME, LEAGUE_NAME } from '../lib/mockData'
+import { useState } from 'react'
+import { Link, Navigate } from 'react-router-dom'
+import QRCode from 'react-qr-code'
+import toast from 'react-hot-toast'
+import { useAuth } from '../hooks/useAuth'
+import { usePwaInstall } from '../hooks/usePwaInstall'
+import { triggerPwaInstall } from '../lib/pwaInstall'
+import { CLUB_NAME } from '../lib/mockData'
+import { getSiteOrigin } from '../lib/siteUrl'
+import { InAppBrowserBanner } from '../components/ui/InAppBrowserBanner'
+import { PwaIosInstallInstructions } from '../components/ui/PwaIosInstallInstructions'
 
-const FEATURES = [
-  { title: 'League table', body: 'DDSFL league table for our division, updated when we sync.' },
-  { title: 'Results & fixtures', body: 'All our games and scores for the season.' },
-  { title: 'Calendar & availability', body: 'Matches, training, socials and fundraisers. Mark in, out or maybe for games and training.' },
-  { title: 'Squad stats', body: 'Goals, assists, MOTM, cards and appearances.' },
-]
+const INSTALL_STEPS = [
+  'Tap Install below',
+  'Open it from your home screen',
+  'Log in with your login name and passcode',
+] as const
 
-function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+function DownloadIcon() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.45, delay, ease: 'easeOut' }}
+    <svg
+      className="w-5 h-5 shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
     >
-      {children}
-    </motion.div>
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>
+  )
+}
+
+function LandingSpinner() {
+  return (
+    <div
+      className="min-h-[100dvh] flex items-center justify-center"
+      style={{ background: '#0A1628' }}
+    >
+      <div
+        className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+        style={{ borderColor: '#D4AF37', borderTopColor: 'transparent' }}
+      />
+    </div>
   )
 }
 
 export default function Landing() {
-  const heroRef = useRef<HTMLElement>(null)
-  const [showScrollHint, setShowScrollHint] = useState(true)
+  const { user, loading } = useAuth()
+  const { ios, standalone, canPrompt } = usePwaInstall()
+  const [installing, setInstalling] = useState(false)
+  const [iosOpen, setIosOpen] = useState(false)
+  const siteOrigin = getSiteOrigin()
 
-  useEffect(() => {
-    const onScroll = () => {
-      if (window.scrollY > 100) setShowScrollHint(false)
+  if (loading) {
+    return <LandingSpinner />
+  }
+
+  if (user?.is_approved) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  if (user && !user.is_approved) {
+    return <Navigate to="/pending" replace />
+  }
+
+  if (standalone) {
+    return <Navigate to="/login" replace />
+  }
+
+  const handleInstall = async () => {
+    if (ios) {
+      setIosOpen(true)
+      return
     }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+
+    if (!canPrompt) {
+      toast(
+        'Install will appear once your browser is ready. Try again after a moment, or use your browser menu.',
+        { duration: 5000 },
+      )
+      return
+    }
+
+    setInstalling(true)
+    try {
+      await triggerPwaInstall()
+    } finally {
+      setInstalling(false)
+    }
+  }
 
   return (
-    <PageShell>
-      <Navbar />
-      <div className="bg-[#f0f4ff]">
-        <section
-          ref={heroRef}
-          className="relative min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden px-4 pb-16 pt-8 select-none touch-manipulation [-webkit-touch-callout:none]"
-        >
-          <LandingHeroBackdrop containerRef={heroRef} />
+    <div
+      className="relative min-h-[100dvh] flex flex-col overflow-x-hidden"
+      style={{ background: '#0A1628', color: '#F4F1E8' }}
+    >
+      <div
+        className="pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-full"
+        style={{
+          top: '-120px',
+          width: '280px',
+          height: '280px',
+          border: '1px solid rgba(212, 175, 55, 0.08)',
+        }}
+        aria-hidden
+      />
 
-          <div className="relative z-10 flex flex-col items-center text-center w-full max-w-[900px] mx-auto">
+      <InAppBrowserBanner />
+
+      <div className="relative z-10 flex flex-1 flex-col items-center px-5 py-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
+        <div className="w-full max-w-sm flex flex-col items-center text-center">
+          <div
+            className="mb-5 flex h-[88px] w-[88px] items-center justify-center rounded-full"
+            style={{
+              background: 'rgba(212, 175, 55, 0.12)',
+              border: '1px solid rgba(212, 175, 55, 0.35)',
+            }}
+          >
             <img
               src="/logo.png"
-              alt="BMFC"
-              className="h-20 w-20 object-contain drop-shadow-md mb-8"
-              onError={(e) => { (e.target as HTMLImageElement).src = '/logo.svg' }}
+              alt=""
+              className="h-14 w-14 object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/logo.svg'
+              }}
             />
-            <h1
-              className="font-display tracking-tight text-brand-navy leading-[1.05] max-w-[900px]"
-              style={{ fontSize: 'clamp(2.5rem, 7vw, 4.5rem)' }}
-            >
-              <span className="block font-extrabold">BMFC Club Hub</span>
-            </h1>
-            <p className="text-brand-gold font-semibold text-lg mt-3">{CLUB_NAME}</p>
-            <p
-              className="text-[#6B7280] font-normal max-w-[500px] mx-auto mt-4 mb-8 leading-relaxed"
-              style={{ fontSize: 'clamp(1rem, 2vw, 1.25rem)' }}
-            >
-              Fixtures, table, stats and availability for the squad.
-            </p>
-            <p className="text-sm text-gray-400 mb-8">{LEAGUE_NAME}</p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                to="/login"
-                className="inline-flex items-center justify-center px-8 py-3 rounded-pill font-semibold text-white bg-brand-blue shadow-[0_4px_16px_rgba(43,95,192,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(43,95,192,0.3)] min-w-[140px]"
-              >
-                Log in
-              </Link>
-            </div>
-            <p className="mt-4 text-sm text-gray-400">New player? Use the invite link from your admin.</p>
-            <p className="mt-8 text-[0.8rem] text-[#9ca3af]">
-              Est. 1984 · Bishop Middleham
-            </p>
           </div>
 
-          {showScrollHint && (
-            <div
-              className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 text-[#9ca3af] text-xl landing-scroll-hint pointer-events-none"
-              aria-hidden
-            >
-              ↓
-            </div>
-          )}
-        </section>
+          <p
+            className="text-[11px] font-semibold uppercase tracking-[0.22em]"
+            style={{ color: '#D4AF37' }}
+          >
+            {CLUB_NAME}
+          </p>
 
-        <section className="px-4 py-16 max-w-5xl mx-auto">
-          <FadeUp>
-            <h2 className="font-display text-2xl text-brand-navy text-center mb-10">What you get</h2>
-          </FadeUp>
-          <div className="grid sm:grid-cols-2 gap-5">
-            {FEATURES.map((f, i) => (
-              <FadeUp key={f.title} delay={i * 0.08}>
-                <div className="glass-card p-6 h-full">
-                  <h3 className="font-bold text-brand-navy mb-2">{f.title}</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">{f.body}</p>
-                </div>
-              </FadeUp>
+          <h1
+            className="font-display mt-4 text-2xl font-semibold leading-tight"
+            style={{ color: '#F4F1E8' }}
+          >
+            You&apos;re in the squad.
+          </h1>
+
+          <p className="mt-3 text-[15px] leading-relaxed" style={{ color: '#8B92A3' }}>
+            Install the app to see fixtures, mark availability and get match reminders.
+          </p>
+
+          <ol className="mt-8 w-full space-y-4 text-left">
+            {INSTALL_STEPS.map((step, index) => (
+              <li key={step} className="flex items-start gap-3">
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                  style={{ background: '#D4AF37', color: '#0A1628' }}
+                  aria-hidden
+                >
+                  {index + 1}
+                </span>
+                <span className="pt-0.5 text-sm leading-snug" style={{ color: '#C5CAD6' }}>
+                  {step}
+                </span>
+              </li>
             ))}
+          </ol>
+
+          <button
+            type="button"
+            disabled={installing}
+            onClick={handleInstall}
+            className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-base font-semibold transition-opacity disabled:opacity-70 touch-manipulation min-h-[52px]"
+            style={{ background: '#D4AF37', color: '#0A1628' }}
+          >
+            <DownloadIcon />
+            {installing ? 'Installing…' : 'Install the app'}
+          </button>
+
+          <Link
+            to="/login"
+            className="mt-4 text-sm font-medium transition-opacity hover:opacity-80 touch-manipulation py-2"
+            style={{ color: '#D4AF37' }}
+          >
+            Already installed? Log in
+          </Link>
+
+          <div
+            className="mt-10 w-full pt-8 flex flex-col items-center gap-4"
+            style={{ borderTop: '1px solid rgba(139, 146, 163, 0.25)' }}
+          >
+            {siteOrigin && (
+              <div
+                className="rounded-xl p-3"
+                style={{ background: '#F4F1E8' }}
+              >
+                <QRCode
+                  value={siteOrigin}
+                  size={128}
+                  bgColor="#F4F1E8"
+                  fgColor="#0A1628"
+                  level="M"
+                />
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-medium" style={{ color: '#F4F1E8' }}>
+                Scan on another phone
+              </p>
+              <p className="mt-1 text-xs leading-relaxed" style={{ color: '#8B92A3' }}>
+                Works best from your camera app, not WhatsApp
+              </p>
+            </div>
           </div>
-        </section>
+        </div>
       </div>
-    </PageShell>
+
+      {iosOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/60"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="landing-ios-install-title"
+          onClick={() => setIosOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-card p-5 shadow-xl"
+            style={{ background: '#F4F1E8' }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p id="landing-ios-install-title" className="font-semibold font-display" style={{ color: '#0A1628' }}>
+              Add BMFC Club Hub to your home screen
+            </p>
+            <PwaIosInstallInstructions />
+            <button
+              type="button"
+              onClick={() => setIosOpen(false)}
+              className="mt-4 w-full rounded-xl px-4 py-2.5 text-sm font-semibold sm:w-auto touch-manipulation min-h-[44px]"
+              style={{ background: '#D4AF37', color: '#0A1628' }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

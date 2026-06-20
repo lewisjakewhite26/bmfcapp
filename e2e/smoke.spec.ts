@@ -4,8 +4,9 @@ import { loginAsPlayer } from './helpers/auth'
 test.describe('Public & squad smoke', () => {
   test('landing page loads', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: /BMFC Club Hub/i })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Log in' }).first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: /You're in the squad/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Install the app/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Already installed\? Log in/i })).toBeVisible()
   })
 
   test('login page shows mock test buttons', async ({ page }) => {

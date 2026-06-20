@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { DataErrorBanner } from '../components/ui/DataErrorBanner'
+import { CollapsibleCard } from '../components/ui/CollapsibleCard'
 import { FinanceBreakdownChart } from '../components/finance/FinanceBreakdownChart'
 import { FinanceLedgerNote } from '../components/finance/FinanceLedgerNote'
 import { SigningOnFeeChecklist } from '../components/finance/SigningOnFeeChecklist'
@@ -80,6 +81,17 @@ export default function AdminFinance() {
   const [editingExId, setEditingExId] = useState<string | null>(null)
 
   const [saving, setSaving] = useState(false)
+  const [breakdownOpen, setBreakdownOpen] = useState(false)
+  const [sponsorshipsOpen, setSponsorshipsOpen] = useState(false)
+  const [expensesOpen, setExpensesOpen] = useState(false)
+
+  useEffect(() => {
+    if (editingSpId) setSponsorshipsOpen(true)
+  }, [editingSpId])
+
+  useEffect(() => {
+    if (editingExId) setExpensesOpen(true)
+  }, [editingExId])
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -219,7 +231,7 @@ export default function AdminFinance() {
         <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         <div>
           <h1 className="font-display text-2xl sm:text-3xl text-brand-navy">Finance</h1>
-          <p className="text-sm text-gray-500 mt-1">Sponsorship income and club expenses. Every entry shows who logged it.</p>
+          <p className="text-sm text-gray-500 mt-1">Track sponsorships and club expenses. Every entry shows who logged it.</p>
         </div>
 
         {error && <DataErrorBanner message={error} onRetry={reload} />}
@@ -229,8 +241,8 @@ export default function AdminFinance() {
         ) : overview && (
           <>
             <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <SummaryCard label="Paid income" value={formatGBP(overview.paid_income)} tone="positive" />
-              <SummaryCard label="Pending income" value={formatGBP(overview.pending_income)} tone="warning" />
+              <SummaryCard label="Paid in" value={formatGBP(overview.paid_income)} tone="positive" />
+              <SummaryCard label="Still owed" value={formatGBP(overview.pending_income)} tone="warning" />
               <SummaryCard label="Total expenses" value={formatGBP(overview.total_expenses)} tone="negative" />
               <SummaryCard
                 label="Net balance"
@@ -239,17 +251,32 @@ export default function AdminFinance() {
               />
             </section>
 
-            <section className="glass-card p-5 sm:p-6">
-              <h2 className="font-display text-lg text-brand-navy mb-4">Breakdown</h2>
+            <CollapsibleCard
+              title="Breakdown"
+              summary="Sponsorship and expenses by category"
+              open={breakdownOpen}
+              onOpenChange={setBreakdownOpen}
+            >
               <FinanceBreakdownChart overview={overview} />
-            </section>
+            </CollapsibleCard>
           </>
         )}
 
         <SigningOnFeeChecklist />
 
-        <section className="glass-card p-5 space-y-4">
-          <h2 className="font-semibold text-brand-navy">{editingSpId ? 'Edit sponsorship' : 'Add sponsorship'}</h2>
+        <CollapsibleCard
+          title="Sponsorships"
+          summary={
+            sponsorships.length === 0
+              ? 'No entries yet'
+              : `${sponsorships.length} ${sponsorships.length === 1 ? 'entry' : 'entries'}`
+          }
+          open={sponsorshipsOpen}
+          onOpenChange={setSponsorshipsOpen}
+        >
+          <h3 className="font-semibold text-brand-navy -mt-1">
+            {editingSpId ? 'Edit sponsorship' : 'Add sponsorship'}
+          </h3>
           <form onSubmit={handleSaveSponsorship} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <input
               type="text"
@@ -361,10 +388,21 @@ export default function AdminFinance() {
               ))}
             </ul>
           )}
-        </section>
+        </CollapsibleCard>
 
-        <section className="glass-card p-5 space-y-4">
-          <h2 className="font-semibold text-brand-navy">{editingExId ? 'Edit expense' : 'Add expense'}</h2>
+        <CollapsibleCard
+          title="Expenses"
+          summary={
+            expenses.length === 0
+              ? 'No entries yet'
+              : `${expenses.length} ${expenses.length === 1 ? 'entry' : 'entries'}`
+          }
+          open={expensesOpen}
+          onOpenChange={setExpensesOpen}
+        >
+          <h3 className="font-semibold text-brand-navy -mt-1">
+            {editingExId ? 'Edit expense' : 'Add expense'}
+          </h3>
           <form onSubmit={handleSaveExpense} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <input
               type="text"
@@ -440,7 +478,7 @@ export default function AdminFinance() {
               ))}
             </ul>
           )}
-        </section>
+        </CollapsibleCard>
       </div>
     </PageShell>
   )
