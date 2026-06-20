@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import type { StatsScope } from '../lib/seasonScope'
 import {
   fetchAllAvailability,
   fetchAvailability,
@@ -97,7 +98,7 @@ export function useFixtures() {
   return { upcoming, completed, loading, error, reload }
 }
 
-export function usePlayerStats() {
+export function usePlayerStats(scope: StatsScope) {
   const [stats, setStats] = useState<PlayerStats[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -106,13 +107,13 @@ export function usePlayerStats() {
     setLoading(true)
     setError(null)
     try {
-      setStats(await fetchPlayerStats())
+      setStats(await fetchPlayerStats(scope))
     } catch (err) {
       setError(getErrorMessage(err, "Couldn't load stats"))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [scope])
 
   useEffect(() => { reload() }, [reload])
 

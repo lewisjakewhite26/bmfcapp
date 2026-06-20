@@ -56,7 +56,7 @@ export function buildCalendarItems(input: {
     ...training.map((data) => ({ type: 'training' as const, data })),
     ...activeEvents.map((data) => ({ type: 'event' as const, data })),
     ...fundraiserItems,
-  ].sort((a, b) => getCalendarItemDate(a).getTime() - getCalendarItemDate(b).getTime())
+  ].sort((a, b) => getCalendarItemDate(b).getTime() - getCalendarItemDate(a).getTime())
 }
 
 export function isUpcomingFixtureItem(item: CalendarItem): boolean {

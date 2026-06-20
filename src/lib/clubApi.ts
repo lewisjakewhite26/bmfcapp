@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from './supabase'
 import { findClubTableRow } from './clubTeams'
 import { aggregatePlayerStats } from './playerStats'
 import { auditCleanSheetFixtures } from './cleanSheet'
+import { filterFixturesForStatsScope, type StatsScope } from './seasonScope'
 import { getClubSession } from './clubAuth'
 import { loadSession } from '../hooks/authContext'
 import {
@@ -167,7 +168,7 @@ export async function fetchUpcomingFixtures(): Promise<FixtureWithResult[]> {
   const all = await fetchFixturesWithResults()
   return all
     .filter((f) => isUpcomingScheduledFixture(f))
-    .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
+    .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())
 }
 
 export async function fetchCompletedFixtures(): Promise<FixtureWithResult[]> {
@@ -176,7 +177,9 @@ export async function fetchCompletedFixtures(): Promise<FixtureWithResult[]> {
     return getMockCompletedFixtures()
   }
   const all = await fetchFixturesWithResults()
-  return all.filter((f) => f.status === 'completed')
+  return all
+    .filter((f) => f.status === 'completed')
+    .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())
 }
 
 /** Manually added matches (friendlies, cups, etc.) — not from DDSFL sync. */
@@ -255,7 +258,7 @@ export async function fetchLineupsByFixtureId(): Promise<Map<string, Lineup | nu
   return map
 }
 
-export async function fetchPlayerStats(): Promise<PlayerStats[]> {
+export async function fetchPlayerStats(scope: StatsScope): Promise<PlayerStats[]> {
   if (isMockDataMode()) {
     await delay()
     return getMockPlayerStats()
@@ -266,7 +269,8 @@ export async function fetchPlayerStats(): Promise<PlayerStats[]> {
     fetchFixturesWithResults(),
     fetchLineupsByFixtureId(),
   ])
-  return aggregatePlayerStats(squad, fixtures, { lineupsByFixtureId }).stats
+  const scoped = filterFixturesForStatsScope(fixtures, scope)
+  return aggregatePlayerStats(squad, scoped, { lineupsByFixtureId }).stats
 }
 
 export async function fetchCleanSheetAudit() {
@@ -278,23 +282,28 @@ export async function fetchCleanSheetAudit() {
   return auditCleanSheetFixtures(squad, fixtures, lineupsByFixtureId)
 }
 
-export async function fetchPlayerProfile(playerId: string): Promise<PlayerProfile | null> {
-  const [squad, statsList, fixtures] = await Promise.all([
+export async function fetchPlayerProfile(playerId: string, scope: StatsScope): Promise<PlayerProfile | null> {
+  const [squad, fixtures, lineupsByFixtureId] = await Promise.all([
     fetchSquad(),
-    fetchPlayerStats(),
     fetchFixturesWithResults(),
+    fetchLineupsByFixtureId(),
   ])
 
   const member = squad.find((m) => m.player_id === playerId)
   if (!member) return null
 
+  const scopedFixtures = filterFixturesForStatsScope(fixtures, scope)
+  const statsList = aggregatePlayerStats(squad, scopedFixtures, { lineupsByFixtureId }).stats
   const stats = statsList.find((s) => s.player_id === playerId)
   if (!stats) return null
 
+  const scopedIds = new Set(scopedFixtures.map((f) => f.id))
   const playerEvents = fixtures.flatMap((f) =>
-    (f.events ?? [])
-      .filter((e) => e.player_id === playerId)
-      .map((e) => ({ fixture: f, event: e }))
+    scopedIds.has(f.id)
+      ? (f.events ?? [])
+          .filter((e) => e.player_id === playerId)
+          .map((e) => ({ fixture: f, event: e }))
+      : [],
   )
 
   const byFixture = new Map<string, PlayerProfile['matchHistory'][0]>()

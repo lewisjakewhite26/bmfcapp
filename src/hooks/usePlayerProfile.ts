@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchPlayerProfile } from '../lib/clubApi'
 import { getErrorMessage } from '../lib/errors'
+import type { StatsScope } from '../lib/seasonScope'
 import type { PlayerProfile } from '../types'
 
-export function usePlayerProfile(playerId?: string) {
+export function usePlayerProfile(playerId?: string, scope: StatsScope = 'season') {
   const [profile, setProfile] = useState<PlayerProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -22,7 +23,7 @@ export function usePlayerProfile(playerId?: string) {
     setNotFound(false)
     setError(null)
     try {
-      const data = await fetchPlayerProfile(playerId)
+      const data = await fetchPlayerProfile(playerId, scope)
       setProfile(data)
       setNotFound(!data)
     } catch (err) {
@@ -32,7 +33,7 @@ export function usePlayerProfile(playerId?: string) {
     } finally {
       setLoading(false)
     }
-  }, [playerId])
+  }, [playerId, scope])
 
   useEffect(() => {
     reload()
