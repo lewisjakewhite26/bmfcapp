@@ -50,6 +50,7 @@ Apply migrations **in order** via the Supabase SQL Editor (Dashboard → SQL →
 | `supabase-club/migrations/026_purge_old_fixtures.sql` | Admin purge fixtures before a cutoff date |
 | `supabase-club/migrations/027_em_dash_copy.sql` | Em-dash cleanup in RPC error messages |
 | `supabase-club/migrations/028_team_invite_link.sql` | Reusable team invite link (`/join/:token`) |
+| `supabase-club/migrations/029_admin_audit_log.sql` | Central admin audit log table + list/record RPCs |
 
 **Supabase CLI example** (if `supabase` is installed and linked):
 

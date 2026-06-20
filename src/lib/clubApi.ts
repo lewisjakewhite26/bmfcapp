@@ -563,6 +563,8 @@ export async function enableTeamInvite(): Promise<TeamInviteSettings> {
   void recordAdminAudit('team_invite_enabled')
   return data as TeamInviteSettings
 }
+
+export async function updatePlayerNames(
   userId: string,
   firstName: string,
   lastName: string,

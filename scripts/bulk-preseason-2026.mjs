@@ -31,7 +31,7 @@ const COMPETITION_FRIENDLY = 'Friendly'
 const TRAINING_DATES = ['2026-06-14', '2026-06-21', '2026-06-28', '2026-08-02']
 
 const FIXTURES = [
-  { date: '2026-07-05', opponent: 'Bishop Middleham FC', home_away: 'home', label: 'In-house friendly' },
+  { date: '2026-07-05', opponent: 'Duke of Wellington', home_away: 'home' },
   { date: '2026-07-12', opponent: 'Kirk Merrington', home_away: 'home' },
   { date: '2026-07-19', opponent: "Sedgefield St Edmund's", home_away: 'home' },
   { date: '2026-07-26', opponent: 'Black Bull', home_away: 'away' },
