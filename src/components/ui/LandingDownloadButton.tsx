@@ -134,13 +134,15 @@ export function LandingDownloadButton() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={busy}
-        className="inline-flex min-w-[168px] items-center justify-center gap-2.5 rounded-pill bg-brand-gold px-8 py-3 font-semibold text-brand-navy shadow-[0_4px_16px_rgba(212,160,23,0.32)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(212,160,23,0.4)] touch-manipulation disabled:cursor-not-allowed disabled:opacity-60"
-        aria-label="Download BMFC Club Hub app"
-      >
+      <div className="landing-download-glow-wrap relative inline-flex rounded-pill">
+        <span className="landing-download-glow pointer-events-none absolute -inset-1 rounded-pill" aria-hidden />
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={busy}
+          className="relative z-10 inline-flex min-w-[168px] items-center justify-center gap-2.5 rounded-pill bg-brand-gold px-8 py-3 font-semibold text-brand-navy shadow-[0_4px_16px_rgba(212,160,23,0.32)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(212,160,23,0.4)] touch-manipulation disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label="Download BMFC Club Hub app"
+        >
         <span>{installing ? 'Downloading…' : 'Download'}</span>
         <svg viewBox="0 0 32 32" className="h-5 w-5 shrink-0 overflow-visible" aria-hidden>
           <line
@@ -175,7 +177,8 @@ export function LandingDownloadButton() {
             opacity={0}
           />
         </svg>
-      </button>
+        </button>
+      </div>
 
       {iosOpen && <PwaIosInstallDialog onClose={() => setIosOpen(false)} titleId="pwa-ios-install-title" />}
     </>

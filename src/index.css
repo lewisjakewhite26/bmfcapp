@@ -176,3 +176,32 @@
 .landing-scroll-hint {
   animation: landing-scroll-bounce 2s ease-in-out infinite;
 }
+
+@keyframes landing-download-glow-pulse {
+  0%, 100% {
+    opacity: 0.18;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.42;
+    transform: scale(1.06);
+  }
+}
+
+.landing-download-glow {
+  background: rgba(43, 95, 192, 0.55);
+  filter: blur(14px);
+  animation: landing-download-glow-pulse 3.2s ease-in-out infinite;
+}
+
+.landing-download-glow-wrap:hover .landing-download-glow {
+  animation-play-state: paused;
+  opacity: 0.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-download-glow {
+    animation: none;
+    opacity: 0.28;
+  }
+}
