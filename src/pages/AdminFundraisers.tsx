@@ -5,10 +5,12 @@ import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import {
   createFundraiser,
+  deleteFundraiser,
   fetchFundraiserDetail,
   fetchFundraiserParticipationSummary,
   fetchFundraisers,
   saveFundraiserParticipation,
+  setFundraiserArchived,
 } from '../lib/clubApi'
 import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
@@ -47,11 +49,14 @@ export default function AdminFundraisers() {
   const [saving, setSaving] = useState(false)
   const [summary, setSummary] = useState<FundraiserParticipationSummary | null>(null)
   const [loadingSummary, setLoadingSummary] = useState(false)
+  const [listFilter, setListFilter] = useState<'active' | 'archived'>('active')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [archivingId, setArchivingId] = useState<string | null>(null)
 
   const reloadList = useCallback(async () => {
     setLoadingList(true)
     try {
-      setFundraisers(await fetchFundraisers())
+      setFundraisers(await fetchFundraisers({ includeArchived: true }))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't load fundraisers")
     } finally {
@@ -164,7 +169,46 @@ export default function AdminFundraisers() {
   }
 
   const participatedCount = participants.filter((p) => p.participated).length
-  const totalFundraisers = summary?.total_fundraisers ?? fundraisers.length
+  const totalFundraisers = summary?.total_fundraisers ?? fundraisers.filter((f) => !f.archived).length
+  const visibleFundraisers = fundraisers.filter((f) => (listFilter === 'archived' ? f.archived : !f.archived))
+
+  const handleArchive = async (fundraiser: Fundraiser, archived: boolean) => {
+    setArchivingId(fundraiser.id)
+    try {
+      await setFundraiserArchived(fundraiser.id, archived)
+      if (selectedId === fundraiser.id && archived) {
+        setSelectedId(null)
+        setParticipants([])
+      }
+      toast.success(archived ? 'Fundraiser archived' : 'Fundraiser restored')
+      await reloadList()
+      if (tab === 'overview') await reloadSummary()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't update fundraiser")
+    } finally {
+      setArchivingId(null)
+    }
+  }
+
+  const handleDelete = async (fundraiser: Fundraiser) => {
+    if (!window.confirm(`Permanently delete "${fundraiser.name}"? This cannot be undone.`)) return
+
+    setDeletingId(fundraiser.id)
+    try {
+      await deleteFundraiser(fundraiser.id)
+      if (selectedId === fundraiser.id) {
+        setSelectedId(null)
+        setParticipants([])
+      }
+      toast.success('Fundraiser deleted')
+      await reloadList()
+      if (tab === 'overview') await reloadSummary()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't delete fundraiser")
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   return (
     <PageShell>
@@ -231,35 +275,88 @@ export default function AdminFundraisers() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="font-semibold text-brand-navy">Fundraising events</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <h2 className="font-semibold text-brand-navy">Fundraising events</h2>
+                <div className="flex gap-2 p-1 glass-card shrink-0">
+                  {(['active', 'archived'] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setListFilter(value)}
+                      className={`min-h-[36px] px-3 rounded-pill text-xs font-semibold transition-colors ${
+                        listFilter === value ? 'bg-brand-blue text-white' : 'text-gray-600 hover:bg-white/60'
+                      }`}
+                    >
+                      {value === 'active' ? 'Active' : 'Archived'}
+                    </button>
+                  ))}
+                </div>
+              </div>
               {loadingList ? (
                 <div className="glass-card h-32 animate-pulse" />
-              ) : fundraisers.length === 0 ? (
+              ) : visibleFundraisers.length === 0 ? (
                 <div className="glass-card p-8 text-center text-gray-500">
-                  No fundraisers yet. Add one above.
+                  {listFilter === 'archived' ? 'No archived fundraisers.' : 'No fundraisers yet. Add one above.'}
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {fundraisers.map((f) => (
-                    <button
+                  {visibleFundraisers.map((f) => (
+                    <div
                       key={f.id}
-                      type="button"
-                      onClick={() => openFundraiser(f.id)}
-                      className={`glass-card w-full p-4 text-left transition-colors ${
-                        selectedId === f.id ? 'ring-2 ring-brand-blue/40 bg-white/90' : 'hover:bg-white/80'
+                      className={`glass-card p-4 ${
+                        selectedId === f.id ? 'ring-2 ring-brand-blue/40 bg-white/90' : ''
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div>
+                        <button
+                          type="button"
+                          onClick={() => openFundraiser(f.id)}
+                          className="min-w-0 flex-1 text-left hover:opacity-90"
+                        >
                           <p className="font-semibold text-brand-navy">{f.name}</p>
                           <p className="text-sm text-gray-500">{formatFundraiserDate(f.date)}</p>
                           {f.notes && <p className="text-sm text-gray-600 mt-1">{f.notes}</p>}
+                        </button>
+                        <div className="flex shrink-0 flex-col gap-1 items-end">
+                          {listFilter === 'archived' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleArchive(f, false)}
+                              disabled={archivingId === f.id}
+                              className="text-xs font-semibold text-brand-blue hover:text-brand-navy px-2 py-1"
+                            >
+                              {archivingId === f.id ? 'Restoring…' : 'Restore'}
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => openFundraiser(f.id)}
+                                className="text-xs font-semibold text-brand-blue hover:text-brand-navy px-2 py-1"
+                              >
+                                {selectedId === f.id ? 'Selected' : 'View squad →'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleArchive(f, true)}
+                                disabled={archivingId === f.id}
+                                className="text-xs font-semibold text-gray-600 hover:text-brand-navy px-2 py-1"
+                              >
+                                {archivingId === f.id ? 'Archiving…' : 'Archive'}
+                              </button>
+                            </>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(f)}
+                            disabled={deletingId === f.id}
+                            className="text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1"
+                          >
+                            {deletingId === f.id ? 'Deleting…' : 'Delete'}
+                          </button>
                         </div>
-                        <span className="text-xs text-brand-blue font-medium shrink-0">
-                          {selectedId === f.id ? 'Selected' : 'View squad →'}
-                        </span>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}

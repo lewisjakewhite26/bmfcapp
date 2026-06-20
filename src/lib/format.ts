@@ -39,5 +39,21 @@ export function resultColor(goalsFor: number, goalsAgainst: number): string {
   const label = resultLabel(goalsFor, goalsAgainst)
   if (label === 'W') return 'bg-emerald-100 text-emerald-800'
   if (label === 'L') return 'bg-red-100 text-red-800'
-  return 'bg-gray-100 text-gray-700'
+  return 'bg-amber-100 text-amber-800'
+}
+
+export function fixtureResultBorderClass(fixture: { status: string; result?: { goals_for: number; goals_against: number } }): string {
+  if (fixture.status !== 'completed' || !fixture.result) return 'border-brand-blue'
+  const { goals_for, goals_against } = fixture.result
+  if (goals_for > goals_against) return 'border-teal-600'
+  if (goals_for < goals_against) return 'border-red-500'
+  return 'border-amber-500'
+}
+
+export function fixtureResultDotClass(fixture: { status: string; result?: { goals_for: number; goals_against: number } }): string {
+  if (fixture.status !== 'completed' || !fixture.result) return 'bg-brand-blue'
+  const { goals_for, goals_against } = fixture.result
+  if (goals_for > goals_against) return 'bg-teal-600'
+  if (goals_for < goals_against) return 'bg-red-500'
+  return 'bg-amber-500'
 }

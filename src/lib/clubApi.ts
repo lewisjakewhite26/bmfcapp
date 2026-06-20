@@ -12,6 +12,7 @@ import {
   addMockClubEvent,
   updateMockClubEvent,
   removeMockClubEvent,
+  setMockClubEventArchived,
   CURRENT_SEASON,
   getMockAdminUsers,
   getMockAllAvailability,
@@ -41,6 +42,8 @@ import {
   upsertMockSquad,
   getMockFundraisers,
   addMockFundraiser,
+  setMockFundraiserArchived,
+  removeMockFundraiser,
   getMockFundraiserDetail,
   saveMockFundraiserParticipation,
   getMockFundraiserParticipationSummary,
@@ -99,8 +102,9 @@ import type {
 
 export { getMockInvitePreview, completeMockInvite } from './mockData'
 
-/** Use mock data until the club hub Supabase project is wired up. */
+/** Use mock data until the club hub Supabase project is wired up. E2E builds always use mock. */
 export function isMockDataMode(): boolean {
+  if (import.meta.env.VITE_E2E === 'true') return true
   return import.meta.env.VITE_CLUB_DATA_SOURCE !== 'supabase' || !isSupabaseConfigured
 }
 
@@ -840,23 +844,28 @@ export async function deleteTrainingSession(trainingId: string): Promise<void> {
   if (error) throw error
 }
 
-export async function fetchClubEvents(): Promise<ClubEvent[]> {
+export async function fetchClubEvents(options?: { includeArchived?: boolean }): Promise<ClubEvent[]> {
   if (isMockDataMode()) {
     await delay()
-    return getMockClubEvents()
+    return getMockClubEvents(Boolean(options?.includeArchived))
   }
 
-  const { data, error } = await supabase
-    .from('club_events')
-    .select('*')
-    .order('event_date')
+  let query = supabase.from('club_events').select('*').order('event_date')
+  if (!options?.includeArchived) {
+    query = query.eq('archived', false)
+  }
+
+  const { data, error } = await query
 
   if (error) throw error
-  return (data ?? []) as ClubEvent[]
+  return (data ?? []).map((row) => ({
+    ...(row as ClubEvent),
+    archived: Boolean((row as ClubEvent).archived),
+  }))
 }
 
 export async function createClubEvent(
-  input: Omit<ClubEvent, 'id' | 'created_at'>,
+  input: Omit<ClubEvent, 'id' | 'created_at' | 'archived'>,
 ): Promise<ClubEvent> {
   if (isMockDataMode()) {
     await delay()
@@ -881,7 +890,7 @@ export async function createClubEvent(
 
 export async function updateClubEvent(
   eventId: string,
-  input: Omit<ClubEvent, 'id' | 'created_at'>,
+  input: Omit<ClubEvent, 'id' | 'created_at' | 'archived'>,
 ): Promise<ClubEvent> {
   if (isMockDataMode()) {
     await delay()
@@ -921,6 +930,25 @@ export async function deleteClubEvent(eventId: string): Promise<void> {
     p_event_id: eventId,
   })
   if (error) throw error
+}
+
+export async function setClubEventArchived(eventId: string, archived: boolean): Promise<ClubEvent> {
+  if (isMockDataMode()) {
+    await delay()
+    return setMockClubEventArchived(eventId, archived)
+  }
+
+  const clubSession = getClubSession()
+  if (!clubSession) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_set_club_event_archived', {
+    p_admin_id: clubSession.userId,
+    p_session_token: clubSession.sessionToken,
+    p_event_id: eventId,
+    p_archived: archived,
+  })
+  if (error) throw error
+  return data as ClubEvent
 }
 
 export async function fetchAvailablePlayersForFixture(fixtureId: string): Promise<AvailablePlayer[]> {
@@ -984,10 +1012,24 @@ export async function saveLineup(
   return data as Lineup
 }
 
-export async function fetchFundraisers(): Promise<Fundraiser[]> {
+export async function fetchFundraisers(options?: { includeArchived?: boolean; calendar?: boolean }): Promise<Fundraiser[]> {
   if (isMockDataMode()) {
     await delay()
-    return getMockFundraisers()
+    return getMockFundraisers(Boolean(options?.includeArchived))
+  }
+
+  if (options?.calendar) {
+    const { data, error } = await supabase
+      .from('fundraisers')
+      .select('*')
+      .eq('archived', false)
+      .order('date', { ascending: false })
+
+    if (error) throw error
+    return (data ?? []).map((row) => ({
+      ...(row as Fundraiser),
+      archived: Boolean((row as Fundraiser).archived),
+    }))
   }
 
   const session = getClubSession()
@@ -1003,7 +1045,9 @@ export async function fetchFundraisers(): Promise<Fundraiser[]> {
     p_session_token: session.sessionToken,
   })
   if (error) throw error
-  return (data ?? []) as Fundraiser[]
+  const rows = (data ?? []) as Fundraiser[]
+  if (options?.includeArchived) return rows
+  return rows.filter((f) => !f.archived)
 }
 
 export async function createFundraiser(
@@ -1026,6 +1070,43 @@ export async function createFundraiser(
   })
   if (error) throw error
   return data as Fundraiser
+}
+
+export async function setFundraiserArchived(fundraiserId: string, archived: boolean): Promise<Fundraiser> {
+  if (isMockDataMode()) {
+    await delay()
+    return setMockFundraiserArchived(fundraiserId, archived)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_set_fundraiser_archived', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_fundraiser_id: fundraiserId,
+    p_archived: archived,
+  })
+  if (error) throw error
+  return data as Fundraiser
+}
+
+export async function deleteFundraiser(fundraiserId: string): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    removeMockFundraiser(fundraiserId)
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_delete_fundraiser', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_fundraiser_id: fundraiserId,
+  })
+  if (error) throw error
 }
 
 export async function fetchFundraiserDetail(fundraiserId: string): Promise<FundraiserDetail> {

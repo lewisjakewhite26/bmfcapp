@@ -21,6 +21,10 @@ export function getCalendarItemDate(item: CalendarItem): Date {
   }
 }
 
+function isCompletedFixture(fixture: FixtureWithResult): boolean {
+  return fixture.status === 'completed' && Boolean(fixture.result)
+}
+
 export function buildCalendarItems(input: {
   fixtures: FixtureWithResult[]
   training: TrainingSession[]
@@ -31,16 +35,34 @@ export function buildCalendarItems(input: {
   const now = Date.now()
   const { fixtures, training, events = [], fundraisers = [], includePastFundraisers = false } = input
 
-  const fundraiserItems: CalendarItem[] = fundraisers
+  const activeEvents = events.filter((e) => !e.archived)
+  const activeFundraisers = fundraisers.filter((f) => !f.archived)
+
+  const fundraiserItems: CalendarItem[] = activeFundraisers
     .filter((f) => includePastFundraisers || new Date(`${f.date}T23:59:59`).getTime() >= now - 86400000)
     .map((data) => ({ type: 'fundraiser' as const, data }))
 
+  const upcomingFixtures = fixtures
+    .filter((f) => isUpcomingScheduledFixture(f))
+    .map((data) => ({ type: 'fixture' as const, data }))
+
+  const completedFixtures = fixtures
+    .filter(isCompletedFixture)
+    .map((data) => ({ type: 'fixture' as const, data }))
+
   return [
-    ...fixtures
-      .filter((f) => isUpcomingScheduledFixture(f))
-      .map((data) => ({ type: 'fixture' as const, data })),
+    ...upcomingFixtures,
+    ...completedFixtures,
     ...training.map((data) => ({ type: 'training' as const, data })),
-    ...events.map((data) => ({ type: 'event' as const, data })),
+    ...activeEvents.map((data) => ({ type: 'event' as const, data })),
     ...fundraiserItems,
   ].sort((a, b) => getCalendarItemDate(a).getTime() - getCalendarItemDate(b).getTime())
+}
+
+export function isUpcomingFixtureItem(item: CalendarItem): boolean {
+  return item.type === 'fixture' && isUpcomingScheduledFixture(item.data)
+}
+
+export function isCompletedFixtureItem(item: CalendarItem): boolean {
+  return item.type === 'fixture' && isCompletedFixture(item.data)
 }

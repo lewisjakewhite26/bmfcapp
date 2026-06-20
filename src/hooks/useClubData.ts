@@ -15,7 +15,6 @@ import {
   saveAvailability,
 } from '../lib/clubApi'
 import { buildCalendarItems } from '../lib/calendarItems'
-import { isUpcomingScheduledFixture } from '../lib/fixtureFilters'
 import { getErrorMessage } from '../lib/errors'
 import type {
   Availability,
@@ -145,12 +144,12 @@ export function useCalendar(playerId?: string) {
         fetchFixturesWithResults(),
         fetchTrainingSessions(),
         fetchClubEvents(),
-        fetchFundraisers(),
+        fetchFundraisers({ calendar: true }),
         playerId ? fetchAvailability(playerId) : Promise.resolve([]),
       ])
       const now = Date.now()
       setItems({
-        fixtures: fixtures.filter((f) => isUpcomingScheduledFixture(f)),
+        fixtures,
         training: training.filter((t) => new Date(t.session_date).getTime() > now - 86400000),
         events: events.filter((e) => new Date(e.event_date).getTime() > now - 86400000),
         fundraisers: fundraisers.filter((f) => new Date(`${f.date}T23:59:59`).getTime() > now - 86400000),

@@ -8,8 +8,9 @@ import {
   itemsOnDay,
   startOfMonth,
 } from '../../lib/calendar'
-import { formatMatchDate, formatMatchTime } from '../../lib/format'
+import { formatMatchDate, formatMatchTime, formatScore, fixtureResultBorderClass, fixtureResultDotClass } from '../../lib/format'
 import { CLUB_EVENT_TYPE_LABELS } from '../../lib/clubEventTypes'
+import { isUpcomingScheduledFixture } from '../../lib/fixtureFilters'
 import { AvailabilityForm } from './AvailabilityForm'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -88,7 +89,17 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                 const dayItems = itemsOnDay(items, day)
                 const isToday = isSameDay(day, today)
                 const isSelected = selectedDay && isSameDay(day, selectedDay)
-                const hasMatch = dayItems.some((i) => i.type === 'fixture')
+                const fixtureItems = dayItems.filter((i) => i.type === 'fixture')
+                const hasUpcomingMatch = fixtureItems.some((i) => isUpcomingScheduledFixture(i.data))
+                const hasWin = fixtureItems.some(
+                  (i) => i.data.status === 'completed' && i.data.result && i.data.result.goals_for > i.data.result.goals_against,
+                )
+                const hasDraw = fixtureItems.some(
+                  (i) => i.data.status === 'completed' && i.data.result && i.data.result.goals_for === i.data.result.goals_against,
+                )
+                const hasLoss = fixtureItems.some(
+                  (i) => i.data.status === 'completed' && i.data.result && i.data.result.goals_for < i.data.result.goals_against,
+                )
                 const hasTraining = dayItems.some((i) => i.type === 'training')
                 const hasEvent = dayItems.some((i) => i.type === 'event')
                 const hasFundraiser = dayItems.some((i) => i.type === 'fundraiser')
@@ -112,10 +123,25 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                       {day.getDate()}
                     </span>
                     {dayItems.length > 0 && (
-                      <div className="flex gap-0.5">
-                        {hasMatch && (
+                      <div className="flex gap-0.5 flex-wrap justify-center max-w-[2rem]">
+                        {hasUpcomingMatch && (
                           <span
                             className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-brand-blue'}`}
+                          />
+                        )}
+                        {hasWin && (
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-teal-200' : 'bg-teal-600'}`}
+                          />
+                        )}
+                        {hasDraw && (
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-amber-200' : 'bg-amber-500'}`}
+                          />
+                        )}
+                        {hasLoss && (
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-red-200' : 'bg-red-500'}`}
                           />
                         )}
                         {hasTraining && (
@@ -141,21 +167,6 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
             </div>
           ))}
         </div>
-
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-4 pt-3 border-t border-brand-blue/10 text-[10px] text-gray-500">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-brand-blue" /> Match
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-brand-gold" /> Training
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-violet-500" /> Event
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" /> Fundraiser
-          </span>
-        </div>
       </div>
 
       {selectedDay && (
@@ -173,8 +184,9 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                   const f = item.data
                   const entry = getEntry(f.id)
                   const dot = availColor(f.id)
+                  const completed = f.status === 'completed' && f.result
                   return (
-                    <article key={f.id} className="border-t border-brand-blue/10 pt-4 first:border-t-0 first:pt-0 border-l-4 border-brand-blue pl-3">
+                    <article key={f.id} className={`border-t border-brand-blue/10 pt-4 first:border-t-0 first:pt-0 border-l-4 pl-3 ${fixtureResultBorderClass(f)}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="text-xs font-semibold uppercase text-brand-blue">Match</p>
@@ -185,10 +197,19 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                             {formatMatchTime(f.match_date, f.kickoff_time)}
                             {f.venue ? ` · ${f.venue}` : ''}
                           </p>
+                          {completed && (
+                            <p className="text-sm font-semibold text-brand-navy mt-1">
+                              {formatScore(f.result!.goals_for, f.result!.goals_against)}
+                            </p>
+                          )}
                         </div>
-                        {dot && <span className={`w-3 h-3 rounded-full shrink-0 mt-1 ${dot}`} title={entry?.status} />}
+                        {dot ? (
+                          <span className={`w-3 h-3 rounded-full shrink-0 mt-1 ${dot}`} title={entry?.status} />
+                        ) : completed ? (
+                          <span className={`w-3 h-3 rounded-full shrink-0 mt-1 ${fixtureResultDotClass(f)}`} />
+                        ) : null}
                       </div>
-                      {onAvailabilityChange && (
+                      {!completed && onAvailabilityChange && (
                         <div className="mt-3">
                           <AvailabilityForm
                             value={entry?.status ?? null}

@@ -7,6 +7,7 @@ import {
   createClubEvent,
   deleteClubEvent,
   fetchClubEvents,
+  setClubEventArchived,
   updateClubEvent,
 } from '../lib/clubApi'
 import { CLUB_EVENT_TYPES } from '../lib/clubEventTypes'
@@ -60,11 +61,13 @@ export default function AdminEvents() {
   const [events, setEvents] = useState<ClubEvent[]>([])
   const [loadingList, setLoadingList] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [archivingId, setArchivingId] = useState<string | null>(null)
+  const [listFilter, setListFilter] = useState<'active' | 'archived'>('active')
 
   const reloadList = useCallback(async () => {
     setLoadingList(true)
     try {
-      setEvents(await fetchClubEvents())
+      setEvents(await fetchClubEvents({ includeArchived: true }))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't load events")
     } finally {
@@ -134,24 +137,39 @@ export default function AdminEvents() {
   }
 
   const handleDelete = async (event: ClubEvent) => {
-    if (!window.confirm(`Remove "${event.title}" from the calendar?`)) return
+    if (!window.confirm(`Permanently delete "${event.title}"? This cannot be undone.`)) return
 
     setDeletingId(event.id)
     try {
       await deleteClubEvent(event.id)
       if (editingId === event.id) resetForm()
-      toast.success('Event removed')
+      toast.success('Event deleted')
       await reloadList()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't remove event")
+      toast.error(err instanceof Error ? err.message : "Couldn't delete event")
     } finally {
       setDeletingId(null)
     }
   }
 
+  const handleArchive = async (event: ClubEvent, archived: boolean) => {
+    setArchivingId(event.id)
+    try {
+      await setClubEventArchived(event.id, archived)
+      if (editingId === event.id && archived) resetForm()
+      toast.success(archived ? 'Event archived' : 'Event restored')
+      await reloadList()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't update event")
+    } finally {
+      setArchivingId(null)
+    }
+  }
+
   const now = Date.now()
-  const upcoming = events.filter((e) => new Date(e.event_date).getTime() >= now)
-  const past = events.filter((e) => new Date(e.event_date).getTime() < now).reverse()
+  const filteredEvents = events.filter((e) => (listFilter === 'archived' ? e.archived : !e.archived))
+  const upcoming = filteredEvents.filter((e) => new Date(e.event_date).getTime() >= now)
+  const past = filteredEvents.filter((e) => new Date(e.event_date).getTime() < now).reverse()
 
   return (
     <PageShell>
@@ -244,13 +262,29 @@ export default function AdminEvents() {
         </form>
 
         <section className="space-y-3">
-          <h2 className="font-semibold text-brand-navy">Scheduled events</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h2 className="font-semibold text-brand-navy">Scheduled events</h2>
+            <div className="flex gap-2 p-1 glass-card shrink-0">
+              {(['active', 'archived'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setListFilter(value)}
+                  className={`min-h-[36px] px-3 rounded-pill text-xs font-semibold transition-colors ${
+                    listFilter === value ? 'bg-brand-blue text-white' : 'text-gray-600 hover:bg-white/60'
+                  }`}
+                >
+                  {value === 'active' ? 'Active' : 'Archived'}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {loadingList ? (
             <div className="glass-card h-24 animate-pulse" />
-          ) : events.length === 0 ? (
+          ) : filteredEvents.length === 0 ? (
             <div className="glass-card p-6 text-center text-sm text-gray-500">
-              No other events yet.
+              {listFilter === 'archived' ? 'No archived events.' : 'No other events yet.'}
             </div>
           ) : (
             <>
@@ -262,8 +296,11 @@ export default function AdminEvents() {
                       event={event}
                       editingId={editingId}
                       deletingId={deletingId}
+                      archivingId={archivingId}
                       onEdit={startEdit}
                       onDelete={handleDelete}
+                      onArchive={handleArchive}
+                      archivedView={listFilter === 'archived'}
                     />
                   ))}
                 </ul>
@@ -279,8 +316,11 @@ export default function AdminEvents() {
                         event={event}
                         editingId={editingId}
                         deletingId={deletingId}
+                        archivingId={archivingId}
                         onEdit={startEdit}
                         onDelete={handleDelete}
+                        onArchive={handleArchive}
+                        archivedView={listFilter === 'archived'}
                         muted
                       />
                     ))}
@@ -299,15 +339,21 @@ function EventRow({
   event,
   editingId,
   deletingId,
+  archivingId,
   onEdit,
   onDelete,
+  onArchive,
+  archivedView = false,
   muted = false,
 }: {
   event: ClubEvent
   editingId: string | null
   deletingId: string | null
+  archivingId: string | null
   onEdit: (event: ClubEvent) => void
   onDelete: (event: ClubEvent) => void
+  onArchive: (event: ClubEvent, archived: boolean) => void
+  archivedView?: boolean
   muted?: boolean
 }) {
   const isEditing = editingId === event.id
@@ -329,20 +375,41 @@ function EventRow({
         )}
       </div>
       <div className="flex shrink-0 flex-col gap-1">
-        <button
-          type="button"
-          onClick={() => onEdit(event)}
-          className="text-xs font-semibold text-brand-blue hover:text-brand-navy px-2 py-1"
-        >
-          Edit
-        </button>
+        {!archivedView && (
+          <button
+            type="button"
+            onClick={() => onEdit(event)}
+            className="text-xs font-semibold text-brand-blue hover:text-brand-navy px-2 py-1"
+          >
+            Edit
+          </button>
+        )}
+        {archivedView ? (
+          <button
+            type="button"
+            onClick={() => onArchive(event, false)}
+            disabled={archivingId === event.id}
+            className="text-xs font-semibold text-brand-blue hover:text-brand-navy px-2 py-1"
+          >
+            {archivingId === event.id ? 'Restoring…' : 'Restore'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onArchive(event, true)}
+            disabled={archivingId === event.id}
+            className="text-xs font-semibold text-gray-600 hover:text-brand-navy px-2 py-1"
+          >
+            {archivingId === event.id ? 'Archiving…' : 'Archive'}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => onDelete(event)}
           disabled={deletingId === event.id}
           className="text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1"
         >
-          {deletingId === event.id ? 'Removing...' : 'Remove'}
+          {deletingId === event.id ? 'Deleting…' : 'Delete'}
         </button>
       </div>
     </li>

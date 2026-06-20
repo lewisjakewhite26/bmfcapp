@@ -3,6 +3,7 @@ import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { CalendarList } from '../components/club/CalendarList'
 import { CalendarMonthView } from '../components/club/CalendarMonthView'
+import { CalendarLegend } from '../components/club/CalendarLegend'
 import { DataErrorBanner } from '../components/ui/DataErrorBanner'
 import { useAuth } from '../hooks/useAuth'
 import { useCalendar } from '../hooks/useClubData'
@@ -50,21 +51,26 @@ export default function CalendarPage() {
 
         {loading ? (
           <CalendarSkeleton mode={view} />
-        ) : view === 'list' ? (
-          <CalendarList
-            items={calendarItems}
-            availability={availability}
-            showAvailability
-            availabilityDisabled={availabilitySaving}
-            onAvailabilityChange={setAvailabilityFor}
-          />
         ) : (
-          <CalendarMonthView
-            items={calendarItems}
-            availability={availability}
-            availabilityDisabled={availabilitySaving}
-            onAvailabilityChange={setAvailabilityFor}
-          />
+          <>
+            <CalendarLegend />
+            {view === 'list' ? (
+              <CalendarList
+                items={calendarItems}
+                availability={availability}
+                showAvailability
+                availabilityDisabled={availabilitySaving}
+                onAvailabilityChange={setAvailabilityFor}
+              />
+            ) : (
+              <CalendarMonthView
+                items={calendarItems}
+                availability={availability}
+                availabilityDisabled={availabilitySaving}
+                onAvailabilityChange={setAvailabilityFor}
+              />
+            )}
+          </>
         )}
       </div>
     </PageShell>

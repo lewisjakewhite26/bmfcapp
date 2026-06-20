@@ -3,6 +3,7 @@ import { CLUB_EVENT_TYPE_LABELS } from '../../lib/clubEventTypes'
 import { FixtureCard } from './FixtureCard'
 import { AvailabilityForm } from './AvailabilityForm'
 import { formatMatchDate, formatMatchTime } from '../../lib/format'
+import { isCompletedFixtureItem } from '../../lib/calendarItems'
 
 interface CalendarListProps {
   items: CalendarItem[]
@@ -35,12 +36,13 @@ export function CalendarList({ items, availability, onAvailabilityChange, showAv
       {items.map((item) => {
         if (item.type === 'fixture') {
           const entry = getEntry(item.data.id)
+          const completed = isCompletedFixtureItem(item)
           return (
             <FixtureCard
               key={`f-${item.data.id}`}
               fixture={item.data}
               availabilitySlot={
-                showAvailability && onAvailabilityChange ? (
+                !completed && showAvailability && onAvailabilityChange ? (
                   <AvailabilityForm
                     value={entry?.status ?? null}
                     message={entry?.message}

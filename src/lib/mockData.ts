@@ -88,6 +88,7 @@ export const MOCK_FUNDRAISERS: Fundraiser[] = [
     name: 'Bag pack at Tesco',
     date: dateOnlyFromNow(21),
     notes: 'Morning shift. All hands welcome',
+    archived: false,
     created_at: daysAgo(2),
   },
   {
@@ -95,6 +96,7 @@ export const MOCK_FUNDRAISERS: Fundraiser[] = [
     name: 'Race night',
     date: dateOnlyFromNow(42),
     notes: null,
+    archived: false,
     created_at: daysAgo(1),
   },
 ]
@@ -107,6 +109,7 @@ export const MOCK_CLUB_EVENTS: ClubEvent[] = [
     event_date: daysFromNow(12, 19, 30),
     location: 'The Crown, Bishop Middleham',
     notes: 'All squad welcome',
+    archived: false,
     created_at: daysAgo(3),
   },
   {
@@ -116,6 +119,7 @@ export const MOCK_CLUB_EVENTS: ClubEvent[] = [
     event_date: daysFromNow(35, 18, 0),
     location: 'Community Centre',
     notes: null,
+    archived: false,
     created_at: daysAgo(1),
   },
 ]
@@ -168,7 +172,28 @@ let fundraisers = [...MOCK_FUNDRAISERS]
 const fundraiserParticipation = new Map<string, Map<string, boolean>>()
 let availability: Availability[] = []
 const mockLineups = new Map<string, Lineup>()
-let adminUsers: MockAdminUser[] = [...MOCK_ADMIN_USERS]
+
+/** Pre-seeded pending player when VITE_E2E=true (Playwright). */
+export const E2E_PENDING_APPROVAL_USER_ID = '00000000-0000-0000-0000-0000000000e2'
+
+const E2E_SEED_USERS: MockAdminUser[] =
+  import.meta.env.VITE_E2E === 'true'
+    ? [
+        {
+          id: E2E_PENDING_APPROVAL_USER_ID,
+          username: 'same2e',
+          display_name: 'SamE2e',
+          first_name: 'Sam',
+          last_name: 'E2e',
+          is_admin: false,
+          is_committee: false,
+          is_approved: false,
+          created_at: '2026-06-01T00:00:00Z',
+        },
+      ]
+    : []
+
+let adminUsers: MockAdminUser[] = [...MOCK_ADMIN_USERS, ...E2E_SEED_USERS]
 let squad = [...MOCK_SQUAD]
 const mockPasscodes = new Map<string, string>([[PREVIEW_PLAYER_ID, '1234']])
 const mockPlayerPhotoUrls = new Map<string, string>()
@@ -210,6 +235,47 @@ const mockInviteTokens = new Map<string, string>()
 /** Stable token for dev previews and screenshot capture (/invite/demoinvite0001). */
 export const MOCK_DEMO_INVITE_TOKEN = 'demoinvite0001'
 mockInviteTokens.set(MOCK_DEMO_INVITE_TOKEN, '00000000-0000-0000-0000-000000000003')
+
+const E2E_MOCK_STORAGE_KEY = 'bmfc_e2e_mock_snapshot'
+
+type E2eMockSnapshot = {
+  adminUsers: MockAdminUser[]
+  passcodes: [string, string][]
+  inviteTokens: [string, string][]
+}
+
+function persistE2eMockSnapshot(): void {
+  if (import.meta.env.VITE_E2E !== 'true') return
+  try {
+    const snapshot: E2eMockSnapshot = {
+      adminUsers: adminUsers.map((u) => ({ ...u })),
+      passcodes: [...mockPasscodes.entries()],
+      inviteTokens: [...mockInviteTokens.entries()],
+    }
+    localStorage.setItem(E2E_MOCK_STORAGE_KEY, JSON.stringify(snapshot))
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function hydrateE2eMockSnapshot(): void {
+  if (import.meta.env.VITE_E2E !== 'true') return
+  try {
+    const raw = localStorage.getItem(E2E_MOCK_STORAGE_KEY)
+    if (!raw) return
+    const snap = JSON.parse(raw) as E2eMockSnapshot
+    if (!Array.isArray(snap.adminUsers)) return
+    adminUsers = snap.adminUsers
+    mockPasscodes.clear()
+    for (const [k, v] of snap.passcodes ?? []) mockPasscodes.set(k, v)
+    mockInviteTokens.clear()
+    for (const [k, v] of snap.inviteTokens ?? []) mockInviteTokens.set(k, v)
+  } catch {
+    localStorage.removeItem(E2E_MOCK_STORAGE_KEY)
+  }
+}
+
+hydrateE2eMockSnapshot()
 
 function squadName(playerId: string): string {
   return squad.find((s) => s.player_id === playerId)?.display_name ?? 'Unknown'
@@ -446,6 +512,7 @@ export function createMockInvite(
     })
   }
 
+  persistE2eMockSnapshot()
   return { id, display_name: label ?? 'New player', invite_label: label, invite_token: token }
 }
 
@@ -457,6 +524,7 @@ export function setMockUserCommittee(userId: string, isCommittee: boolean) {
 export function resetMockPasscode(userId: string, passcode: string) {
   if (!/^\d{4}$/.test(passcode)) throw new Error('Passcode must be 4 digits')
   mockPasscodes.set(userId, passcode)
+  persistE2eMockSnapshot()
 }
 
 export function changeMockPasscode(userId: string, currentPasscode: string, newPasscode: string) {
@@ -467,6 +535,7 @@ export function changeMockPasscode(userId: string, currentPasscode: string, newP
   const stored = mockPasscodes.get(userId)
   if (!stored || stored !== currentPasscode) throw new Error('Current passcode is wrong')
   mockPasscodes.set(userId, newPasscode)
+  persistE2eMockSnapshot()
 }
 
 export function updateMockPlayerNames(userId: string, firstName: string, lastName: string) {
@@ -474,6 +543,7 @@ export function updateMockPlayerNames(userId: string, firstName: string, lastNam
   if (!user) throw new Error('Player not found')
   if (user.invite_pending) throw new Error('Player has not finished invite setup yet')
   applyMockPlayerNames(userId, firstName, lastName)
+  persistE2eMockSnapshot()
 }
 
 export function upsertMockSquad(
@@ -612,6 +682,7 @@ export function regenerateMockInvite(userId: string): { id: string; display_name
 
   const token = crypto.randomUUID().replace(/-/g, '')
   mockInviteTokens.set(token, userId)
+  persistE2eMockSnapshot()
   return { id: userId, display_name: user.display_name, invite_token: token }
 }
 
@@ -642,6 +713,7 @@ export function completeMockInvite(
   user.is_approved = false
   mockPasscodes.set(userId, passcode)
   mockInviteTokens.delete(token)
+  persistE2eMockSnapshot()
 
   return {
     id: user.id,
@@ -654,9 +726,30 @@ export function completeMockInvite(
   }
 }
 
+/** E2E-only mock login (VITE_E2E) — display name + passcode after invite approval. */
+export function mockLoginByCredentials(displayName: string, passcode: string): import('../types').User | null {
+  if (!import.meta.env.VITE_E2E || !/^\d{4}$/.test(passcode)) return null
+
+  const normalized = displayName.trim().toLowerCase()
+  const user = adminUsers.find((u) => u.display_name.toLowerCase() === normalized)
+  if (!user || !user.is_approved) return null
+  if (mockPasscodes.get(user.id) !== passcode) return null
+
+  return {
+    id: user.id,
+    username: user.username,
+    display_name: user.display_name,
+    is_admin: user.is_admin,
+    is_committee: user.is_committee,
+    is_approved: true,
+    session_token: 'mock-e2e-login',
+  }
+}
+
 export function setMockUserApproved(userId: string, approved: boolean) {
   const user = adminUsers.find((u) => u.id === userId)
   if (user) user.is_approved = approved
+  persistE2eMockSnapshot()
 }
 
 export function saveMockResult(
@@ -726,17 +819,18 @@ export function removeMockTrainingSession(trainingId: string): void {
   availability = availability.filter((a) => a.training_id !== trainingId)
 }
 
-export function getMockClubEvents(): ClubEvent[] {
-  return [...clubEvents].sort(
-    (a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime(),
-  )
+export function getMockClubEvents(includeArchived = false): ClubEvent[] {
+  return clubEvents
+    .filter((e) => includeArchived || !e.archived)
+    .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
 }
 
 export function addMockClubEvent(
-  input: Omit<ClubEvent, 'id' | 'created_at'>,
+  input: Omit<ClubEvent, 'id' | 'created_at' | 'archived'>,
 ): ClubEvent {
   const row: ClubEvent = {
     ...input,
+    archived: false,
     id: crypto.randomUUID(),
     created_at: new Date().toISOString(),
   }
@@ -746,7 +840,7 @@ export function addMockClubEvent(
 
 export function updateMockClubEvent(
   eventId: string,
-  input: Omit<ClubEvent, 'id' | 'created_at'>,
+  input: Omit<ClubEvent, 'id' | 'created_at' | 'archived'>,
 ): ClubEvent {
   const row = clubEvents.find((e) => e.id === eventId)
   if (!row) throw new Error('Event not found')
@@ -758,14 +852,23 @@ export function updateMockClubEvent(
   return row
 }
 
+export function setMockClubEventArchived(eventId: string, archived: boolean): ClubEvent {
+  const row = clubEvents.find((e) => e.id === eventId)
+  if (!row) throw new Error('Event not found')
+  row.archived = archived
+  return row
+}
+
 export function removeMockClubEvent(eventId: string): void {
   const exists = clubEvents.some((e) => e.id === eventId)
   if (!exists) throw new Error('Event not found')
   clubEvents = clubEvents.filter((e) => e.id !== eventId)
 }
 
-export function getMockFundraisers(): Fundraiser[] {
-  return [...fundraisers].sort((a, b) => {
+export function getMockFundraisers(includeArchived = false): Fundraiser[] {
+  return fundraisers
+    .filter((f) => includeArchived || !f.archived)
+    .sort((a, b) => {
     const byDate = b.date.localeCompare(a.date)
     if (byDate !== 0) return byDate
     return b.created_at.localeCompare(a.created_at)
@@ -777,12 +880,27 @@ export function addMockFundraiser(
 ): Fundraiser {
   const row: Fundraiser = {
     ...input,
+    archived: false,
     id: crypto.randomUUID(),
     created_at: new Date().toISOString(),
   }
   fundraisers.push(row)
   fundraiserParticipation.set(row.id, new Map())
   return row
+}
+
+export function setMockFundraiserArchived(fundraiserId: string, archived: boolean): Fundraiser {
+  const row = fundraisers.find((f) => f.id === fundraiserId)
+  if (!row) throw new Error('Fundraiser not found')
+  row.archived = archived
+  return row
+}
+
+export function removeMockFundraiser(fundraiserId: string): void {
+  const exists = fundraisers.some((f) => f.id === fundraiserId)
+  if (!exists) throw new Error('Fundraiser not found')
+  fundraisers = fundraisers.filter((f) => f.id !== fundraiserId)
+  fundraiserParticipation.delete(fundraiserId)
 }
 
 export function getMockFundraiserDetail(fundraiserId: string): FundraiserDetail {
@@ -823,12 +941,13 @@ export function saveMockFundraiserParticipation(
 }
 
 export function getMockFundraiserParticipationSummary(): FundraiserParticipationSummary {
-  const total = fundraisers.length
+  const total = fundraisers.filter((f) => !f.archived).length
   const members = squad
     .filter((m) => m.active)
     .map((m) => {
       let participated_count = 0
       for (const f of fundraisers) {
+        if (f.archived) continue
         const map = fundraiserParticipation.get(f.id)
         if (map?.get(m.player_id)) participated_count += 1
       }
@@ -884,9 +1003,21 @@ export function resetMockData() {
   seedMockFundraiserParticipation()
   availability = []
   mockLineups.clear()
-  adminUsers = [...MOCK_ADMIN_USERS]
+  adminUsers = [...MOCK_ADMIN_USERS, ...(import.meta.env.VITE_E2E === 'true' ? E2E_SEED_USERS : [])]
   squad = [...MOCK_SQUAD]
+  mockPasscodes.clear()
+  mockPasscodes.set(PREVIEW_PLAYER_ID, '1234')
   mockInviteTokens.clear()
   mockInviteTokens.set(MOCK_DEMO_INVITE_TOKEN, '00000000-0000-0000-0000-000000000003')
   seedMockFixtureAvailability()
+}
+
+/** Playwright: reset in-memory mock state between tests (window.__BMFC_E2E_RESET__). */
+export function resetMockDataForE2e() {
+  try {
+    localStorage.removeItem(E2E_MOCK_STORAGE_KEY)
+  } catch {
+    // ignore
+  }
+  resetMockData()
 }

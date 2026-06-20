@@ -101,6 +101,7 @@ export interface ClubEvent {
   event_date: string
   location: string | null
   notes: string | null
+  archived: boolean
   created_at: string
 }
 
@@ -210,6 +211,7 @@ export interface Fundraiser {
   name: string
   date: string
   notes: string | null
+  archived: boolean
   created_at: string
 }
 

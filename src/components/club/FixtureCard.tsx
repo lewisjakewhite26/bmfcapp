@@ -1,5 +1,5 @@
 import type { FixtureWithResult } from '../../types'
-import { formatMatchDate, formatMatchTime, formatScore, resultColor } from '../../lib/format'
+import { formatMatchDate, formatMatchTime, formatScore, resultColor, fixtureResultBorderClass } from '../../lib/format'
 import { CLUB_NAME } from '../../lib/mockData'
 
 interface FixtureCardProps {
@@ -15,7 +15,7 @@ export function FixtureCard({ fixture, availabilitySlot }: FixtureCardProps) {
   const completed = fixture.status === 'completed' && fixture.result
 
   return (
-    <article className="glass-card p-4 sm:p-5 border-l-4 border-brand-blue">
+    <article className={`glass-card p-4 sm:p-5 border-l-4 ${fixtureResultBorderClass(fixture)}`}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-blue">{fixture.competition}</p>
