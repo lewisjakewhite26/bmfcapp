@@ -51,6 +51,17 @@ import {
   saveMockLiveMatchDraft,
   clearMockLiveMatchDraft,
 } from './mockData'
+import {
+  addMockExpense,
+  addMockSponsorship,
+  deleteMockExpense,
+  deleteMockSponsorship,
+  getMockExpenses,
+  getMockFinanceOverview,
+  getMockSponsorships,
+  updateMockExpense,
+  updateMockSponsorship,
+} from './mockFinance'
 import { parseLiveDraftEntries } from './liveMatchDraftStorage'
 import type { LiveMatchDraft } from './liveMatchEvents'
 import { playerPhotoFileExt, validatePlayerPhotoFile } from './playerPhotos'
@@ -79,6 +90,11 @@ import type {
   SquadPosition,
   TrainingSession,
   ClubEvent,
+  Expense,
+  ExpenseCategory,
+  FinanceOverview,
+  Sponsorship,
+  SponsorshipCategory,
 } from '../types'
 
 export { getMockInvitePreview, completeMockInvite } from './mockData'
@@ -1122,6 +1138,260 @@ export async function deletePlayerPhoto(playerId: string): Promise<void> {
     p_admin_id: session.userId,
     p_session_token: session.sessionToken,
     p_player_id: playerId,
+  })
+  if (error) throw error
+}
+
+function num(value: unknown): number {
+  return typeof value === 'number' ? value : Number(value)
+}
+
+function mapSponsorship(row: Record<string, unknown>): Sponsorship {
+  return {
+    id: row.id as string,
+    sponsor_name: row.sponsor_name as string,
+    category: row.category as SponsorshipCategory,
+    item_detail: (row.item_detail as string | null) ?? null,
+    amount: num(row.amount),
+    paid: Boolean(row.paid),
+    date_added: row.date_added as string,
+    logged_by_id: row.logged_by_id as string,
+    logged_by_name: row.logged_by_name as string,
+    edited_by_id: (row.edited_by_id as string | null) ?? null,
+    edited_by_name: (row.edited_by_name as string | null) ?? null,
+    edited_at: (row.edited_at as string | null) ?? null,
+    created_at: row.created_at as string,
+  }
+}
+
+function mapExpense(row: Record<string, unknown>): Expense {
+  return {
+    id: row.id as string,
+    description: row.description as string,
+    category: row.category as ExpenseCategory,
+    amount: num(row.amount),
+    expense_date: row.expense_date as string,
+    logged_by_id: row.logged_by_id as string,
+    logged_by_name: row.logged_by_name as string,
+    edited_by_id: (row.edited_by_id as string | null) ?? null,
+    edited_by_name: (row.edited_by_name as string | null) ?? null,
+    edited_at: (row.edited_at as string | null) ?? null,
+    created_at: row.created_at as string,
+  }
+}
+
+export async function fetchFinanceOverview(): Promise<FinanceOverview> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockFinanceOverview()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_finance_overview', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+
+  const row = data as Record<string, unknown>
+  return {
+    paid_income: num(row.paid_income),
+    pending_income: num(row.pending_income),
+    total_expenses: num(row.total_expenses),
+    net_balance: num(row.net_balance),
+    sponsorship_by_category: (row.sponsorship_by_category as FinanceOverview['sponsorship_by_category']) ?? [],
+    expenses_by_category: (row.expenses_by_category as FinanceOverview['expenses_by_category']) ?? [],
+  }
+}
+
+export async function fetchSponsorships(): Promise<Sponsorship[]> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockSponsorships()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_list_sponsorships', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return ((data ?? []) as Record<string, unknown>[]).map(mapSponsorship)
+}
+
+export async function createSponsorship(input: {
+  sponsor_name: string
+  category: SponsorshipCategory
+  item_detail?: string | null
+  amount: number
+  paid: boolean
+  date_added: string
+}): Promise<Sponsorship> {
+  if (isMockDataMode()) {
+    await delay()
+    return addMockSponsorship(input)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_create_sponsorship', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_sponsor_name: input.sponsor_name.trim(),
+    p_category: input.category,
+    p_item_detail: input.item_detail ?? null,
+    p_amount: input.amount,
+    p_paid: input.paid,
+    p_date_added: input.date_added,
+  })
+  if (error) throw error
+  return mapSponsorship(data as Record<string, unknown>)
+}
+
+export async function updateSponsorship(
+  id: string,
+  input: {
+    sponsor_name: string
+    category: SponsorshipCategory
+    item_detail?: string | null
+    amount: number
+    paid: boolean
+    date_added: string
+  },
+): Promise<Sponsorship> {
+  if (isMockDataMode()) {
+    await delay()
+    return updateMockSponsorship(id, input)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_update_sponsorship', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_sponsorship_id: id,
+    p_sponsor_name: input.sponsor_name.trim(),
+    p_category: input.category,
+    p_item_detail: input.item_detail ?? null,
+    p_amount: input.amount,
+    p_paid: input.paid,
+    p_date_added: input.date_added,
+  })
+  if (error) throw error
+  return mapSponsorship(data as Record<string, unknown>)
+}
+
+export async function deleteSponsorship(id: string): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    deleteMockSponsorship(id)
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_delete_sponsorship', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_sponsorship_id: id,
+  })
+  if (error) throw error
+}
+
+export async function fetchExpenses(): Promise<Expense[]> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockExpenses()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_list_expenses', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return ((data ?? []) as Record<string, unknown>[]).map(mapExpense)
+}
+
+export async function createExpense(input: {
+  description: string
+  category: ExpenseCategory
+  amount: number
+  expense_date: string
+}): Promise<Expense> {
+  if (isMockDataMode()) {
+    await delay()
+    return addMockExpense(input)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_create_expense', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_description: input.description.trim(),
+    p_category: input.category,
+    p_amount: input.amount,
+    p_expense_date: input.expense_date,
+  })
+  if (error) throw error
+  return mapExpense(data as Record<string, unknown>)
+}
+
+export async function updateExpense(
+  id: string,
+  input: {
+    description: string
+    category: ExpenseCategory
+    amount: number
+    expense_date: string
+  },
+): Promise<Expense> {
+  if (isMockDataMode()) {
+    await delay()
+    return updateMockExpense(id, input)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_update_expense', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_expense_id: id,
+    p_description: input.description.trim(),
+    p_category: input.category,
+    p_amount: input.amount,
+    p_expense_date: input.expense_date,
+  })
+  if (error) throw error
+  return mapExpense(data as Record<string, unknown>)
+}
+
+export async function deleteExpense(id: string): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    deleteMockExpense(id)
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_delete_expense', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_expense_id: id,
   })
   if (error) throw error
 }

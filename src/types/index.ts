@@ -235,3 +235,56 @@ export interface FundraiserParticipationSummary {
   total_fundraisers: number
   members: FundraiserParticipationSummaryRow[]
 }
+
+export type SponsorshipCategory = 'player_sponsor' | 'match_balls' | 'kit' | 'other'
+
+export type ExpenseCategory =
+  | 'pitch_hire'
+  | 'referee_fees'
+  | 'kit'
+  | 'equipment'
+  | 'admin_fees'
+  | 'other'
+
+export interface FinanceLedgerMeta {
+  logged_by_id: string
+  logged_by_name: string
+  edited_by_id?: string | null
+  edited_by_name?: string | null
+  edited_at?: string | null
+  created_at: string
+}
+
+export interface Sponsorship extends FinanceLedgerMeta {
+  id: string
+  sponsor_name: string
+  category: SponsorshipCategory
+  item_detail?: string | null
+  amount: number
+  paid: boolean
+  date_added: string
+}
+
+export interface Expense extends FinanceLedgerMeta {
+  id: string
+  description: string
+  category: ExpenseCategory
+  amount: number
+  expense_date: string
+}
+
+export interface FinanceCategoryBreakdown {
+  category: string
+  paid_amount?: number
+  pending_amount?: number
+  amount?: number
+}
+
+export interface FinanceOverview {
+  paid_income: number
+  pending_income: number
+  total_expenses: number
+  net_balance: number
+  sponsorship_by_category: FinanceCategoryBreakdown[]
+  expenses_by_category: FinanceCategoryBreakdown[]
+}

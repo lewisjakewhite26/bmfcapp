@@ -39,6 +39,11 @@ Apply migrations **in order** via the Supabase SQL Editor (Dashboard → SQL →
 | `supabase-club/migrations/006_manual_fixtures.sql` | Manual fixture CRUD + delete |
 | `supabase-club/migrations/007_training_edit_delete.sql` | Training edit/delete |
 | `supabase-club/migrations/008_manual_fixture_edit.sql` | Manual fixture edit |
+| … | `009`–`018` — lineups, fundraisers, events, photos, live matchday (see `supabase-club/migrations/`) |
+| `supabase-club/migrations/019_player_names_and_passcode.sql` | Names on invite link; display **ChrisL**; passcode self-service |
+| `supabase-club/migrations/020_display_name_no_space.sql` | ChrisL display name backfill |
+| `supabase-club/migrations/021_profiles_photo_url_grant.sql` | Squad stats photo_url read grant |
+| `supabase-club/migrations/022_finance.sql` | Sponsorships, expenses, finance RPCs |
 
 **Supabase CLI example** (if `supabase` is installed and linked):
 
@@ -59,7 +64,7 @@ Edit `supabase-club/seed.sql` — change the display name and passcode **before*
 
 Run the seed in the SQL Editor. Then log in at `/login` with that name and 4-digit passcode.
 
-From Admin → **Squad members**, create invite links for players.
+From Admin → **Squad members**, create invite links for players. Players enter their first and last name when they open the link, then set a passcode. Login uses the short display name (e.g. `Chris L.`).
 
 ---
 
@@ -211,4 +216,4 @@ Checklist after deploy:
 - [README.md](../README.md) — quick start and scripts
 - [PAGE-COPY.md](PAGE-COPY.md) — all UI strings
 - [AUDITNEW.md](../AUDITNEW.md) — project audit
-- [ROADMAP-90.md](ROADMAP-90.md) — roadmap to 90+ score
+- [ROADMAP-99.md](ROADMAP-99.md) — roadmap to 99/100 score
