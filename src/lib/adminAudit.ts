@@ -50,6 +50,7 @@ export const ADMIN_AUDIT_ACTIONS = [
   'expense_created',
   'expense_updated',
   'expense_deleted',
+  'signing_on_fee_updated',
   'push_sent',
 ] as const
 
@@ -97,6 +98,7 @@ const ACTION_LABELS: Record<AdminAuditAction, string> = {
   expense_created: 'Expense added',
   expense_updated: 'Expense updated',
   expense_deleted: 'Expense deleted',
+  signing_on_fee_updated: 'Signing-on fee updated',
   push_sent: 'Push notification sent',
 }
 

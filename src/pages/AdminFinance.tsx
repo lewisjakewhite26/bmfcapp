@@ -6,6 +6,7 @@ import { PageShell } from '../components/ui/PageBackground'
 import { DataErrorBanner } from '../components/ui/DataErrorBanner'
 import { FinanceBreakdownChart } from '../components/finance/FinanceBreakdownChart'
 import { FinanceLedgerNote } from '../components/finance/FinanceLedgerNote'
+import { SigningOnFeeChecklist } from '../components/finance/SigningOnFeeChecklist'
 import {
   createExpense,
   createSponsorship,
@@ -244,6 +245,8 @@ export default function AdminFinance() {
             </section>
           </>
         )}
+
+        <SigningOnFeeChecklist />
 
         <section className="glass-card p-5 space-y-4">
           <h2 className="font-semibold text-brand-navy">{editingSpId ? 'Edit sponsorship' : 'Add sponsorship'}</h2>

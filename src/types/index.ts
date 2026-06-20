@@ -310,3 +310,16 @@ export interface FinanceOverview {
   sponsorship_by_category: FinanceCategoryBreakdown[]
   expenses_by_category: FinanceCategoryBreakdown[]
 }
+
+export interface SigningOnFeeRow {
+  profile_id: string
+  display_name: string
+  paid: boolean
+  marked_at?: string | null
+  marked_by_name?: string | null
+}
+
+export interface SigningOnFeesSummary {
+  season: string
+  members: SigningOnFeeRow[]
+}

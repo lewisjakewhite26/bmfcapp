@@ -70,6 +70,8 @@ import {
   getMockExpenses,
   getMockFinanceOverview,
   getMockSponsorships,
+  getMockSigningOnFees,
+  setMockSigningOnPaid,
   updateMockExpense,
   updateMockSponsorship,
 } from './mockFinance'
@@ -107,6 +109,8 @@ import type {
   FinanceOverview,
   Sponsorship,
   SponsorshipCategory,
+  SigningOnFeeRow,
+  SigningOnFeesSummary,
   TeamInviteSettings,
 } from '../types'
 
@@ -1897,4 +1901,74 @@ export async function deleteExpense(id: string): Promise<void> {
   })
   if (error) throw error
   void recordAdminAudit('expense_deleted', { entityType: 'expense', entityId: id })
+}
+
+function mapSigningOnFeeRow(row: Record<string, unknown>): SigningOnFeeRow {
+  return {
+    profile_id: row.profile_id as string,
+    display_name: row.display_name as string,
+    paid: Boolean(row.paid),
+    marked_at: (row.marked_at as string | null) ?? null,
+    marked_by_name: (row.marked_by_name as string | null) ?? null,
+  }
+}
+
+export async function fetchSigningOnFees(season: string): Promise<SigningOnFeesSummary> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockSigningOnFees(season)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_list_signing_on_fees', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_season: season,
+  })
+  if (error) throw error
+
+  const row = data as Record<string, unknown>
+  return {
+    season: row.season as string,
+    members: ((row.members ?? []) as Record<string, unknown>[]).map(mapSigningOnFeeRow),
+  }
+}
+
+export async function setSigningOnPaid(
+  profileId: string,
+  season: string,
+  paid: boolean,
+): Promise<SigningOnFeeRow> {
+  if (isMockDataMode()) {
+    await delay(40)
+    const updated = setMockSigningOnPaid(season, profileId, paid)
+    void recordAdminAudit('signing_on_fee_updated', {
+      entityType: 'profile',
+      entityId: profileId,
+      details: { display_name: updated.display_name, paid, season },
+    })
+    return updated
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_set_signing_on_paid', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_profile_id: profileId,
+    p_season: season,
+    p_paid: paid,
+  })
+  if (error) throw error
+
+  const updated = mapSigningOnFeeRow(data as Record<string, unknown>)
+  void recordAdminAudit('signing_on_fee_updated', {
+    entityType: 'profile',
+    entityId: profileId,
+    details: { paid, season },
+  })
+  return updated
 }

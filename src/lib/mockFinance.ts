@@ -1,9 +1,13 @@
 import { loadSession } from '../hooks/authContext'
 import { DEV_ADMIN } from './devBypass'
+import { getMockSquad } from './mockData'
+import { DDSFL_SEASONS, DDSFL_ACTIVE_SEASON } from './ddsflConstants'
 import type {
   Expense,
   ExpenseCategory,
   FinanceOverview,
+  SigningOnFeeRow,
+  SigningOnFeesSummary,
   Sponsorship,
   SponsorshipCategory,
 } from '../types'
@@ -219,7 +223,49 @@ export function deleteMockExpense(id: string) {
   expenses = expenses.filter((e) => e.id !== id)
 }
 
+const signingOnPaidBySeason = new Map<string, Set<string>>()
+
 export function resetMockFinance() {
   sponsorships = [...MOCK_SPONSORSHIPS]
   expenses = [...MOCK_EXPENSES]
+  signingOnPaidBySeason.clear()
 }
+
+function signingOnSeasonKey(season: string) {
+  if (!signingOnPaidBySeason.has(season)) {
+    signingOnPaidBySeason.set(season, new Set(['00000000-0000-0000-0000-000000000001']))
+  }
+  return signingOnPaidBySeason.get(season)!
+}
+
+export function getMockSigningOnFees(season: string): SigningOnFeesSummary {
+  const paidSet = signingOnSeasonKey(season)
+  return {
+    season,
+    members: getMockSquad().map((member) => ({
+      profile_id: member.player_id,
+      display_name: member.display_name,
+      paid: paidSet.has(member.player_id),
+      marked_at: paidSet.has(member.player_id) ? new Date().toISOString() : null,
+      marked_by_name: paidSet.has(member.player_id) ? MOCK_LOGGED_BY.name : null,
+    })),
+  }
+}
+
+export function setMockSigningOnPaid(season: string, profileId: string, paid: boolean): SigningOnFeeRow {
+  const paidSet = signingOnSeasonKey(season)
+  const actor = mockActor()
+  if (paid) paidSet.add(profileId)
+  else paidSet.delete(profileId)
+
+  const member = getMockSquad().find((m) => m.player_id === profileId)
+  return {
+    profile_id: profileId,
+    display_name: member?.display_name ?? 'Unknown',
+    paid,
+    marked_at: paid ? new Date().toISOString() : null,
+    marked_by_name: paid ? actor.name : null,
+  }
+}
+
+export const MOCK_CURRENT_SEASON = DDSFL_SEASONS[DDSFL_ACTIVE_SEASON].appSeason
