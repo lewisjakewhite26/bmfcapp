@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { LandingHeroBackdrop } from '../components/ui/LandingHeroBackdrop'
+import { LandingDownloadButton } from '../components/ui/LandingDownloadButton'
+import { usePwaInstall } from '../hooks/usePwaInstall'
 import { CLUB_NAME, LEAGUE_NAME } from '../lib/mockData'
 
 const FEATURES = [
@@ -29,6 +31,7 @@ function FadeUp({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 export default function Landing() {
   const heroRef = useRef<HTMLElement>(null)
   const [showScrollHint, setShowScrollHint] = useState(true)
+  const { standalone } = usePwaInstall()
 
   useEffect(() => {
     const onScroll = () => {
@@ -48,7 +51,7 @@ export default function Landing() {
         >
           <LandingHeroBackdrop containerRef={heroRef} />
 
-          <div className="relative z-10 flex flex-col items-center text-center w-full max-w-[900px] mx-auto">
+          <div className="relative z-10 mx-auto flex w-full max-w-[900px] flex-col items-center text-center">
             <img
               src="/logo.png"
               alt="BMFC"
@@ -70,12 +73,16 @@ export default function Landing() {
             </p>
             <p className="text-sm text-gray-400 mb-8">{LEAGUE_NAME}</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                to="/login"
-                className="inline-flex items-center justify-center px-8 py-3 rounded-pill font-semibold text-white bg-brand-blue shadow-[0_4px_16px_rgba(43,95,192,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(43,95,192,0.3)] min-w-[140px]"
-              >
-                Log in
-              </Link>
+              {standalone ? (
+                <Link
+                  to="/login"
+                  className="inline-flex items-center justify-center px-8 py-3 rounded-pill font-semibold text-white bg-brand-blue shadow-[0_4px_16px_rgba(43,95,192,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(43,95,192,0.3)] min-w-[140px]"
+                >
+                  Log in
+                </Link>
+              ) : (
+                <LandingDownloadButton />
+              )}
             </div>
             <p className="mt-4 text-sm text-gray-400">New player? Use the invite link from your admin.</p>
             <p className="mt-8 text-[0.8rem] text-[#9ca3af]">

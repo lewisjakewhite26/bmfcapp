@@ -4,10 +4,10 @@ import { usePwaInstall } from '../../hooks/usePwaInstall'
 import { PwaIosInstallDialog } from './PwaIosInstallDialog'
 import { triggerPwaInstall } from '../../lib/pwaInstall'
 
-function InstallIcon() {
+function InstallIcon({ className = 'w-4 h-4 shrink-0' }: { className?: string }) {
   return (
     <svg
-      className="w-4 h-4 shrink-0"
+      className={className}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -38,7 +38,7 @@ export function PwaInstallNavButton() {
 
     if (!canPrompt) {
       toast(
-        'Install will appear here once your browser is ready. Try again after browsing a bit, or use the browser menu.',
+        'Download will appear here once your browser is ready. Try again after browsing a bit, or use the browser menu.',
         { duration: 5000 },
       )
       return
@@ -52,17 +52,19 @@ export function PwaInstallNavButton() {
     }
   }
 
+  const label = installing ? '…' : 'Download'
+
   return (
     <>
       <button
         type="button"
         onClick={handleClick}
         disabled={installing}
-        className="flex items-center gap-1 text-xs sm:text-sm text-brand-blue hover:text-brand-navy transition-colors min-h-[44px] px-1.5 sm:px-2 shrink-0 touch-manipulation"
-        aria-label="Install BMFC Club Hub app"
+        className="flex min-h-[44px] shrink-0 items-center gap-1 px-1.5 text-xs text-brand-blue transition-colors touch-manipulation hover:text-brand-navy disabled:opacity-50 sm:px-2 sm:text-sm"
+        aria-label="Download BMFC Club Hub app"
       >
         <InstallIcon />
-        <span>{installing ? '…' : 'Install'}</span>
+        <span>{label}</span>
       </button>
 
       {iosOpen && <PwaIosInstallDialog onClose={() => setIosOpen(false)} titleId="pwa-ios-install-title" />}
