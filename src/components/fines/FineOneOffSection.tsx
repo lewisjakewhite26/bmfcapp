@@ -16,7 +16,7 @@ export function FineOneOffSection({
   return (
     <div className="rounded-card border border-brand-blue/10 bg-white/50 p-3 space-y-3">
       <h3 className="text-sm font-semibold text-brand-navy">One-off fine</h3>
-      <p className="text-xs text-gray-500 -mt-1">Optional — just for this player, this session.</p>
+      <p className="text-xs text-gray-500 -mt-1">Optional — just for this player, this event.</p>
       <label className="block">
         <span className="text-xs text-gray-500">What for?</span>
         <input

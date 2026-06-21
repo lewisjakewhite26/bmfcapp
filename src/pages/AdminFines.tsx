@@ -79,7 +79,7 @@ export default function AdminFines() {
     try {
       setSessions(await fetchFineSessions())
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't load fines sessions")
+      toast.error(err instanceof Error ? err.message : "Couldn't load events")
     } finally {
       setLoadingSessions(false)
     }
@@ -98,7 +98,7 @@ export default function AdminFines() {
     try {
       setDetail(await fetchFineSessionDetail(sessionId))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't load session")
+      toast.error(err instanceof Error ? err.message : "Couldn't load event")
       setSelectedId(null)
       setDetail(null)
     } finally {
@@ -172,7 +172,7 @@ export default function AdminFines() {
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault()
     if (sessionTitle.trim().length < 2) {
-      toast.error('Enter a session title (e.g. Saturday training)')
+      toast.error('Enter an event title (e.g. Saturday training)')
       return
     }
     setCreating(true)
@@ -182,13 +182,13 @@ export default function AdminFines() {
         title: sessionTitle.trim(),
         notes: sessionNotes.trim() || null,
       })
-      toast.success(`Started fines for ${sessionDateLabel(created.session_date)}`)
+      toast.success(`Event created for ${sessionDateLabel(created.session_date)}`)
       setSessionTitle('')
       setSessionNotes('')
       await reloadSessions()
       openSession(created.id)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't create session")
+      toast.error(err instanceof Error ? err.message : "Couldn't create event")
     } finally {
       setCreating(false)
     }
@@ -295,14 +295,14 @@ export default function AdminFines() {
     setDeletingSessionId(selectedId)
     try {
       await deleteFineSession(selectedId)
-      toast.success('Session deleted')
+      toast.success('Event deleted')
       setSelectedId(null)
       setDetail(null)
       setEditingPlayerId(null)
       await reloadSessions()
       if (tab === 'payments') void reloadPayments({ silent: true })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't delete session")
+      toast.error(err instanceof Error ? err.message : "Couldn't delete event")
     } finally {
       setDeletingSessionId(null)
     }
@@ -396,7 +396,7 @@ export default function AdminFines() {
                 tab === t ? 'bg-brand-blue text-white' : 'text-brand-navy'
               }`}
             >
-              {t === 'sessions' ? 'Sessions' : 'Payments'}
+              {t === 'sessions' ? 'Log fines' : 'Payments'}
             </button>
           ))}
         </div>
@@ -404,7 +404,7 @@ export default function AdminFines() {
         {tab === 'sessions' && (
           <div className="space-y-4">
             <form onSubmit={(e) => void handleCreateSession(e)} className="glass-card p-4 space-y-3">
-              <h2 className="font-semibold text-brand-navy">Start a fines session</h2>
+              <h2 className="font-semibold text-brand-navy">Log fines for an event</h2>
               <div className="grid sm:grid-cols-2 gap-3">
                 <label className="block">
                   <span className="text-sm text-gray-500">Date</span>
@@ -438,19 +438,19 @@ export default function AdminFines() {
                 />
               </label>
               <button type="submit" className="btn-primary text-sm" disabled={creating}>
-                {creating ? 'Starting…' : 'Start session'}
+                {creating ? 'Creating…' : 'Create event'}
               </button>
             </form>
 
             <div className="grid lg:grid-cols-[minmax(0,280px)_1fr] gap-4 items-start">
               <div className="glass-card overflow-hidden">
                 <div className="px-4 py-3 border-b border-brand-blue/10">
-                  <h2 className="font-semibold text-brand-navy">Sessions</h2>
+                  <h2 className="font-semibold text-brand-navy">Events</h2>
                 </div>
                 {loadingSessions ? (
                   <p className="p-4 text-sm text-gray-500">Loading…</p>
                 ) : sessions.length === 0 ? (
-                  <p className="p-4 text-sm text-gray-500">No sessions yet.</p>
+                  <p className="p-4 text-sm text-gray-500">Nothing logged yet.</p>
                 ) : (
                   <ul className="divide-y divide-brand-blue/10 max-h-[420px] overflow-y-auto">
                     {sessions.map((s) => (
@@ -480,7 +480,7 @@ export default function AdminFines() {
               <div className="space-y-4 min-w-0">
                 {!selectedId ? (
                   <div className="glass-card p-6 text-sm text-gray-500 text-center">
-                    Select a session or start a new one.
+                    Select an event or create one.
                   </div>
                 ) : loadingDetail || !detail ? (
                   <div className="glass-card p-6 animate-pulse bg-brand-light/40 h-48 rounded-card" />
@@ -495,7 +495,7 @@ export default function AdminFines() {
                             <p className="text-sm text-gray-600 mt-2">{detail.session.notes}</p>
                           )}
                           <p className="text-sm font-medium text-brand-navy mt-3">
-                            Session total: {formatFineAmount(detail.session.session_total ?? 0)}
+                            Event total: {formatFineAmount(detail.session.session_total ?? 0)}
                           </p>
                         </div>
                         <button
@@ -504,7 +504,7 @@ export default function AdminFines() {
                           onClick={() => void handleDeleteSession()}
                           className="btn-danger text-xs px-3 py-2 min-h-0 shrink-0"
                         >
-                          {deletingSessionId === selectedId ? 'Deleting…' : 'Delete session'}
+                          {deletingSessionId === selectedId ? 'Deleting…' : 'Delete event'}
                         </button>
                       </div>
                     </div>
@@ -548,7 +548,7 @@ export default function AdminFines() {
 
                     <div className="glass-card overflow-hidden">
                       <div className="px-4 py-3 border-b border-brand-blue/10">
-                        <h3 className="font-semibold text-brand-navy">Session sheet</h3>
+                        <h3 className="font-semibold text-brand-navy">Player fines</h3>
                       </div>
                       {detail.entries.length === 0 ? (
                         <p className="p-4 text-sm text-gray-500">No fines logged yet.</p>
