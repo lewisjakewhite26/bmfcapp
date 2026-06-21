@@ -22,6 +22,20 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: /mobile-ios-layout\.spec\.ts/,
+    },
+    {
+      name: 'iphone-17-pro',
+      testMatch: /mobile-ios-layout\.spec\.ts/,
+      use: {
+        browserName: 'chromium',
+        ...devices['iPhone 17 Pro'],
+      },
+    },
+    {
+      name: 'iphone-17-pro-webkit',
+      testMatch: /mobile-ios-layout\.spec\.ts/,
+      use: { ...devices['iPhone 17 Pro'] },
     },
   ],
   webServer: {

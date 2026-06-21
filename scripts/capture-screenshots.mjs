@@ -7,6 +7,8 @@
  *
  * Output folder: screenshots-club-hub/
  * Optional base URL: npm run screenshots -- http://localhost:5173
+ * Mobile only: npm run screenshots -- --mobile
+ * Desktop only: npm run screenshots -- --desktop
  */
 import { chromium } from 'playwright'
 import { mkdirSync } from 'fs'
@@ -16,7 +18,10 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 const OUT_DIR = join(ROOT, 'screenshots-club-hub')
-const BASE_URL = process.argv[2] ?? 'http://localhost:5173'
+const args = process.argv.slice(2)
+const mobileOnly = args.includes('--mobile')
+const desktopOnly = args.includes('--desktop')
+const BASE_URL = args.find((a) => a.startsWith('http')) ?? 'http://localhost:5173'
 const STORAGE_KEY = 'bmfc_club_session'
 const PLAYER_ID = '00000000-0000-0000-0000-000000000001'
 const INVITE_TOKEN = 'demoinvite0001'
@@ -129,7 +134,11 @@ async function capture(viewport, subfolder) {
 console.log(`Capturing BMFC Club Hub screenshots from ${BASE_URL}`)
 console.log(`Output: ${OUT_DIR}\n`)
 
-await capture({ width: 390, height: 844 }, 'mobile')
-await capture({ width: 1280, height: 800 }, 'desktop')
+if (!desktopOnly) {
+  await capture({ width: 390, height: 844 }, 'mobile')
+}
+if (!mobileOnly) {
+  await capture({ width: 1280, height: 800 }, 'desktop')
+}
 
 console.log('\nDone.')

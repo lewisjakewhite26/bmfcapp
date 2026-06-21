@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { PwaIosInstallInstructions } from './PwaIosInstallInstructions'
 
 interface PwaIosInstallDialogProps {
@@ -5,18 +7,29 @@ interface PwaIosInstallDialogProps {
   titleId?: string
 }
 
-/** iOS add-to-home-screen steps — sized for short in-app browser viewports (e.g. WhatsApp). */
+/** iOS add-to-home-screen steps — portaled above nav bars so Safari/WebKit never clips it. */
 export function PwaIosInstallDialog({ onClose, titleId = 'pwa-ios-install-title' }: PwaIosInstallDialogProps) {
-  return (
+  useEffect(() => {
+    const prevBodyOverflow = document.body.style.overflow
+    const prevHtmlOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevBodyOverflow
+      document.documentElement.style.overflow = prevHtmlOverflow
+    }
+  }, [])
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,var(--mobile-bottom-nav-clearance,1rem))] touch-none overscroll-none"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
       onClick={onClose}
     >
       <div
-        className="glass-card w-full max-w-sm p-4 shadow-xl max-h-[min(85dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] overflow-y-auto overscroll-contain"
+        className="glass-card w-full max-w-sm p-4 shadow-xl max-h-[min(85dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] overflow-y-auto overscroll-contain touch-auto"
         onClick={(event) => event.stopPropagation()}
       >
         <p id={titleId} className="font-semibold text-brand-navy">
@@ -31,6 +44,7 @@ export function PwaIosInstallDialog({ onClose, titleId = 'pwa-ios-install-title'
           Got it
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

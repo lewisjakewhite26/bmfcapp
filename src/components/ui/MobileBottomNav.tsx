@@ -82,10 +82,22 @@ function syncMobileBottomNavHeight(nav: HTMLElement | null) {
     document.documentElement.style.setProperty(MOBILE_BOTTOM_NAV_HEIGHT_VAR, '0px')
     return
   }
+  const measured = nav.getBoundingClientRect().height
   document.documentElement.style.setProperty(
     MOBILE_BOTTOM_NAV_HEIGHT_VAR,
-    `${nav.getBoundingClientRect().height}px`,
+    `${measured}px`,
   )
+  // If env(safe-area-inset-bottom) is 0 in a webview but we're clearly on a notched phone, nudge gap.
+  const probe = document.createElement('div')
+  probe.style.cssText = 'position:fixed;visibility:hidden;padding-bottom:env(safe-area-inset-bottom);'
+  document.documentElement.appendChild(probe)
+  const safeBottom = parseFloat(getComputedStyle(probe).paddingBottom) || 0
+  probe.remove()
+  if (safeBottom === 0 && measured >= 56 && window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+    document.documentElement.style.setProperty('--mobile-bottom-nav-gap', '1rem')
+  } else {
+    document.documentElement.style.removeProperty('--mobile-bottom-nav-gap')
+  }
 }
 
 export function MobileBottomNav() {

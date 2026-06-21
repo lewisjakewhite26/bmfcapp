@@ -12,6 +12,8 @@
     "test:ci": "node scripts/run-vitest-isolated.mjs",
     "test:docker": "node scripts/run-vitest-isolated.mjs --docker",
     "test:e2e": "playwright test",
+    "test:e2e:iphone": "playwright test e2e/mobile-ios-layout.spec.ts --project=iphone-17-pro",
+    "test:e2e:iphone-webkit": "playwright test e2e/mobile-ios-layout.spec.ts --project=iphone-17-pro-webkit",
     "test:e2e:ci": "playwright test --reporter=github",
     "preview": "vite preview",
     "generate:vapid-keys": "node scripts/generate-vapid-keys.mjs",
@@ -19,7 +21,9 @@
     "scrape:ddsfl": "tsx scripts/scrape-ddsfl.mjs",
     "scrape:ddsfl:save": "tsx scripts/scrape-ddsfl.mjs --out scraped.json",
     "sync:ddsfl": "tsx scripts/sync-ddsfl-to-supabase.mjs",
-    "screenshots": "node scripts/capture-screenshots.mjs"
+    "screenshots": "node scripts/capture-screenshots.mjs",
+    "screenshots:mobile": "node scripts/capture-screenshots.mjs --mobile",
+    "screenshots:desktop": "node scripts/capture-screenshots.mjs --desktop"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
