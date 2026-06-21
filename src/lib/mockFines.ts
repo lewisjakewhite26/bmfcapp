@@ -74,7 +74,7 @@ const entries: FineEntry[] = [
     profile_id: 'p2',
     display_name: 'James W',
     fine_key: 'oneoff:demo-bibs',
-    label: 'Forgot bibs',
+    label: 'Lost ball',
     amount: 2,
     paid: true,
     marked_at: '2026-06-08T12:00:00.000Z',

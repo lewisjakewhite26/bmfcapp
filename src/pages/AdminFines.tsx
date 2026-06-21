@@ -631,7 +631,7 @@ export default function AdminFines() {
                 </div>
               ) : payEntries.length === 0 ? (
                 <p className="p-6 text-sm text-gray-500 text-center">
-                  {payFilter === 'unpaid' ? 'No outstanding fines — everyone\'s square.' : 'Nothing here.'}
+                  {payFilter === 'unpaid' ? 'No outstanding fines. Everyone\'s square.' : 'Nothing here.'}
                 </p>
               ) : (
                 <ul

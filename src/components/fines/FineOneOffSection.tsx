@@ -16,13 +16,13 @@ export function FineOneOffSection({
   return (
     <div className="rounded-card border border-brand-blue/10 bg-white/50 p-3 space-y-3">
       <h3 className="text-sm font-semibold text-brand-navy">One-off fine</h3>
-      <p className="text-xs text-gray-500 -mt-1">Optional — just for this player, this event.</p>
+      <p className="text-xs text-gray-500 -mt-1">Optional. Just for this player, this session.</p>
       <label className="block">
         <span className="text-xs text-gray-500">What for?</span>
         <input
           type="text"
           className="input-field mt-1"
-          placeholder="e.g. Forgot bibs"
+          placeholder="e.g. Lost ball"
           value={label}
           disabled={disabled}
           onChange={(e) => onLabelChange(e.target.value)}
