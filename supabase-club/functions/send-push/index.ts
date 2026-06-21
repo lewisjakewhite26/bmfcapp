@@ -45,20 +45,32 @@ Deno.serve(async (req) => {
     )
 
     const payload = (await req.json()) as PushPayload
+    const adminId = payload.admin_id?.trim()
+    const sessionToken = payload.session_token?.trim()
 
-    if (!payload.admin_id || !payload.session_token) {
+    if (!adminId || !sessionToken) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const { data: isAdmin, error: verifyError } = await supabase.rpc('verify_admin_session', {
-      p_user_id: payload.admin_id,
-      p_session_token: payload.session_token,
-    })
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('session_token, is_admin, is_committee')
+      .eq('id', adminId)
+      .maybeSingle()
 
-    if (verifyError || !isAdmin) {
+    if (profileError) throw profileError
+
+    if (!profile || profile.session_token !== sessionToken) {
+      return new Response(JSON.stringify({ error: 'Invalid session' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (!profile.is_admin && !profile.is_committee) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -4,4 +4,5 @@
 # Edge function source of truth: supabase-club/functions/
 
 [functions.send-push]
+verify_jwt = false
 entrypoint = "../supabase-club/functions/send-push/index.ts"

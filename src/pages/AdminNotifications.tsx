@@ -3,10 +3,9 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
-import { getClubSession } from '../lib/clubAuth'
 import { recordAdminAudit } from '../lib/adminAudit'
-import { supabase } from '../lib/supabase'
 import { fetchAdminUsers, isMockDataMode } from '../lib/clubApi'
+import { invokeSendPush } from '../lib/sendPush'
 import { pageContainerClass } from '../lib/layout'
 import type { AdminUserRow } from '../types'
 
@@ -60,27 +59,14 @@ export default function AdminNotifications() {
       return
     }
 
-    const session = getClubSession()
-    if (!session) {
-      toast.error('Not signed in')
-      return
-    }
-
     setSending(true)
     try {
-      const { data, error } = await supabase.functions.invoke('send-push', {
-        body: {
-          title,
-          body,
-          url,
-          admin_id: session.userId,
-          session_token: session.sessionToken,
-          ...(sendMode === 'selected' ? { player_ids: [...selectedIds] } : {}),
-        },
+      const { sent } = await invokeSendPush({
+        title,
+        body,
+        url,
+        ...(sendMode === 'selected' ? { player_ids: [...selectedIds] } : {}),
       })
-
-      if (error) throw error
-      const sent = (data as { sent?: number })?.sent ?? 0
       void recordAdminAudit('push_sent', {
         details: {
           title,

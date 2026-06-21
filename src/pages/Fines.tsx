@@ -50,7 +50,7 @@ export default function Fines() {
       <div className={pageContainerClass()}>
         <div>
           <h1 className="font-display text-2xl sm:text-3xl text-brand-navy">Fines</h1>
-          <p className="text-sm text-gray-500 mt-1">Outstanding match-day fines across the squad.</p>
+          <p className="text-sm text-gray-500 mt-1">Outstanding fines across the squad.</p>
         </div>
 
         {error && <DataErrorBanner message={error} onRetry={load} />}
