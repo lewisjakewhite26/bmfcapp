@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
-import { FinePickerModal } from '../components/fines/FinePickerModal'
-import { FINE_CATALOG, formatFineAmount } from '../lib/fineCatalog'
+import { FinePickerModal, type FinePickerSavePayload } from '../components/fines/FinePickerModal'
+import { FinePaymentCard } from '../components/fines/FinePaymentCard'
+import { FINE_CATALOG, formatFineAmount, isCatalogFineKey, newOneOffFineKey } from '../lib/fineCatalog'
 import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
 import {
   createFineSession,
+  deleteFineSession,
   fetchFineSessionDetail,
   fetchFineSessions,
   fetchFinesOverview,
@@ -28,6 +30,24 @@ function sessionDateLabel(date: string) {
   return formatMatchDate(`${date}T12:00:00`)
 }
 
+function preserveScrollPosition(action: () => void) {
+  const scrollY = window.scrollY
+  action()
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (Math.abs(window.scrollY - scrollY) > 2) {
+        window.scrollTo(0, scrollY)
+      }
+    })
+  })
+}
+
+function blurActiveElement() {
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur()
+  }
+}
+
 export default function AdminFines() {
   const [tab, setTab] = useState<Tab>('sessions')
   const [sessions, setSessions] = useState<FineSession[]>([])
@@ -42,6 +62,7 @@ export default function AdminFines() {
   const [sessionTitle, setSessionTitle] = useState('')
   const [sessionNotes, setSessionNotes] = useState('')
   const [creating, setCreating] = useState(false)
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
 
   const [payFilter, setPayFilter] = useState<PayFilter>('unpaid')
   const [payEntries, setPayEntries] = useState<FineEntry[]>([])
@@ -49,6 +70,9 @@ export default function AdminFines() {
   const [payPlayersOwing, setPayPlayersOwing] = useState(0)
   const [loadingPayments, setLoadingPayments] = useState(false)
   const [togglingPaidId, setTogglingPaidId] = useState<string | null>(null)
+  const [paySuccessId, setPaySuccessId] = useState<string | null>(null)
+  const [payExitingId, setPayExitingId] = useState<string | null>(null)
+  const paymentsListRef = useRef<HTMLUListElement>(null)
 
   const reloadSessions = useCallback(async () => {
     setLoadingSessions(true)
@@ -58,6 +82,14 @@ export default function AdminFines() {
       toast.error(err instanceof Error ? err.message : "Couldn't load fines sessions")
     } finally {
       setLoadingSessions(false)
+    }
+  }, [])
+
+  const refreshSessionsQuiet = useCallback(async () => {
+    try {
+      setSessions(await fetchFineSessions())
+    } catch {
+      // Background refresh only — don't disturb the payments list.
     }
   }, [])
 
@@ -74,17 +106,19 @@ export default function AdminFines() {
     }
   }, [])
 
-  const reloadPayments = useCallback(async () => {
-    setLoadingPayments(true)
+  const reloadPayments = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoadingPayments(true)
     try {
       const overview = await fetchFinesOverview(payFilter)
-      setPayEntries(overview.entries)
-      setPayOutstanding(overview.total_outstanding)
-      setPayPlayersOwing(overview.players_owing)
+      preserveScrollPosition(() => {
+        setPayEntries(overview.entries)
+        setPayOutstanding(overview.total_outstanding)
+        setPayPlayersOwing(overview.players_owing)
+      })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't load fines")
     } finally {
-      setLoadingPayments(false)
+      if (!options?.silent) setLoadingPayments(false)
     }
   }, [payFilter])
 
@@ -101,18 +135,32 @@ export default function AdminFines() {
     if (tab === 'payments') void reloadPayments()
   }, [tab, reloadPayments])
 
+  useEffect(() => {
+    setPaySuccessId(null)
+    setPayExitingId(null)
+  }, [payFilter])
+
   const editingPlayer = useMemo(
     () => detail?.squad.find((s) => s.profile_id === editingPlayerId) ?? null,
     [detail, editingPlayerId],
   )
 
-  const editingPlayerKeys = useMemo(() => {
+  const editingPlayerPresetKeys = useMemo(() => {
     if (!detail || !editingPlayerId) return new Set<string>()
     return new Set(
       detail.entries
-        .filter((e) => e.profile_id === editingPlayerId)
+        .filter((e) => e.profile_id === editingPlayerId && isCatalogFineKey(e.fine_key))
         .map((e) => e.fine_key),
     )
+  }, [detail, editingPlayerId])
+
+  const editingPlayerOneOff = useMemo(() => {
+    if (!detail || !editingPlayerId) return null
+    const entry = detail.entries.find(
+      (e) => e.profile_id === editingPlayerId && !isCatalogFineKey(e.fine_key),
+    )
+    if (!entry) return null
+    return { key: entry.fine_key, label: entry.label, amount: entry.amount }
   }, [detail, editingPlayerId])
 
   const openSession = (id: string) => {
@@ -146,23 +194,69 @@ export default function AdminFines() {
     }
   }
 
-  const handleSavePlayerFines = async (draftKeys: Set<string>) => {
+  const handleSavePlayerFines = async ({ presetKeys, oneOff }: FinePickerSavePayload) => {
     if (!selectedId || !detail || !editingPlayerId) return
 
-    const serverKeys = new Set(
-      detail.entries
-        .filter((e) => e.profile_id === editingPlayerId)
-        .map((e) => e.fine_key),
+    const serverEntries = detail.entries.filter((e) => e.profile_id === editingPlayerId)
+    const serverPresetKeys = new Set(
+      serverEntries.filter((e) => isCatalogFineKey(e.fine_key)).map((e) => e.fine_key),
     )
+    const serverOneOffEntries = serverEntries.filter((e) => !isCatalogFineKey(e.fine_key))
+
+    type FineUpdate = {
+      key: string
+      label: string
+      amount: number
+      enabled: boolean
+    }
+
+    const updates: FineUpdate[] = []
+
+    for (const fine of FINE_CATALOG) {
+      const inDraft = presetKeys.has(fine.key)
+      const onServer = serverPresetKeys.has(fine.key)
+      if (inDraft !== onServer) {
+        updates.push({
+          key: fine.key,
+          label: fine.label,
+          amount: fine.amount,
+          enabled: inDraft,
+        })
+      }
+    }
+
+    for (const entry of serverOneOffEntries) {
+      if (!oneOff || entry.fine_key !== oneOff.key) {
+        updates.push({
+          key: entry.fine_key,
+          label: entry.label,
+          amount: entry.amount,
+          enabled: false,
+        })
+      }
+    }
+
+    if (oneOff) {
+      const existing = oneOff.key
+        ? serverOneOffEntries.find((e) => e.fine_key === oneOff.key)
+        : null
+      const key = existing?.fine_key ?? newOneOffFineKey()
+      if (
+        !existing ||
+        existing.label !== oneOff.label ||
+        existing.amount !== oneOff.amount
+      ) {
+        updates.push({
+          key,
+          label: oneOff.label,
+          amount: oneOff.amount,
+          enabled: true,
+        })
+      }
+    }
 
     setSavingPlayerFines(true)
     try {
-      const updates = FINE_CATALOG.filter((fine) => {
-        const inDraft = draftKeys.has(fine.key)
-        const onServer = serverKeys.has(fine.key)
-        return inDraft !== onServer
-      })
-
       await Promise.all(
         updates.map((fine) =>
           setFineEntry(
@@ -171,7 +265,7 @@ export default function AdminFines() {
             fine.key,
             fine.label,
             fine.amount,
-            draftKeys.has(fine.key),
+            fine.enabled,
           ),
         ),
       )
@@ -187,22 +281,94 @@ export default function AdminFines() {
     }
   }
 
-  const handlePaidToggle = async (entry: FineEntry) => {
-    setTogglingPaidId(entry.id)
-    const next = !entry.paid
-    setPayEntries((prev) =>
-      prev.map((e) => (e.id === entry.id ? { ...e, paid: next } : e)),
-    )
+  const handleDeleteSession = async () => {
+    if (!selectedId || !detail) return
+
+    const entryCount = detail.entries.length
+    const message =
+      entryCount > 0
+        ? `Delete "${detail.session.title}" and all ${entryCount} fine${entryCount === 1 ? '' : 's'} logged? This can't be undone.`
+        : `Delete "${detail.session.title}"? This can't be undone.`
+
+    if (!window.confirm(message)) return
+
+    setDeletingSessionId(selectedId)
     try {
-      await setFinePaid(entry.id, next)
-      await reloadPayments()
-      if (selectedId) await loadDetail(selectedId)
+      await deleteFineSession(selectedId)
+      toast.success('Session deleted')
+      setSelectedId(null)
+      setDetail(null)
+      setEditingPlayerId(null)
       await reloadSessions()
+      if (tab === 'payments') void reloadPayments({ silent: true })
     } catch (err) {
-      setPayEntries((prev) =>
-        prev.map((e) => (e.id === entry.id ? { ...e, paid: entry.paid } : e)),
-      )
+      toast.error(err instanceof Error ? err.message : "Couldn't delete session")
+    } finally {
+      setDeletingSessionId(null)
+    }
+  }
+
+  const handlePaidToggle = async (entry: FineEntry) => {
+    if (togglingPaidId) return
+
+    const prevPaid = entry.paid
+    const next = !prevPaid
+    setTogglingPaidId(entry.id)
+
+    setPayEntries((prev) => {
+      const updated = prev.map((e) => (e.id === entry.id ? { ...e, paid: next } : e))
+      if (!prevPaid && next) {
+        setPayOutstanding((total) => Math.max(0, total - entry.amount))
+        const stillOwing = updated.some(
+          (e) => e.id !== entry.id && e.profile_id === entry.profile_id && !e.paid,
+        )
+        if (!stillOwing) setPayPlayersOwing((count) => Math.max(0, count - 1))
+      } else if (prevPaid && !next) {
+        setPayOutstanding((total) => total + entry.amount)
+        const hadOther = prev.some(
+          (e) => e.id !== entry.id && e.profile_id === entry.profile_id && !e.paid,
+        )
+        if (!hadOther) setPayPlayersOwing((count) => count + 1)
+      }
+      return updated
+    })
+
+    preserveScrollPosition(() => {
+      if (next) setPaySuccessId(entry.id)
+    })
+
+    try {
+      const updated = await setFinePaid(entry.id, next)
+      preserveScrollPosition(() => {
+        setPayEntries((prev) => prev.map((e) => (e.id === entry.id ? updated : e)))
+      })
+
+      const leavesFilter =
+        (payFilter === 'unpaid' && next) || (payFilter === 'paid' && !next)
+
+      if (leavesFilter) {
+        setPayExitingId(entry.id)
+        window.setTimeout(() => {
+          blurActiveElement()
+          const scrollY = window.scrollY
+          paymentsListRef.current?.focus({ preventScroll: true })
+          setPayEntries((prev) => prev.filter((e) => e.id !== entry.id))
+          setPayExitingId(null)
+          setPaySuccessId(null)
+          requestAnimationFrame(() => {
+            window.scrollTo(0, scrollY)
+          })
+        }, 380)
+      } else {
+        window.setTimeout(() => setPaySuccessId(null), 600)
+      }
+
+      void refreshSessionsQuiet()
+    } catch (err) {
+      setPaySuccessId(null)
+      setPayExitingId(null)
       toast.error(err instanceof Error ? err.message : "Couldn't update payment")
+      void reloadPayments({ silent: true })
     } finally {
       setTogglingPaidId(null)
     }
@@ -216,7 +382,7 @@ export default function AdminFines() {
         <div>
           <h1 className="font-display text-2xl text-brand-navy">Fines</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Log match-day fines and mark when they&apos;ve been paid.
+            Log squad fines and mark when they&apos;ve been paid.
           </p>
         </div>
 
@@ -321,14 +487,26 @@ export default function AdminFines() {
                 ) : (
                   <>
                     <div className="glass-card p-4">
-                      <h2 className="font-semibold text-brand-navy">{detail.session.title}</h2>
-                      <p className="text-sm text-gray-500">{sessionDateLabel(detail.session.session_date)}</p>
-                      {detail.session.notes && (
-                        <p className="text-sm text-gray-600 mt-2">{detail.session.notes}</p>
-                      )}
-                      <p className="text-sm font-medium text-brand-navy mt-3">
-                        Session total: {formatFineAmount(detail.session.session_total ?? 0)}
-                      </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h2 className="font-semibold text-brand-navy">{detail.session.title}</h2>
+                          <p className="text-sm text-gray-500">{sessionDateLabel(detail.session.session_date)}</p>
+                          {detail.session.notes && (
+                            <p className="text-sm text-gray-600 mt-2">{detail.session.notes}</p>
+                          )}
+                          <p className="text-sm font-medium text-brand-navy mt-3">
+                            Session total: {formatFineAmount(detail.session.session_total ?? 0)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={deletingSessionId === selectedId}
+                          onClick={() => void handleDeleteSession()}
+                          className="btn-danger text-xs px-3 py-2 min-h-0 shrink-0"
+                        >
+                          {deletingSessionId === selectedId ? 'Deleting…' : 'Delete session'}
+                        </button>
+                      </div>
                     </div>
 
                     <div className="glass-card p-4 space-y-3">
@@ -361,10 +539,11 @@ export default function AdminFines() {
                     <FinePickerModal
                       open={Boolean(editingPlayer)}
                       playerName={editingPlayer?.display_name ?? ''}
-                      initialActiveKeys={editingPlayerKeys}
+                      initialPresetKeys={editingPlayerPresetKeys}
+                      initialOneOff={editingPlayerOneOff}
                       saving={savingPlayerFines}
                       onClose={() => setEditingPlayerId(null)}
-                      onSave={(keys) => void handleSavePlayerFines(keys)}
+                      onSave={(payload) => void handleSavePlayerFines(payload)}
                     />
 
                     <div className="glass-card overflow-hidden">
@@ -444,51 +623,33 @@ export default function AdminFines() {
             </div>
 
             <div className="glass-card overflow-hidden">
-              {loadingPayments ? (
-                <p className="p-6 text-sm text-gray-500">Loading…</p>
+              {loadingPayments && payEntries.length === 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="h-[88px] animate-pulse rounded-card bg-brand-light/50" />
+                  ))}
+                </div>
               ) : payEntries.length === 0 ? (
                 <p className="p-6 text-sm text-gray-500 text-center">
                   {payFilter === 'unpaid' ? 'No outstanding fines — everyone\'s square.' : 'Nothing here.'}
                 </p>
               ) : (
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3">
-                  {payEntries.map((entry) => {
-                    const busy = togglingPaidId === entry.id
-                    return (
-                      <li key={entry.id}>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void handlePaidToggle(entry)}
-                          className={`w-full h-full flex flex-col gap-2 px-4 py-3 text-left min-h-[88px] rounded-card border transition-colors touch-manipulation ${
-                            entry.paid
-                              ? 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50'
-                              : 'border-brand-blue/10 hover:bg-brand-light/40'
-                          } ${busy ? 'opacity-60' : ''}`}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-brand-navy">
-                              {entry.display_name}
-                              <span className="text-gray-500 font-normal"> · {entry.label}</span>
-                            </p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {entry.session_title} · {sessionDateLabel(entry.session_date)}
-                            </p>
-                          </div>
-                          <div className="flex items-center justify-between gap-2 mt-auto">
-                            <span className="font-semibold tabular-nums text-brand-navy">
-                              {formatFineAmount(entry.amount)}
-                            </span>
-                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-pill ${
-                              entry.paid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                            }`}>
-                              {entry.paid ? 'Paid ✓' : 'Mark paid'}
-                            </span>
-                          </div>
-                        </button>
-                      </li>
-                    )
-                  })}
+                <ul
+                  ref={paymentsListRef}
+                  tabIndex={-1}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 outline-none"
+                >
+                  {payEntries.map((entry) => (
+                    <FinePaymentCard
+                      key={entry.id}
+                      entry={entry}
+                      busy={togglingPaidId === entry.id}
+                      success={paySuccessId === entry.id}
+                      exiting={payExitingId === entry.id}
+                      onMarkPaid={() => void handlePaidToggle(entry)}
+                      onUndoPaid={() => void handlePaidToggle(entry)}
+                    />
+                  ))}
                 </ul>
               )}
             </div>

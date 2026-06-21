@@ -77,6 +77,7 @@ import {
 } from './mockFinance'
 import {
   createMockFineSession,
+  deleteMockFineSession,
   getMockFineSessionDetail,
   getMockFineSessions,
   getMockFinesOverview,
@@ -2058,6 +2059,24 @@ export async function createFineSession(input: {
   })
   if (error) throw error
   return mapFineSession(data as Record<string, unknown>)
+}
+
+export async function deleteFineSession(sessionId: string): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    deleteMockFineSession(sessionId)
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_delete_fine_session', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_session_id: sessionId,
+  })
+  if (error) throw error
 }
 
 export async function fetchFineSessionDetail(sessionId: string): Promise<FineSessionDetail> {

@@ -11,8 +11,8 @@ const sessions: FineSession[] = [
     notes: null,
     created_at: '2026-06-14T10:00:00.000Z',
     entry_count: 3,
-    session_total: 9,
-    unpaid_total: 7,
+    session_total: 7,
+    unpaid_total: 6,
   },
   {
     id: 'fine-session-2',
@@ -34,7 +34,7 @@ const entries: FineEntry[] = [
     display_name: 'Chris L',
     fine_key: 'late',
     label: 'Late',
-    amount: 2,
+    amount: 1,
     paid: false,
     session_date: '2026-06-14',
     session_title: 'Sat training',
@@ -45,9 +45,9 @@ const entries: FineEntry[] = [
     session_id: 'fine-session-1',
     profile_id: PREVIEW_PLAYER_ID,
     display_name: 'Chris L',
-    fine_key: 'no_shin_pads',
-    label: 'No shin pads',
-    amount: 2,
+    fine_key: 'no_warm_up_top',
+    label: 'No warm up top',
+    amount: 1,
     paid: false,
     session_date: '2026-06-14',
     session_title: 'Sat training',
@@ -73,9 +73,9 @@ const entries: FineEntry[] = [
     session_id: 'fine-session-2',
     profile_id: 'p2',
     display_name: 'James W',
-    fine_key: 'yellow_card',
-    label: 'Yellow card',
-    amount: 5,
+    fine_key: 'oneoff:demo-bibs',
+    label: 'Forgot bibs',
+    amount: 2,
     paid: true,
     marked_at: '2026-06-08T12:00:00.000Z',
     marked_by_name: DEV_ADMIN.display_name,
@@ -88,9 +88,9 @@ const entries: FineEntry[] = [
     session_id: 'fine-session-2',
     profile_id: PREVIEW_PLAYER_ID,
     display_name: 'Chris L',
-    fine_key: 'lost_ball',
-    label: 'Lost ball',
-    amount: 2,
+    fine_key: 'sin_bin',
+    label: 'Sin bin',
+    amount: 5,
     paid: true,
     marked_at: '2026-06-08T12:00:00.000Z',
     marked_by_name: DEV_ADMIN.display_name,
@@ -149,6 +149,15 @@ export function getMockFineSessionDetail(sessionId: string): FineSessionDetail {
     entries: entries.filter((e) => e.session_id === sessionId),
     squad: squadList(),
   }
+}
+
+export function deleteMockFineSession(sessionId: string): void {
+  const idx = sessions.findIndex((s) => s.id === sessionId)
+  if (idx < 0) throw new Error('Fines session not found')
+  for (let i = entries.length - 1; i >= 0; i--) {
+    if (entries[i].session_id === sessionId) entries.splice(i, 1)
+  }
+  sessions.splice(idx, 1)
 }
 
 export function setMockFineEntry(

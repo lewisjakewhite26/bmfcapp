@@ -1,17 +1,28 @@
 /** Preset match-day fines — amounts in GBP. */
 export const FINE_CATALOG = [
-  { key: 'late', label: 'Late', amount: 2 },
-  { key: 'no_shin_pads', label: 'No shin pads', amount: 2 },
-  { key: 'wrong_kit', label: 'Wrong kit', amount: 2 },
+  { key: 'late', label: 'Late', amount: 1 },
+  { key: 'sin_bin', label: 'Sin bin', amount: 5 },
+  { key: 'no_warm_up_top', label: 'No warm up top', amount: 1 },
   { key: 'no_show', label: 'No show', amount: 5 },
-  { key: 'late_no_text', label: 'Late no text', amount: 3 },
-  { key: 'yellow_card', label: 'Yellow card', amount: 5 },
-  { key: 'red_card', label: 'Red card', amount: 10 },
-  { key: 'lost_ball', label: 'Lost ball', amount: 5 },
-  { key: 'fine_of_fines', label: 'Fine of fines', amount: 1 },
 ] as const
 
 export type FineCatalogKey = (typeof FINE_CATALOG)[number]['key']
+
+export const ONE_OFF_FINE_KEY_PREFIX = 'oneoff:'
+
+const CATALOG_KEYS = new Set<string>(FINE_CATALOG.map((f) => f.key))
+
+export function isCatalogFineKey(key: string): boolean {
+  return CATALOG_KEYS.has(key)
+}
+
+export function isOneOffFineKey(key: string): boolean {
+  return key.startsWith(ONE_OFF_FINE_KEY_PREFIX)
+}
+
+export function newOneOffFineKey(): string {
+  return `${ONE_OFF_FINE_KEY_PREFIX}${crypto.randomUUID()}`
+}
 
 export function getFinePreset(key: string) {
   return FINE_CATALOG.find((f) => f.key === key)

@@ -1,15 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { FINE_CATALOG, formatFineAmount } from '../../lib/fineCatalog'
+import { FineOneOffSection } from './FineOneOffSection'
 import { FineTypeGrid } from './FineTypeGrid'
+
+export type OneOffFineDraft = {
+  key: string | null
+  label: string
+  amount: number
+}
+
+export type FinePickerSavePayload = {
+  presetKeys: Set<string>
+  oneOff: OneOffFineDraft | null
+}
 
 interface FinePickerModalProps {
   open: boolean
   playerName: string
-  initialActiveKeys: Set<string>
+  initialPresetKeys: Set<string>
+  initialOneOff: OneOffFineDraft | null
   saving?: boolean
   onClose: () => void
-  onSave: (activeKeys: Set<string>) => void
+  onSave: (payload: FinePickerSavePayload) => void
 }
 
 function CloseIcon() {
@@ -20,19 +33,37 @@ function CloseIcon() {
   )
 }
 
+function parseOneOff(label: string, amount: string): OneOffFineDraft | null {
+  const trimmed = label.trim()
+  const parsed = Number.parseFloat(amount)
+  if (trimmed.length < 2 || !Number.isFinite(parsed) || parsed <= 0) return null
+  return { key: null, label: trimmed, amount: parsed }
+}
+
 export function FinePickerModal({
   open,
   playerName,
-  initialActiveKeys,
+  initialPresetKeys,
+  initialOneOff,
   saving,
   onClose,
   onSave,
 }: FinePickerModalProps) {
-  const [draftKeys, setDraftKeys] = useState<Set<string>>(() => new Set(initialActiveKeys))
+  const [draftPresetKeys, setDraftPresetKeys] = useState<Set<string>>(() => new Set(initialPresetKeys))
+  const [oneOffLabel, setOneOffLabel] = useState(initialOneOff?.label ?? '')
+  const [oneOffAmount, setOneOffAmount] = useState(
+    initialOneOff ? String(initialOneOff.amount) : '',
+  )
+  const [oneOffKey, setOneOffKey] = useState<string | null>(initialOneOff?.key ?? null)
 
   useEffect(() => {
-    if (open) setDraftKeys(new Set(initialActiveKeys))
-  }, [open, initialActiveKeys])
+    if (open) {
+      setDraftPresetKeys(new Set(initialPresetKeys))
+      setOneOffLabel(initialOneOff?.label ?? '')
+      setOneOffAmount(initialOneOff ? String(initialOneOff.amount) : '')
+      setOneOffKey(initialOneOff?.key ?? null)
+    }
+  }, [open, initialPresetKeys, initialOneOff])
 
   useEffect(() => {
     if (!open) return
@@ -46,12 +77,19 @@ export function FinePickerModal({
     }
   }, [open])
 
-  const draftTotal = useMemo(
-    () => FINE_CATALOG.filter((f) => draftKeys.has(f.key)).reduce((s, f) => s + f.amount, 0),
-    [draftKeys],
+  const draftOneOff = useMemo(
+    () => parseOneOff(oneOffLabel, oneOffAmount),
+    [oneOffLabel, oneOffAmount],
   )
 
-  const selectedCount = draftKeys.size
+  const draftTotal = useMemo(() => {
+    const presetTotal = FINE_CATALOG
+      .filter((f) => draftPresetKeys.has(f.key))
+      .reduce((s, f) => s + f.amount, 0)
+    return presetTotal + (draftOneOff?.amount ?? 0)
+  }, [draftPresetKeys, draftOneOff])
+
+  const selectedCount = draftPresetKeys.size + (draftOneOff ? 1 : 0)
 
   if (!open) return null
 
@@ -95,18 +133,25 @@ export function FinePickerModal({
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 space-y-4">
           <FineTypeGrid
-            activeKeys={draftKeys}
+            activeKeys={draftPresetKeys}
             disabled={saving}
             onToggle={(key, _label, _amount, enabled) => {
-              setDraftKeys((prev) => {
+              setDraftPresetKeys((prev) => {
                 const next = new Set(prev)
                 if (enabled) next.add(key)
                 else next.delete(key)
                 return next
               })
             }}
+          />
+          <FineOneOffSection
+            label={oneOffLabel}
+            amount={oneOffAmount}
+            disabled={saving}
+            onLabelChange={setOneOffLabel}
+            onAmountChange={setOneOffAmount}
           />
         </div>
 
@@ -124,7 +169,12 @@ export function FinePickerModal({
               type="button"
               className="btn-primary text-sm py-2.5 min-h-[44px] flex-1 touch-manipulation"
               disabled={saving}
-              onClick={() => onSave(draftKeys)}
+              onClick={() =>
+                onSave({
+                  presetKeys: draftPresetKeys,
+                  oneOff: draftOneOff ? { ...draftOneOff, key: oneOffKey } : null,
+                })
+              }
             >
               {saving ? 'Saving…' : selectedCount > 0 ? `Save · ${formatFineAmount(draftTotal)}` : 'Save fines'}
             </button>

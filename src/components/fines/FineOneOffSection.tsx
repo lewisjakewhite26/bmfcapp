@@ -1,0 +1,47 @@
+interface FineOneOffSectionProps {
+  label: string
+  amount: string
+  disabled?: boolean
+  onLabelChange: (value: string) => void
+  onAmountChange: (value: string) => void
+}
+
+export function FineOneOffSection({
+  label,
+  amount,
+  disabled,
+  onLabelChange,
+  onAmountChange,
+}: FineOneOffSectionProps) {
+  return (
+    <div className="rounded-card border border-brand-blue/10 bg-white/50 p-3 space-y-3">
+      <h3 className="text-sm font-semibold text-brand-navy">One-off fine</h3>
+      <p className="text-xs text-gray-500 -mt-1">Optional — just for this player, this session.</p>
+      <label className="block">
+        <span className="text-xs text-gray-500">What for?</span>
+        <input
+          type="text"
+          className="input-field mt-1"
+          placeholder="e.g. Forgot bibs"
+          value={label}
+          disabled={disabled}
+          onChange={(e) => onLabelChange(e.target.value)}
+        />
+      </label>
+      <label className="block">
+        <span className="text-xs text-gray-500">Amount (£)</span>
+        <input
+          type="number"
+          className="input-field mt-1"
+          placeholder="0"
+          min="0.01"
+          step="0.01"
+          inputMode="decimal"
+          value={amount}
+          disabled={disabled}
+          onChange={(e) => onAmountChange(e.target.value)}
+        />
+      </label>
+    </div>
+  )
+}
