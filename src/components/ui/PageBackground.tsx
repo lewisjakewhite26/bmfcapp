@@ -1,8 +1,15 @@
+import { useContext } from 'react'
+import { AuthContext } from '../../hooks/authContext'
+import { mainContentClassName } from '../../lib/layout'
+
 export function PageBackground() {
   return <div className="fixed inset-0 page-bg -z-10" aria-hidden />
 }
 
 export function PageShell({ children }: { children: React.ReactNode }) {
+  const auth = useContext(AuthContext)
+  const showMobileBottomNav = auth?.user?.is_approved ?? false
+
   return (
     <div className="min-h-screen relative page-enter">
       <a
@@ -12,7 +19,7 @@ export function PageShell({ children }: { children: React.ReactNode }) {
         Skip to content
       </a>
       <PageBackground />
-      <div id="main-content" className="relative z-10">
+      <div id="main-content" className={mainContentClassName(showMobileBottomNav)}>
         {children}
       </div>
     </div>

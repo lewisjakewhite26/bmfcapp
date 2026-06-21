@@ -3,13 +3,36 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Measured at runtime by MobileBottomNav; fallback covers tab row + home indicator. */
+    --mobile-bottom-nav-height: 4.25rem;
+    --mobile-bottom-nav-gap: 0.75rem;
+    --mobile-bottom-nav-clearance: calc(
+      var(--mobile-bottom-nav-height) + var(--mobile-bottom-nav-gap)
+    );
+  }
+
   html {
-    scroll-padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: var(--mobile-bottom-nav-clearance);
   }
 
   @media (min-width: 768px) {
     html {
       scroll-padding-bottom: 0;
+    }
+
+    :root {
+      --mobile-bottom-nav-height: 0px;
+    }
+  }
+
+  #main-content.has-mobile-bottom-nav {
+    padding-bottom: var(--mobile-bottom-nav-clearance);
+  }
+
+  @media (min-width: 768px) {
+    #main-content.has-mobile-bottom-nav {
+      padding-bottom: 0;
     }
   }
 }

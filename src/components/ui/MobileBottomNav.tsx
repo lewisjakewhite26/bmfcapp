@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { NotificationToggle } from './NotificationToggle'
@@ -74,16 +74,54 @@ const tabs = [
   },
 ]
 
+const MOBILE_BOTTOM_NAV_HEIGHT_VAR = '--mobile-bottom-nav-height'
+const MOBILE_NAV_DESKTOP_MQL = '(min-width: 768px)'
+
+function syncMobileBottomNavHeight(nav: HTMLElement | null) {
+  if (!nav || window.matchMedia(MOBILE_NAV_DESKTOP_MQL).matches) {
+    document.documentElement.style.setProperty(MOBILE_BOTTOM_NAV_HEIGHT_VAR, '0px')
+    return
+  }
+  document.documentElement.style.setProperty(
+    MOBILE_BOTTOM_NAV_HEIGHT_VAR,
+    `${nav.getBoundingClientRect().height}px`,
+  )
+}
+
 export function MobileBottomNav() {
   const location = useLocation()
   const { user, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const [passcodeOpen, setPasscodeOpen] = useState(false)
+  const navRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     setMenuOpen(false)
     setPasscodeOpen(false)
   }, [location.pathname])
+
+  useEffect(() => {
+    if (!user?.is_approved) {
+      document.documentElement.style.setProperty(MOBILE_BOTTOM_NAV_HEIGHT_VAR, '0px')
+      return
+    }
+
+    const nav = navRef.current
+    if (!nav) return
+
+    const update = () => syncMobileBottomNavHeight(nav)
+    update()
+
+    const observer = new ResizeObserver(update)
+    observer.observe(nav)
+    window.addEventListener('resize', update)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', update)
+      document.documentElement.style.setProperty(MOBILE_BOTTOM_NAV_HEIGHT_VAR, '0px')
+    }
+  }, [user?.is_approved])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -108,8 +146,8 @@ export function MobileBottomNav() {
       <div
         className={`fixed inset-x-0 z-[101] md:hidden px-3 transition-all duration-200 ease-out ${
           menuOpen
-            ? 'bottom-[calc(3.75rem+env(safe-area-inset-bottom))] opacity-100 pointer-events-auto'
-            : 'bottom-[calc(3.75rem+env(safe-area-inset-bottom))] opacity-0 pointer-events-none translate-y-2'
+            ? 'bottom-[var(--mobile-bottom-nav-height)] opacity-100 pointer-events-auto'
+            : 'bottom-[var(--mobile-bottom-nav-height)] opacity-0 pointer-events-none translate-y-2'
         }`}
         role="dialog"
         aria-modal={menuOpen}
@@ -155,6 +193,7 @@ export function MobileBottomNav() {
       </div>
 
       <nav
+        ref={navRef}
         className="fixed inset-x-0 bottom-0 z-[90] md:hidden glass-nav border-t border-brand-blue/12 pb-[env(safe-area-inset-bottom)]"
         aria-label="Main navigation"
       >
