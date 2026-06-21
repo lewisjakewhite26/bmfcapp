@@ -75,6 +75,16 @@ import {
   updateMockExpense,
   updateMockSponsorship,
 } from './mockFinance'
+import {
+  createMockFineSession,
+  getMockFineSessionDetail,
+  getMockFineSessions,
+  getMockFinesOverview,
+  getMockOutstandingFinesSummary,
+  getMockPlayerFines,
+  setMockFineEntry,
+  setMockFinePaid,
+} from './mockFines'
 import { parseLiveDraftEntries } from './liveMatchDraftStorage'
 import { recordAdminAudit } from './adminAudit'
 import type { LiveMatchDraft } from './liveMatchEvents'
@@ -111,6 +121,11 @@ import type {
   SponsorshipCategory,
   SigningOnFeeRow,
   SigningOnFeesSummary,
+  FineSession,
+  FineSessionDetail,
+  FineEntry,
+  FinesOverview,
+  PlayerFinesSummaryRow,
   TeamInviteSettings,
 } from '../types'
 
@@ -1971,4 +1986,217 @@ export async function setSigningOnPaid(
     details: { paid, season },
   })
   return updated
+}
+
+function mapFineEntry(row: Record<string, unknown>): FineEntry {
+  return {
+    id: row.id as string,
+    session_id: row.session_id as string,
+    profile_id: row.profile_id as string,
+    display_name: row.display_name as string,
+    fine_key: row.fine_key as string,
+    label: row.label as string,
+    amount: Number(row.amount),
+    paid: Boolean(row.paid),
+    marked_at: (row.marked_at as string | null) ?? null,
+    marked_by_name: (row.marked_by_name as string | null) ?? null,
+    session_date: String(row.session_date).slice(0, 10),
+    session_title: row.session_title as string,
+    created_at: row.created_at as string,
+  }
+}
+
+function mapFineSession(row: Record<string, unknown>): FineSession {
+  return {
+    id: row.id as string,
+    session_date: String(row.session_date).slice(0, 10),
+    title: row.title as string,
+    notes: (row.notes as string | null) ?? null,
+    created_at: row.created_at as string,
+    entry_count: Number(row.entry_count ?? 0),
+    session_total: Number(row.session_total ?? 0),
+    unpaid_total: Number(row.unpaid_total ?? 0),
+  }
+}
+
+export async function fetchFineSessions(): Promise<FineSession[]> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockFineSessions()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_list_fine_sessions', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return ((data ?? []) as Record<string, unknown>[]).map(mapFineSession)
+}
+
+export async function createFineSession(input: {
+  session_date: string
+  title: string
+  notes: string | null
+}): Promise<FineSession> {
+  if (isMockDataMode()) {
+    await delay()
+    return createMockFineSession(input)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_create_fine_session', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_session_date: input.session_date,
+    p_title: input.title,
+    p_notes: input.notes,
+  })
+  if (error) throw error
+  return mapFineSession(data as Record<string, unknown>)
+}
+
+export async function fetchFineSessionDetail(sessionId: string): Promise<FineSessionDetail> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockFineSessionDetail(sessionId)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_get_fine_session_detail', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_session_id: sessionId,
+  })
+  if (error) throw error
+  const row = data as Record<string, unknown>
+  return {
+    session: mapFineSession(row.session as Record<string, unknown>),
+    entries: ((row.entries ?? []) as Record<string, unknown>[]).map(mapFineEntry),
+    squad: (row.squad ?? []) as FineSessionDetail['squad'],
+  }
+}
+
+export async function setFineEntry(
+  sessionId: string,
+  profileId: string,
+  fineKey: string,
+  label: string,
+  amount: number,
+  enabled: boolean,
+): Promise<FineEntry | null> {
+  if (isMockDataMode()) {
+    await delay(30)
+    return setMockFineEntry(sessionId, profileId, fineKey, label, amount, enabled)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_set_fine_entry', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_session_id: sessionId,
+    p_profile_id: profileId,
+    p_fine_key: fineKey,
+    p_label: label,
+    p_amount: amount,
+    p_enabled: enabled,
+  })
+  if (error) throw error
+  if (!data) return null
+  return mapFineEntry(data as Record<string, unknown>)
+}
+
+export async function fetchFinesOverview(
+  filter: 'all' | 'unpaid' | 'paid' = 'unpaid',
+): Promise<FinesOverview> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockFinesOverview(filter)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_list_fine_entries', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_filter: filter,
+  })
+  if (error) throw error
+  const row = data as Record<string, unknown>
+  return {
+    total_outstanding: Number(row.total_outstanding ?? 0),
+    players_owing: Number(row.players_owing ?? 0),
+    entries: ((row.entries ?? []) as Record<string, unknown>[]).map(mapFineEntry),
+  }
+}
+
+export async function setFinePaid(entryId: string, paid: boolean): Promise<FineEntry> {
+  if (isMockDataMode()) {
+    await delay(30)
+    return setMockFinePaid(entryId, paid)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_set_fine_paid', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_entry_id: entryId,
+    p_paid: paid,
+  })
+  if (error) throw error
+  return mapFineEntry(data as Record<string, unknown>)
+}
+
+export async function fetchOutstandingFinesSummary(): Promise<PlayerFinesSummaryRow[]> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockOutstandingFinesSummary()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('list_outstanding_fines_summary', {
+    p_user_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    profile_id: row.profile_id as string,
+    display_name: row.display_name as string,
+    outstanding_total: Number(row.outstanding_total),
+    unpaid_count: Number(row.unpaid_count),
+    oldest_unpaid_days: Number(row.oldest_unpaid_days),
+    entries: ((row.entries ?? []) as Record<string, unknown>[]).map(mapFineEntry),
+  }))
+}
+
+export async function fetchMyUnpaidFines(): Promise<FineEntry[]> {
+  if (isMockDataMode()) {
+    await delay()
+    const session = loadSession()
+    if (!session) return []
+    return getMockPlayerFines(session.id).filter((e) => !e.paid)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('list_my_unpaid_fines', {
+    p_user_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return ((data ?? []) as Record<string, unknown>[]).map(mapFineEntry)
 }

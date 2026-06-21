@@ -10,6 +10,7 @@ import {
   fetchFixturesWithResults,
   fetchFundraisers,
   fetchLeagueTable,
+  fetchMyUnpaidFines,
   fetchPlayerStats,
   fetchTrainingSessions,
   fetchUpcomingFixtures,
@@ -23,6 +24,7 @@ import type {
   ClubEvent,
   DashboardSummary,
   FixtureWithResult,
+  FineEntry,
   Fundraiser,
   LeagueTableRow,
   PlayerStats,
@@ -221,4 +223,24 @@ export function useAdminAvailability() {
   useEffect(() => { reload() }, [reload])
 
   return { rows, loading, error, reload }
+}
+
+export function useMyUnpaidFines() {
+  const [entries, setEntries] = useState<FineEntry[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const reload = useCallback(async () => {
+    setLoading(true)
+    try {
+      setEntries(await fetchMyUnpaidFines())
+    } catch {
+      setEntries([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { void reload() }, [reload])
+
+  return { entries, loading, reload }
 }

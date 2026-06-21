@@ -323,3 +323,51 @@ export interface SigningOnFeesSummary {
   season: string
   members: SigningOnFeeRow[]
 }
+
+export interface FineSession {
+  id: string
+  session_date: string
+  title: string
+  notes: string | null
+  created_at: string
+  entry_count?: number
+  session_total?: number
+  unpaid_total?: number
+}
+
+export interface FineEntry {
+  id: string
+  session_id: string
+  profile_id: string
+  display_name: string
+  fine_key: string
+  label: string
+  amount: number
+  paid: boolean
+  marked_at?: string | null
+  marked_by_name?: string | null
+  session_date: string
+  session_title: string
+  created_at: string
+}
+
+export interface FineSessionDetail {
+  session: FineSession
+  entries: FineEntry[]
+  squad: { profile_id: string; display_name: string }[]
+}
+
+export interface PlayerFinesSummaryRow {
+  profile_id: string
+  display_name: string
+  outstanding_total: number
+  unpaid_count: number
+  oldest_unpaid_days: number
+  entries: FineEntry[]
+}
+
+export interface FinesOverview {
+  total_outstanding: number
+  players_owing: number
+  entries: FineEntry[]
+}
