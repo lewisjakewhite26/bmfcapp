@@ -24,7 +24,7 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(title, {
       body,
       icon: '/pwa-192.png',
-      badge: '/pwa-192.png',
+      badge: '/pwa-badge-96.png',
       data: { url },
     })
   )

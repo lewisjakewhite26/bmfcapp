@@ -56,12 +56,49 @@ async function writeMaskableIcon(src) {
   console.log('Wrote public/pwa-512-maskable.png (512×512 maskable)')
 }
 
+/** Monochrome alpha silhouette for notification badge (Android status bar). */
+async function writeBadgeIcon(src) {
+  const size = 96
+  const { data, info } = await sharp(src)
+    .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  const bgThreshold = 48
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i]
+    const g = data[i + 1]
+    const b = data[i + 2]
+    const a = data[i + 3]
+    if (a < 12 || (r <= bgThreshold && g <= bgThreshold && b <= bgThreshold)) {
+      data[i] = 0
+      data[i + 1] = 0
+      data[i + 2] = 0
+      data[i + 3] = 0
+      continue
+    }
+    const luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    data[i] = 255
+    data[i + 1] = 255
+    data[i + 2] = 255
+    data[i + 3] = Math.min(255, Math.round((luminance / 255) * a * 1.15))
+  }
+
+  await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
+    .png()
+    .toFile(path.join(OUT, 'pwa-badge-96.png'))
+
+  console.log(`Wrote public/pwa-badge-96.png (${size}×${size} notification badge)`)
+}
+
 async function main() {
   const src = await ensureLogoPng()
   await writeIcon(src, 'pwa-192.png', 192)
   await writeIcon(src, 'pwa-512.png', 512)
   await writeIcon(src, 'apple-touch-icon.png', 180)
   await writeMaskableIcon(src)
+  await writeBadgeIcon(src)
 }
 
 main().catch((err) => {
