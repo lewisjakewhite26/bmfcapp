@@ -258,3 +258,37 @@
     animation: none;
   }
 }
+
+@keyframes fine-modal-up {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fine-modal-panel {
+  animation: fine-modal-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 640px) {
+  @keyframes fine-modal-up {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fine-modal-panel {
+    animation: none;
+  }
+}

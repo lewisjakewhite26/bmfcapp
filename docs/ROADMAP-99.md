@@ -29,6 +29,7 @@ Remaining lift to **99**:
 | 2 | **Observability** | Sentry, admin audit log |
 | 3 | **Testing** | E2E for team join link; finance unit tests |
 | 4 | **A11y** | Fieldset, focus trap, contrast (optional for closed squad) |
+| 5 | **Fines** | Player UI release + auto push when fined (see Phase 6g) |
 
 ---
 
@@ -152,6 +153,21 @@ gantt
 
 ---
 
+## Phase 6g — Fines (admin shipped; player release pending)
+
+Admin fines tool is live (`Admin → Fines`, migration **032**). Player-facing UI is built but **hidden** until release.
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Apply migration **032_fines.sql** on Club Hub | ⚠️ | Required before production fines |
+| Admin fines sessions + payments + save modal | ✅ | Shipped |
+| **Release player `/fines` page** | Open | Unhide route, nav links, dashboard alert banner |
+| **Auto push when player receives new fines** | Open | On admin Save fines: `send-push` to that `player_id` only; notify **new** fines added (not removals); body e.g. fine labels + total owed; tap opens `/fines`; non-blocking like `liveMatchPush.ts`; players need PWA + notifications enabled |
+| Optional: “Notify player” checkbox on save modal | Open | If admins want manual control |
+| Optional: custom fine list tweaks | Open | Edit `src/lib/fineCatalog.ts` |
+
+---
+
 ## Phase 1–5 — Previously complete
 
 Migrations 001–018, lazy routes, live matchday, photos, events, fundraisers, copy audit, weekly DDSFL sync, official crest PWA.
@@ -262,6 +278,7 @@ Optional for ~25-player closed squad.
 3. **Brief the squad** on **ChrisL**-style login name (displayed elsewhere as **Chris L**).
 4. **Run `npm run sync:ddsfl`** when 2026/27 fixtures publish.
 5. **Sentry + admin audit log** — final lift to 99; optional push smoke test.
+6. **Fines player release** — unhide `/fines`, then wire **auto push on new fines** (Phase 6g).
 
 ---
 
@@ -281,4 +298,4 @@ Optional for ~25-player closed squad.
 
 ---
 
-*Roadmap updated 20 June 2026 (PM). Baseline: AUDIT.md v11 (app at `7265a28`). **98/100 reached; target 99.*
+*Roadmap updated 21 June 2026. Baseline: AUDIT.md v11 (app at `7265a28`). **98/100 reached; target 99.*
