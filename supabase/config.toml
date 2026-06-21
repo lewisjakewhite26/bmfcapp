@@ -6,3 +6,7 @@
 [functions.send-push]
 verify_jwt = false
 entrypoint = "../supabase-club/functions/send-push/index.ts"
+
+[functions.apply-fine-late-fees]
+verify_jwt = false
+entrypoint = "../supabase-club/functions/apply-fine-late-fees/index.ts"

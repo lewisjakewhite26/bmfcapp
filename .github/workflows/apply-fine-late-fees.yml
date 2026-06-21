@@ -1,0 +1,35 @@
+name: Apply fine late fees
+
+on:
+  schedule:
+    # Daily 00:05 UTC — charges after each month's last-Sunday deadline
+    - cron: '5 0 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: apply-fine-late-fees
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply monthly late fees
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run apply:fine-late-fees
