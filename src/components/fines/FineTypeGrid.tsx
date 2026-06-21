@@ -8,7 +8,7 @@ interface FineTypeGridProps {
 
 export function FineTypeGrid({ activeKeys, disabled, onToggle }: FineTypeGridProps) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+    <div className="grid grid-cols-2 gap-2">
       {FINE_CATALOG.map((fine) => {
         const active = activeKeys.has(fine.key)
         return (

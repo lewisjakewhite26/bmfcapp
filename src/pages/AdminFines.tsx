@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
-import { FineTypeGrid } from '../components/fines/FineTypeGrid'
-import { formatFineAmount } from '../lib/fineCatalog'
+import { FinePickerModal } from '../components/fines/FinePickerModal'
+import { FINE_CATALOG, formatFineAmount } from '../lib/fineCatalog'
 import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
 import {
@@ -35,8 +35,8 @@ export default function AdminFines() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detail, setDetail] = useState<FineSessionDetail | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
-  const [togglingFine, setTogglingFine] = useState<string | null>(null)
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null)
+  const [savingPlayerFines, setSavingPlayerFines] = useState(false)
 
   const [sessionDate, setSessionDate] = useState(todayIso())
   const [sessionTitle, setSessionTitle] = useState('')
@@ -101,31 +101,24 @@ export default function AdminFines() {
     if (tab === 'payments') void reloadPayments()
   }, [tab, reloadPayments])
 
-  const selectedPlayer = useMemo(
-    () => detail?.squad.find((s) => s.profile_id === selectedPlayerId) ?? null,
-    [detail, selectedPlayerId],
+  const editingPlayer = useMemo(
+    () => detail?.squad.find((s) => s.profile_id === editingPlayerId) ?? null,
+    [detail, editingPlayerId],
   )
 
-  const playerActiveKeys = useMemo(() => {
-    if (!detail || !selectedPlayerId) return new Set<string>()
+  const editingPlayerKeys = useMemo(() => {
+    if (!detail || !editingPlayerId) return new Set<string>()
     return new Set(
       detail.entries
-        .filter((e) => e.profile_id === selectedPlayerId)
+        .filter((e) => e.profile_id === editingPlayerId)
         .map((e) => e.fine_key),
     )
-  }, [detail, selectedPlayerId])
-
-  const playerSessionTotal = useMemo(() => {
-    if (!detail || !selectedPlayerId) return 0
-    return detail.entries
-      .filter((e) => e.profile_id === selectedPlayerId)
-      .reduce((s, e) => s + e.amount, 0)
-  }, [detail, selectedPlayerId])
+  }, [detail, editingPlayerId])
 
   const openSession = (id: string) => {
     setTab('sessions')
     setSelectedId(id)
-    setSelectedPlayerId(null)
+    setEditingPlayerId(null)
   }
 
   const handleCreateSession = async (e: React.FormEvent) => {
@@ -153,17 +146,44 @@ export default function AdminFines() {
     }
   }
 
-  const handleFineToggle = async (fineKey: string, label: string, amount: number, enabled: boolean) => {
-    if (!selectedId || !selectedPlayerId) return
-    setTogglingFine(fineKey)
+  const handleSavePlayerFines = async (draftKeys: Set<string>) => {
+    if (!selectedId || !detail || !editingPlayerId) return
+
+    const serverKeys = new Set(
+      detail.entries
+        .filter((e) => e.profile_id === editingPlayerId)
+        .map((e) => e.fine_key),
+    )
+
+    setSavingPlayerFines(true)
     try {
-      await setFineEntry(selectedId, selectedPlayerId, fineKey, label, amount, enabled)
+      const updates = FINE_CATALOG.filter((fine) => {
+        const inDraft = draftKeys.has(fine.key)
+        const onServer = serverKeys.has(fine.key)
+        return inDraft !== onServer
+      })
+
+      await Promise.all(
+        updates.map((fine) =>
+          setFineEntry(
+            selectedId,
+            editingPlayerId,
+            fine.key,
+            fine.label,
+            fine.amount,
+            draftKeys.has(fine.key),
+          ),
+        ),
+      )
+
       await loadDetail(selectedId)
       await reloadSessions()
+      setEditingPlayerId(null)
+      toast.success('Fines saved')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't update fine")
+      toast.error(err instanceof Error ? err.message : "Couldn't save fines")
     } finally {
-      setTogglingFine(null)
+      setSavingPlayerFines(false)
     }
   }
 
@@ -313,22 +333,17 @@ export default function AdminFines() {
 
                     <div className="glass-card p-4 space-y-3">
                       <h3 className="font-semibold text-brand-navy">Pick a player</h3>
-                      <ul className="grid sm:grid-cols-2 gap-2">
+                      <ul className="grid grid-cols-2 gap-2">
                         {detail.squad.map((member) => {
                           const memberTotal = detail.entries
                             .filter((e) => e.profile_id === member.profile_id)
                             .reduce((sum, e) => sum + e.amount, 0)
-                          const selected = selectedPlayerId === member.profile_id
                           return (
                             <li key={member.profile_id}>
                               <button
                                 type="button"
-                                onClick={() => setSelectedPlayerId(member.profile_id)}
-                                className={`w-full flex items-center justify-between gap-2 px-3 py-3 min-h-[52px] rounded-card border text-left transition-colors ${
-                                  selected
-                                    ? 'border-brand-blue bg-brand-blue/10'
-                                    : 'border-brand-blue/10 hover:bg-brand-light/50'
-                                }`}
+                                onClick={() => setEditingPlayerId(member.profile_id)}
+                                className="w-full flex items-center justify-between gap-2 px-3 py-3 min-h-[52px] rounded-card border border-brand-blue/10 hover:bg-brand-light/50 text-left transition-colors touch-manipulation"
                               >
                                 <span className="font-medium text-brand-navy truncate">{member.display_name}</span>
                                 {memberTotal > 0 && (
@@ -343,26 +358,14 @@ export default function AdminFines() {
                       </ul>
                     </div>
 
-                    {selectedPlayer && (
-                      <div className="glass-card p-4 space-y-3">
-                        <div className="flex flex-wrap items-baseline justify-between gap-2">
-                          <h3 className="font-semibold text-brand-navy">{selectedPlayer.display_name}</h3>
-                          {playerSessionTotal > 0 && (
-                            <p className="text-sm text-brand-blue font-semibold tabular-nums">
-                              Session: {formatFineAmount(playerSessionTotal)}
-                            </p>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-500">Tap a fine to toggle it on or off.</p>
-                        <FineTypeGrid
-                          activeKeys={playerActiveKeys}
-                          disabled={Boolean(togglingFine)}
-                          onToggle={(key, label, amount, enabled) => {
-                            void handleFineToggle(key, label, amount, enabled)
-                          }}
-                        />
-                      </div>
-                    )}
+                    <FinePickerModal
+                      open={Boolean(editingPlayer)}
+                      playerName={editingPlayer?.display_name ?? ''}
+                      initialActiveKeys={editingPlayerKeys}
+                      saving={savingPlayerFines}
+                      onClose={() => setEditingPlayerId(null)}
+                      onSave={(keys) => void handleSavePlayerFines(keys)}
+                    />
 
                     <div className="glass-card overflow-hidden">
                       <div className="px-4 py-3 border-b border-brand-blue/10">
@@ -448,7 +451,7 @@ export default function AdminFines() {
                   {payFilter === 'unpaid' ? 'No outstanding fines — everyone\'s square.' : 'Nothing here.'}
                 </p>
               ) : (
-                <ul className="divide-y divide-brand-blue/10">
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3">
                   {payEntries.map((entry) => {
                     const busy = togglingPaidId === entry.id
                     return (
@@ -457,8 +460,10 @@ export default function AdminFines() {
                           type="button"
                           disabled={busy}
                           onClick={() => void handlePaidToggle(entry)}
-                          className={`w-full flex flex-col sm:flex-row sm:items-center gap-2 px-4 py-3 text-left min-h-[56px] transition-colors touch-manipulation ${
-                            entry.paid ? 'bg-emerald-50/50 hover:bg-emerald-50' : 'hover:bg-brand-light/40'
+                          className={`w-full h-full flex flex-col gap-2 px-4 py-3 text-left min-h-[88px] rounded-card border transition-colors touch-manipulation ${
+                            entry.paid
+                              ? 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50'
+                              : 'border-brand-blue/10 hover:bg-brand-light/40'
                           } ${busy ? 'opacity-60' : ''}`}
                         >
                           <div className="flex-1 min-w-0">
@@ -470,7 +475,7 @@ export default function AdminFines() {
                               {entry.session_title} · {sessionDateLabel(entry.session_date)}
                             </p>
                           </div>
-                          <div className="flex items-center gap-3 shrink-0">
+                          <div className="flex items-center justify-between gap-2 mt-auto">
                             <span className="font-semibold tabular-nums text-brand-navy">
                               {formatFineAmount(entry.amount)}
                             </span>

@@ -67,7 +67,7 @@ export default function Fines() {
             <p className="text-sm text-gray-500 mt-1">Nobody has outstanding fines right now.</p>
           </div>
         ) : (
-          <ul className="space-y-3">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {rows.map((row) => {
               const level = getFineAlertLevel(row.outstanding_total, row.oldest_unpaid_days)
               const expanded = expandedId === row.profile_id
