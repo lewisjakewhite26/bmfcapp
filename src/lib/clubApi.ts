@@ -2039,7 +2039,7 @@ export async function fetchFineSessions(): Promise<FineSession[]> {
 
 export async function createFineSession(input: {
   session_date: string
-  title: string
+  title?: string
   notes: string | null
 }): Promise<FineSession> {
   if (isMockDataMode()) {
@@ -2054,7 +2054,7 @@ export async function createFineSession(input: {
     p_admin_id: session.userId,
     p_session_token: session.sessionToken,
     p_session_date: input.session_date,
-    p_title: input.title,
+    p_title: input.title?.trim() ?? '',
     p_notes: input.notes,
   })
   if (error) throw error

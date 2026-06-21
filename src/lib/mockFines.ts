@@ -1,4 +1,5 @@
 import { loadSession } from '../hooks/authContext'
+import { autoFineEventTitle } from './fineCatalog'
 import { DEV_ADMIN } from './devBypass'
 import { getMockSquad, PREVIEW_PLAYER_ID } from './mockData'
 import type { FineEntry, FineSession, FineSessionDetail, FinesOverview, PlayerFinesSummaryRow } from '../types'
@@ -123,13 +124,13 @@ export function getMockFineSessions(): FineSession[] {
 
 export function createMockFineSession(input: {
   session_date: string
-  title: string
+  title?: string
   notes: string | null
 }): FineSession {
   const session: FineSession = {
     id: `fine-session-${Date.now()}`,
     session_date: input.session_date,
-    title: input.title,
+    title: input.title?.trim() || autoFineEventTitle(input.session_date),
     notes: input.notes,
     created_at: new Date().toISOString(),
     entry_count: 0,

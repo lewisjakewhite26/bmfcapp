@@ -9,7 +9,7 @@ import { groupFineEntriesByPlayer } from '../lib/finePaymentGroups'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
-import { FINE_CATALOG, formatFineAmount, isCatalogFineKey, newOneOffFineKey } from '../lib/fineCatalog'
+import { FINE_CATALOG, fineEventPrimaryLabel, fineEventSubtitle, formatFineAmount, isCatalogFineKey, newOneOffFineKey } from '../lib/fineCatalog'
 import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
 import {
@@ -82,7 +82,6 @@ export default function AdminFines() {
   const [showCreateForm, setShowCreateForm] = useState(false)
 
   const [sessionDate, setSessionDate] = useState(todayIso())
-  const [sessionTitle, setSessionTitle] = useState('')
   const [sessionNotes, setSessionNotes] = useState('')
   const [creating, setCreating] = useState(false)
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
@@ -119,16 +118,21 @@ export default function AdminFines() {
     }
   }, [])
 
-  const loadDetail = useCallback(async (sessionId: string) => {
-    setLoadingDetail(true)
+  const loadDetail = useCallback(async (sessionId: string, options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoadingDetail(true)
     try {
-      setDetail(await fetchFineSessionDetail(sessionId))
+      const next = await fetchFineSessionDetail(sessionId)
+      preserveScrollPosition(() => {
+        setDetail(next)
+      })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't load event")
-      setSelectedId(null)
-      setDetail(null)
+      if (!options?.silent) {
+        setSelectedId(null)
+        setDetail(null)
+      }
     } finally {
-      setLoadingDetail(false)
+      if (!options?.silent) setLoadingDetail(false)
     }
   }, [])
 
@@ -189,12 +193,18 @@ export default function AdminFines() {
     return { key: entry.fine_key, label: entry.label, amount: entry.amount }
   }, [detail, editingPlayerId])
 
+  const detailSubtitle = useMemo(() => {
+    if (!detail) return null
+    return fineEventSubtitle(detail.session.title, detail.session.session_date, detail.session.notes)
+  }, [detail])
+
   const deleteConfirmMessage = useMemo(() => {
     if (!detail) return ''
+    const label = fineEventPrimaryLabel(detail.session.title, detail.session.session_date)
     const entryCount = detail.entries.length
     return entryCount > 0
-      ? `Delete "${detail.session.title}" and all ${entryCount} fine${entryCount === 1 ? '' : 's'} logged? This can't be undone.`
-      : `Delete "${detail.session.title}"? This can't be undone.`
+      ? `Delete fines for ${label} and all ${entryCount} fine${entryCount === 1 ? '' : 's'} logged? This can't be undone.`
+      : `Delete fines for ${label}? This can't be undone.`
   }, [detail])
 
   const openSession = (id: string) => {
@@ -206,19 +216,13 @@ export default function AdminFines() {
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (sessionTitle.trim().length < 2) {
-      toast.error('Enter an event title (e.g. Saturday training)')
-      return
-    }
     setCreating(true)
     try {
       const created = await createFineSession({
         session_date: sessionDate,
-        title: sessionTitle.trim(),
         notes: sessionNotes.trim() || null,
       })
-      toast.success(`Event created for ${sessionDateLabel(created.session_date)}`)
-      setSessionTitle('')
+      toast.success(`Fines opened for ${sessionDateLabel(created.session_date)}`)
       setSessionNotes('')
       setShowCreateForm(false)
       await reloadSessions()
@@ -292,6 +296,7 @@ export default function AdminFines() {
     }
 
     setSavingPlayerFines(true)
+    const scrollY = window.scrollY
     try {
       await Promise.all(
         updates.map((fine) =>
@@ -306,10 +311,13 @@ export default function AdminFines() {
         ),
       )
 
-      await loadDetail(selectedId)
-      await reloadSessions()
       setEditingPlayerId(null)
+      await loadDetail(selectedId, { silent: true })
+      await refreshSessionsQuiet()
       toast.success('Fines saved')
+      requestAnimationFrame(() => {
+        window.scrollTo(0, scrollY)
+      })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't save fines")
     } finally {
@@ -464,7 +472,7 @@ export default function AdminFines() {
             {showCreateForm ? (
               <form onSubmit={(e) => void handleCreateSession(e)} className="glass-card p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
-                  <h2 className="font-semibold text-brand-navy">Log fines for an event</h2>
+                  <h2 className="font-semibold text-brand-navy">Log fines for a date</h2>
                   <button
                     type="button"
                     className="text-sm text-gray-500 hover:text-brand-navy shrink-0"
@@ -473,29 +481,16 @@ export default function AdminFines() {
                     Cancel
                   </button>
                 </div>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  <label className="block">
-                    <span className="text-sm text-gray-500">Date</span>
-                    <input
-                      type="date"
-                      className="input-field mt-1"
-                      value={sessionDate}
-                      onChange={(e) => setSessionDate(e.target.value)}
-                      required
-                    />
-                  </label>
-                  <label className="block sm:col-span-1">
-                    <span className="text-sm text-gray-500">Title</span>
-                    <input
-                      type="text"
-                      className="input-field mt-1"
-                      placeholder="e.g. Saturday training"
-                      value={sessionTitle}
-                      onChange={(e) => setSessionTitle(e.target.value)}
-                      required
-                    />
-                  </label>
-                </div>
+                <label className="block">
+                  <span className="text-sm text-gray-500">Date</span>
+                  <input
+                    type="date"
+                    className="input-field mt-1"
+                    value={sessionDate}
+                    onChange={(e) => setSessionDate(e.target.value)}
+                    required
+                  />
+                </label>
                 <label className="block">
                   <span className="text-sm text-gray-500">Notes (optional)</span>
                   <input
@@ -506,7 +501,7 @@ export default function AdminFines() {
                   />
                 </label>
                 <button type="submit" className="btn-primary text-sm" disabled={creating}>
-                  {creating ? 'Creating…' : 'Create event'}
+                  {creating ? 'Creating…' : 'Open fines'}
                 </button>
               </form>
             ) : (
@@ -515,7 +510,7 @@ export default function AdminFines() {
                 className="btn-secondary text-sm min-h-[44px] touch-manipulation"
                 onClick={() => setShowCreateForm(true)}
               >
-                + New event
+                + New date
               </button>
             )}
 
@@ -524,7 +519,7 @@ export default function AdminFines() {
                 <div className="px-4 py-3 border-b border-brand-blue/10">
                   <h2 className="font-semibold text-brand-navy">Events</h2>
                 </div>
-                {loadingSessions ? (
+                {loadingSessions && sessions.length === 0 ? (
                   <p className="p-4 text-sm text-gray-500">Loading…</p>
                 ) : sessions.length === 0 ? (
                   <p className="p-4 text-sm text-gray-500">Nothing logged yet.</p>
@@ -532,6 +527,8 @@ export default function AdminFines() {
                   <ul className="divide-y divide-brand-blue/10 max-h-[420px] overflow-y-auto">
                     {sessions.map((s) => {
                       const selected = selectedId === s.id
+                      const primary = fineEventPrimaryLabel(s.title, s.session_date)
+                      const subtitle = fineEventSubtitle(s.title, s.session_date, s.notes)
                       return (
                         <li key={s.id}>
                           <button
@@ -546,8 +543,10 @@ export default function AdminFines() {
                             <div className="flex items-start gap-2">
                               {selected && <EventCheckIcon />}
                               <div className="min-w-0 flex-1">
-                                <p className="font-medium text-brand-navy">{s.title}</p>
-                                <p className="text-xs text-gray-500 mt-0.5">{sessionDateLabel(s.session_date)}</p>
+                                <p className="font-medium text-brand-navy">{primary}</p>
+                                {subtitle && (
+                                  <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+                                )}
                                 <p className="text-xs text-gray-500 mt-1">
                                   {formatFineAmount(s.session_total ?? 0)} total
                                   {(s.unpaid_total ?? 0) > 0 && (
@@ -567,19 +566,20 @@ export default function AdminFines() {
               <div className="space-y-4 min-w-0">
                 {!selectedId ? (
                   <div className="glass-card p-6 text-sm text-gray-500 text-center">
-                    Select an event or create one.
+                    Select a date or open a new one.
                   </div>
-                ) : loadingDetail || !detail ? (
+                ) : !detail && loadingDetail ? (
                   <div className="glass-card p-6 animate-pulse bg-brand-light/40 h-48 rounded-card" />
-                ) : (
+                ) : !detail ? null : (
                   <>
                     <div className="glass-card p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h2 className="font-semibold text-brand-navy">{detail.session.title}</h2>
-                          <p className="text-sm text-gray-500">{sessionDateLabel(detail.session.session_date)}</p>
-                          {detail.session.notes && (
-                            <p className="text-sm text-gray-600 mt-2">{detail.session.notes}</p>
+                          <h2 className="font-semibold text-brand-navy">
+                            {fineEventPrimaryLabel(detail.session.title, detail.session.session_date)}
+                          </h2>
+                          {detailSubtitle && (
+                            <p className="text-sm text-gray-500 mt-1">{detailSubtitle}</p>
                           )}
                           <p className="text-sm font-medium text-brand-navy mt-3">
                             Event total: {formatFineAmount(detail.session.session_total ?? 0)}

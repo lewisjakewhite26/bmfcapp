@@ -3,17 +3,12 @@ import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { DataErrorBanner } from '../components/ui/DataErrorBanner'
 import { FineAlertBanner } from '../components/fines/FineAlertBanner'
-import { formatFineAmount } from '../lib/fineCatalog'
+import { fineEventDisplayLabel, formatFineAmount } from '../lib/fineCatalog'
 import { fineAlertClasses, getFineAlertLevel } from '../lib/fineAlerts'
-import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
 import { fetchMyUnpaidFines, fetchOutstandingFinesSummary } from '../lib/clubApi'
 import { useAuth } from '../hooks/useAuth'
 import type { FineEntry, PlayerFinesSummaryRow } from '../types'
-
-function sessionDateLabel(date: string) {
-  return formatMatchDate(`${date}T12:00:00`)
-}
 
 export default function Fines() {
   const { user } = useAuth()
@@ -116,7 +111,7 @@ export default function Fines() {
                               <div>
                                 <p className="font-medium text-brand-navy">{entry.label}</p>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                  {entry.session_title} · {sessionDateLabel(entry.session_date)}
+                                  {fineEventDisplayLabel(entry.session_title, entry.session_date)}
                                 </p>
                               </div>
                               <span className="font-semibold tabular-nums text-brand-navy">

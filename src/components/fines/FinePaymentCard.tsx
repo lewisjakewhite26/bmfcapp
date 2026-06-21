@@ -1,10 +1,5 @@
-import { formatFineAmount } from '../../lib/fineCatalog'
-import { formatMatchDate } from '../../lib/format'
+import { fineEventDisplayLabel, formatFineAmount } from '../../lib/fineCatalog'
 import type { FineEntry } from '../../types'
-
-function sessionDateLabel(date: string) {
-  return formatMatchDate(`${date}T12:00:00`)
-}
 
 function CheckIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
@@ -48,7 +43,7 @@ export function FinePaymentCard({
           <p className="font-semibold text-brand-navy truncate">{entry.display_name}</p>
           <p className="text-sm text-gray-700 truncate mt-0.5">{entry.label}</p>
           <p className="text-xs text-gray-500 mt-1 truncate">
-            {entry.session_title} · {sessionDateLabel(entry.session_date)}
+            {fineEventDisplayLabel(entry.session_title, entry.session_date)}
           </p>
         </div>
 

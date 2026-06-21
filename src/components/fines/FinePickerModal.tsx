@@ -67,6 +67,7 @@ export function FinePickerModal({
 
   useEffect(() => {
     if (!open) return
+    const scrollY = window.scrollY
     const prevBody = document.body.style.overflow
     const prevHtml = document.documentElement.style.overflow
     document.body.style.overflow = 'hidden'
@@ -74,6 +75,9 @@ export function FinePickerModal({
     return () => {
       document.body.style.overflow = prevBody
       document.documentElement.style.overflow = prevHtml
+      requestAnimationFrame(() => {
+        window.scrollTo(0, scrollY)
+      })
     }
   }, [open])
 
