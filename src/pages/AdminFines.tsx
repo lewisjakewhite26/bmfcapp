@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { FinePickerModal, type FinePickerSavePayload } from '../components/fines/FinePickerModal'
+import {
+  FinePlayerPaymentCard,
+} from '../components/fines/FinePlayerPaymentCard'
+import { groupFineEntriesByPlayer } from '../lib/finePaymentGroups'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
-import { FinePickerModal, type FinePickerSavePayload } from '../components/fines/FinePickerModal'
-import { FinePaymentCard } from '../components/fines/FinePaymentCard'
 import { FINE_CATALOG, formatFineAmount, isCatalogFineKey, newOneOffFineKey } from '../lib/fineCatalog'
 import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
@@ -21,6 +25,12 @@ import type { FineEntry, FineSession, FineSessionDetail } from '../types'
 
 type Tab = 'sessions' | 'payments'
 type PayFilter = 'unpaid' | 'paid' | 'all'
+
+const PAY_FILTER_LABELS: Record<PayFilter, string> = {
+  unpaid: 'Still owed',
+  paid: 'Paid',
+  all: 'All fines',
+}
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
@@ -48,6 +58,18 @@ function blurActiveElement() {
   }
 }
 
+function EventCheckIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 shrink-0 text-brand-blue" aria-hidden>
+      <path
+        fillRule="evenodd"
+        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+        clipRule="evenodd"
+      />
+    </svg>
+  )
+}
+
 export default function AdminFines() {
   const [tab, setTab] = useState<Tab>('sessions')
   const [sessions, setSessions] = useState<FineSession[]>([])
@@ -57,22 +79,26 @@ export default function AdminFines() {
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null)
   const [savingPlayerFines, setSavingPlayerFines] = useState(false)
+  const [showCreateForm, setShowCreateForm] = useState(false)
 
   const [sessionDate, setSessionDate] = useState(todayIso())
   const [sessionTitle, setSessionTitle] = useState('')
   const [sessionNotes, setSessionNotes] = useState('')
   const [creating, setCreating] = useState(false)
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   const [payFilter, setPayFilter] = useState<PayFilter>('unpaid')
   const [payEntries, setPayEntries] = useState<FineEntry[]>([])
   const [payOutstanding, setPayOutstanding] = useState(0)
   const [payPlayersOwing, setPayPlayersOwing] = useState(0)
   const [loadingPayments, setLoadingPayments] = useState(false)
-  const [togglingPaidId, setTogglingPaidId] = useState<string | null>(null)
-  const [paySuccessId, setPaySuccessId] = useState<string | null>(null)
-  const [payExitingId, setPayExitingId] = useState<string | null>(null)
+  const [togglingPlayerId, setTogglingPlayerId] = useState<string | null>(null)
+  const [paySuccessPlayerId, setPaySuccessPlayerId] = useState<string | null>(null)
+  const [payExitingPlayerId, setPayExitingPlayerId] = useState<string | null>(null)
   const paymentsListRef = useRef<HTMLUListElement>(null)
+
+  const payGroups = useMemo(() => groupFineEntriesByPlayer(payEntries), [payEntries])
 
   const reloadSessions = useCallback(async () => {
     setLoadingSessions(true)
@@ -89,7 +115,7 @@ export default function AdminFines() {
     try {
       setSessions(await fetchFineSessions())
     } catch {
-      // Background refresh only — don't disturb the payments list.
+      // Background refresh only.
     }
   }, [])
 
@@ -136,8 +162,8 @@ export default function AdminFines() {
   }, [tab, reloadPayments])
 
   useEffect(() => {
-    setPaySuccessId(null)
-    setPayExitingId(null)
+    setPaySuccessPlayerId(null)
+    setPayExitingPlayerId(null)
   }, [payFilter])
 
   const editingPlayer = useMemo(
@@ -163,10 +189,19 @@ export default function AdminFines() {
     return { key: entry.fine_key, label: entry.label, amount: entry.amount }
   }, [detail, editingPlayerId])
 
+  const deleteConfirmMessage = useMemo(() => {
+    if (!detail) return ''
+    const entryCount = detail.entries.length
+    return entryCount > 0
+      ? `Delete "${detail.session.title}" and all ${entryCount} fine${entryCount === 1 ? '' : 's'} logged? This can't be undone.`
+      : `Delete "${detail.session.title}"? This can't be undone.`
+  }, [detail])
+
   const openSession = (id: string) => {
     setTab('sessions')
     setSelectedId(id)
     setEditingPlayerId(null)
+    setShowCreateForm(false)
   }
 
   const handleCreateSession = async (e: React.FormEvent) => {
@@ -185,6 +220,7 @@ export default function AdminFines() {
       toast.success(`Event created for ${sessionDateLabel(created.session_date)}`)
       setSessionTitle('')
       setSessionNotes('')
+      setShowCreateForm(false)
       await reloadSessions()
       openSession(created.id)
     } catch (err) {
@@ -282,16 +318,9 @@ export default function AdminFines() {
   }
 
   const handleDeleteSession = async () => {
-    if (!selectedId || !detail) return
+    if (!selectedId) return
 
-    const entryCount = detail.entries.length
-    const message =
-      entryCount > 0
-        ? `Delete "${detail.session.title}" and all ${entryCount} fine${entryCount === 1 ? '' : 's'} logged? This can't be undone.`
-        : `Delete "${detail.session.title}"? This can't be undone.`
-
-    if (!window.confirm(message)) return
-
+    setDeleteConfirmOpen(false)
     setDeletingSessionId(selectedId)
     try {
       await deleteFineSession(selectedId)
@@ -308,69 +337,98 @@ export default function AdminFines() {
     }
   }
 
-  const handlePaidToggle = async (entry: FineEntry) => {
-    if (togglingPaidId) return
-
-    const prevPaid = entry.paid
-    const next = !prevPaid
-    setTogglingPaidId(entry.id)
+  const applyPlayerPaymentOptimistic = (
+    profileId: string,
+    markPaid: boolean,
+    targets: FineEntry[],
+  ) => {
+    const targetIds = new Set(targets.map((e) => e.id))
+    const delta = targets.reduce((sum, e) => sum + e.amount, 0)
 
     setPayEntries((prev) => {
-      const updated = prev.map((e) => (e.id === entry.id ? { ...e, paid: next } : e))
-      if (!prevPaid && next) {
-        setPayOutstanding((total) => Math.max(0, total - entry.amount))
+      const updated = prev.map((e) =>
+        targetIds.has(e.id) ? { ...e, paid: markPaid } : e,
+      )
+
+      if (markPaid) {
+        setPayOutstanding((total) => Math.max(0, total - delta))
         const stillOwing = updated.some(
-          (e) => e.id !== entry.id && e.profile_id === entry.profile_id && !e.paid,
+          (e) => e.profile_id === profileId && !e.paid,
         )
-        if (!stillOwing) setPayPlayersOwing((count) => Math.max(0, count - 1))
-      } else if (prevPaid && !next) {
-        setPayOutstanding((total) => total + entry.amount)
+        if (!stillOwing) {
+          setPayPlayersOwing((count) => Math.max(0, count - 1))
+        }
+      } else {
+        setPayOutstanding((total) => total + delta)
         const hadOther = prev.some(
-          (e) => e.id !== entry.id && e.profile_id === entry.profile_id && !e.paid,
+          (e) => e.profile_id === profileId && !e.paid && !targetIds.has(e.id),
         )
-        if (!hadOther) setPayPlayersOwing((count) => count + 1)
+        if (!hadOther) {
+          setPayPlayersOwing((count) => count + 1)
+        }
       }
+
       return updated
     })
 
-    preserveScrollPosition(() => {
-      if (next) setPaySuccessId(entry.id)
-    })
+    if (markPaid) {
+      preserveScrollPosition(() => {
+        setPaySuccessPlayerId(profileId)
+      })
+    }
+  }
+
+  const handlePlayerPaidToggle = async (profileId: string, markPaid: boolean) => {
+    if (togglingPlayerId) return
+
+    const targets = payEntries.filter(
+      (e) => e.profile_id === profileId && e.paid !== markPaid,
+    )
+    if (targets.length === 0) return
+
+    setTogglingPlayerId(profileId)
+    applyPlayerPaymentOptimistic(profileId, markPaid, targets)
 
     try {
-      const updated = await setFinePaid(entry.id, next)
+      const updatedEntries = await Promise.all(
+        targets.map((entry) => setFinePaid(entry.id, markPaid)),
+      )
+      const updatedById = new Map(updatedEntries.map((entry) => [entry.id, entry]))
+
       preserveScrollPosition(() => {
-        setPayEntries((prev) => prev.map((e) => (e.id === entry.id ? updated : e)))
+        setPayEntries((prev) =>
+          prev.map((e) => updatedById.get(e.id) ?? e),
+        )
       })
 
       const leavesFilter =
-        (payFilter === 'unpaid' && next) || (payFilter === 'paid' && !next)
+        (payFilter === 'unpaid' && markPaid) || (payFilter === 'paid' && !markPaid)
 
       if (leavesFilter) {
-        setPayExitingId(entry.id)
+        setPayExitingPlayerId(profileId)
         window.setTimeout(() => {
           blurActiveElement()
           const scrollY = window.scrollY
           paymentsListRef.current?.focus({ preventScroll: true })
-          setPayEntries((prev) => prev.filter((e) => e.id !== entry.id))
-          setPayExitingId(null)
-          setPaySuccessId(null)
+          setPayEntries((prev) => prev.filter((e) => e.profile_id !== profileId))
+          setPayExitingPlayerId(null)
+          setPaySuccessPlayerId(null)
           requestAnimationFrame(() => {
             window.scrollTo(0, scrollY)
           })
         }, 380)
-      } else {
-        window.setTimeout(() => setPaySuccessId(null), 600)
+      } else if (markPaid) {
+        window.setTimeout(() => setPaySuccessPlayerId(null), 600)
       }
 
       void refreshSessionsQuiet()
     } catch (err) {
-      setPaySuccessId(null)
-      setPayExitingId(null)
+      setPaySuccessPlayerId(null)
+      setPayExitingPlayerId(null)
       toast.error(err instanceof Error ? err.message : "Couldn't update payment")
       void reloadPayments({ silent: true })
     } finally {
-      setTogglingPaidId(null)
+      setTogglingPlayerId(null)
     }
   }
 
@@ -392,7 +450,7 @@ export default function AdminFines() {
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`text-sm font-semibold px-4 py-2 rounded-pill capitalize ${
+              className={`text-sm font-semibold px-4 py-2 rounded-pill ${
                 tab === t ? 'bg-brand-blue text-white' : 'text-brand-navy'
               }`}
             >
@@ -403,44 +461,63 @@ export default function AdminFines() {
 
         {tab === 'sessions' && (
           <div className="space-y-4">
-            <form onSubmit={(e) => void handleCreateSession(e)} className="glass-card p-4 space-y-3">
-              <h2 className="font-semibold text-brand-navy">Log fines for an event</h2>
-              <div className="grid sm:grid-cols-2 gap-3">
+            {showCreateForm ? (
+              <form onSubmit={(e) => void handleCreateSession(e)} className="glass-card p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="font-semibold text-brand-navy">Log fines for an event</h2>
+                  <button
+                    type="button"
+                    className="text-sm text-gray-500 hover:text-brand-navy shrink-0"
+                    onClick={() => setShowCreateForm(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="text-sm text-gray-500">Date</span>
+                    <input
+                      type="date"
+                      className="input-field mt-1"
+                      value={sessionDate}
+                      onChange={(e) => setSessionDate(e.target.value)}
+                      required
+                    />
+                  </label>
+                  <label className="block sm:col-span-1">
+                    <span className="text-sm text-gray-500">Title</span>
+                    <input
+                      type="text"
+                      className="input-field mt-1"
+                      placeholder="e.g. Saturday training"
+                      value={sessionTitle}
+                      onChange={(e) => setSessionTitle(e.target.value)}
+                      required
+                    />
+                  </label>
+                </div>
                 <label className="block">
-                  <span className="text-sm text-gray-500">Date</span>
-                  <input
-                    type="date"
-                    className="input-field mt-1"
-                    value={sessionDate}
-                    onChange={(e) => setSessionDate(e.target.value)}
-                    required
-                  />
-                </label>
-                <label className="block sm:col-span-1">
-                  <span className="text-sm text-gray-500">Title</span>
+                  <span className="text-sm text-gray-500">Notes (optional)</span>
                   <input
                     type="text"
                     className="input-field mt-1"
-                    placeholder="e.g. Saturday training"
-                    value={sessionTitle}
-                    onChange={(e) => setSessionTitle(e.target.value)}
-                    required
+                    value={sessionNotes}
+                    onChange={(e) => setSessionNotes(e.target.value)}
                   />
                 </label>
-              </div>
-              <label className="block">
-                <span className="text-sm text-gray-500">Notes (optional)</span>
-                <input
-                  type="text"
-                  className="input-field mt-1"
-                  value={sessionNotes}
-                  onChange={(e) => setSessionNotes(e.target.value)}
-                />
-              </label>
-              <button type="submit" className="btn-primary text-sm" disabled={creating}>
-                {creating ? 'Creating…' : 'Create event'}
+                <button type="submit" className="btn-primary text-sm" disabled={creating}>
+                  {creating ? 'Creating…' : 'Create event'}
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                className="btn-secondary text-sm min-h-[44px] touch-manipulation"
+                onClick={() => setShowCreateForm(true)}
+              >
+                + New event
               </button>
-            </form>
+            )}
 
             <div className="grid lg:grid-cols-[minmax(0,280px)_1fr] gap-4 items-start">
               <div className="glass-card overflow-hidden">
@@ -453,26 +530,36 @@ export default function AdminFines() {
                   <p className="p-4 text-sm text-gray-500">Nothing logged yet.</p>
                 ) : (
                   <ul className="divide-y divide-brand-blue/10 max-h-[420px] overflow-y-auto">
-                    {sessions.map((s) => (
-                      <li key={s.id}>
-                        <button
-                          type="button"
-                          onClick={() => openSession(s.id)}
-                          className={`w-full text-left px-4 py-3 hover:bg-brand-light/40 transition-colors ${
-                            selectedId === s.id ? 'bg-brand-blue/8' : ''
-                          }`}
-                        >
-                          <p className="font-medium text-brand-navy">{s.title}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{sessionDateLabel(s.session_date)}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {formatFineAmount(s.session_total ?? 0)} total
-                            {(s.unpaid_total ?? 0) > 0 && (
-                              <span className="text-amber-700"> · {formatFineAmount(s.unpaid_total ?? 0)} unpaid</span>
-                            )}
-                          </p>
-                        </button>
-                      </li>
-                    ))}
+                    {sessions.map((s) => {
+                      const selected = selectedId === s.id
+                      return (
+                        <li key={s.id}>
+                          <button
+                            type="button"
+                            onClick={() => openSession(s.id)}
+                            className={`w-full text-left py-3 pr-4 pl-3 border-l-4 transition-colors ${
+                              selected
+                                ? 'border-brand-blue bg-brand-blue/10'
+                                : 'border-transparent hover:bg-brand-light/40'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2">
+                              {selected && <EventCheckIcon />}
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-brand-navy">{s.title}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">{sessionDateLabel(s.session_date)}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {formatFineAmount(s.session_total ?? 0)} total
+                                  {(s.unpaid_total ?? 0) > 0 && (
+                                    <span className="text-amber-700"> · {formatFineAmount(s.unpaid_total ?? 0)} unpaid</span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        </li>
+                      )
+                    })}
                   </ul>
                 )}
               </div>
@@ -501,7 +588,7 @@ export default function AdminFines() {
                         <button
                           type="button"
                           disabled={deletingSessionId === selectedId}
-                          onClick={() => void handleDeleteSession()}
+                          onClick={() => setDeleteConfirmOpen(true)}
                           className="btn-danger text-xs px-3 py-2 min-h-0 shrink-0"
                         >
                           {deletingSessionId === selectedId ? 'Deleting…' : 'Delete event'}
@@ -510,23 +597,38 @@ export default function AdminFines() {
                     </div>
 
                     <div className="glass-card p-4 space-y-3">
-                      <h3 className="font-semibold text-brand-navy">Pick a player</h3>
+                      <h3 className="font-semibold text-brand-navy">Squad</h3>
+                      <p className="text-xs text-gray-500 -mt-1">Tap a player to log or edit their fines.</p>
                       <ul className="grid grid-cols-2 gap-2">
                         {detail.squad.map((member) => {
-                          const memberTotal = detail.entries
-                            .filter((e) => e.profile_id === member.profile_id)
-                            .reduce((sum, e) => sum + e.amount, 0)
+                          const fineCount = detail.entries.filter(
+                            (e) => e.profile_id === member.profile_id,
+                          ).length
+                          const isActive = editingPlayerId === member.profile_id
+                          const hasFines = fineCount > 0
                           return (
                             <li key={member.profile_id}>
                               <button
                                 type="button"
+                                aria-pressed={hasFines}
                                 onClick={() => setEditingPlayerId(member.profile_id)}
-                                className="w-full flex items-center justify-between gap-2 px-3 py-3 min-h-[52px] rounded-card border border-brand-blue/10 hover:bg-brand-light/50 text-left transition-colors touch-manipulation"
+                                className={`relative w-full flex items-center justify-between gap-2 px-3 py-3 min-h-[52px] rounded-card border text-left transition-colors touch-manipulation ${
+                                  isActive
+                                    ? 'border-brand-blue bg-brand-blue/10 ring-2 ring-brand-blue/25'
+                                    : hasFines
+                                      ? 'border-brand-blue/20 bg-white/70 hover:bg-brand-light/50'
+                                      : 'border-brand-blue/10 hover:bg-brand-light/50'
+                                }`}
                               >
-                                <span className="font-medium text-brand-navy truncate">{member.display_name}</span>
-                                {memberTotal > 0 && (
-                                  <span className="text-sm font-semibold text-brand-blue tabular-nums shrink-0">
-                                    {formatFineAmount(memberTotal)}
+                                <span className="font-medium text-brand-navy truncate pr-1">
+                                  {member.display_name}
+                                </span>
+                                {fineCount > 0 && (
+                                  <span
+                                    className="flex h-6 min-w-[1.5rem] shrink-0 items-center justify-center rounded-full bg-brand-blue px-1.5 text-xs font-bold tabular-nums text-white"
+                                    aria-label={`${fineCount} fine${fineCount === 1 ? '' : 's'}`}
+                                  >
+                                    {fineCount}
                                   </span>
                                 )}
                               </button>
@@ -545,44 +647,6 @@ export default function AdminFines() {
                       onClose={() => setEditingPlayerId(null)}
                       onSave={(payload) => void handleSavePlayerFines(payload)}
                     />
-
-                    <div className="glass-card overflow-hidden">
-                      <div className="px-4 py-3 border-b border-brand-blue/10">
-                        <h3 className="font-semibold text-brand-navy">Player fines</h3>
-                      </div>
-                      {detail.entries.length === 0 ? (
-                        <p className="p-4 text-sm text-gray-500">No fines logged yet.</p>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="text-left text-gray-500 border-b border-brand-blue/10">
-                                <th className="px-4 py-2 font-medium">Player</th>
-                                <th className="px-4 py-2 font-medium">Fine</th>
-                                <th className="px-4 py-2 font-medium text-right">Amount</th>
-                                <th className="px-4 py-2 font-medium">Paid</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-brand-blue/8">
-                              {detail.entries.map((entry) => (
-                                <tr key={entry.id}>
-                                  <td className="px-4 py-2.5 font-medium text-brand-navy">{entry.display_name}</td>
-                                  <td className="px-4 py-2.5 text-gray-700">{entry.label}</td>
-                                  <td className="px-4 py-2.5 text-right tabular-nums">{formatFineAmount(entry.amount)}</td>
-                                  <td className="px-4 py-2.5">
-                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-pill ${
-                                      entry.paid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                                    }`}>
-                                      {entry.paid ? 'Paid' : 'Owed'}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
                   </>
                 )}
               </div>
@@ -613,25 +677,25 @@ export default function AdminFines() {
                   key={f}
                   type="button"
                   onClick={() => setPayFilter(f)}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-pill capitalize ${
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-pill ${
                     payFilter === f ? 'bg-brand-blue text-white' : 'bg-brand-light text-brand-navy'
                   }`}
                 >
-                  {f === 'unpaid' ? 'Still owed' : f}
+                  {PAY_FILTER_LABELS[f]}
                 </button>
               ))}
             </div>
 
             <div className="glass-card overflow-hidden">
-              {loadingPayments && payEntries.length === 0 ? (
+              {loadingPayments && payGroups.length === 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3">
                   {[0, 1, 2, 3].map((i) => (
                     <div key={i} className="h-[88px] animate-pulse rounded-card bg-brand-light/50" />
                   ))}
                 </div>
-              ) : payEntries.length === 0 ? (
+              ) : payGroups.length === 0 ? (
                 <p className="p-6 text-sm text-gray-500 text-center">
-                  {payFilter === 'unpaid' ? 'No outstanding fines. Everyone\'s square.' : 'Nothing here.'}
+                  {payFilter === 'unpaid' ? "No outstanding fines. Everyone's square." : 'Nothing here.'}
                 </p>
               ) : (
                 <ul
@@ -639,15 +703,16 @@ export default function AdminFines() {
                   tabIndex={-1}
                   className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 outline-none"
                 >
-                  {payEntries.map((entry) => (
-                    <FinePaymentCard
-                      key={entry.id}
-                      entry={entry}
-                      busy={togglingPaidId === entry.id}
-                      success={paySuccessId === entry.id}
-                      exiting={payExitingId === entry.id}
-                      onMarkPaid={() => void handlePaidToggle(entry)}
-                      onUndoPaid={() => void handlePaidToggle(entry)}
+                  {payGroups.map((group) => (
+                    <FinePlayerPaymentCard
+                      key={group.profileId}
+                      group={group}
+                      busy={togglingPlayerId === group.profileId}
+                      success={paySuccessPlayerId === group.profileId}
+                      exiting={payExitingPlayerId === group.profileId}
+                      showPulse={!group.allPaid}
+                      onMarkAllPaid={() => void handlePlayerPaidToggle(group.profileId, true)}
+                      onUndoAllPaid={() => void handlePlayerPaidToggle(group.profileId, false)}
                     />
                   ))}
                 </ul>
@@ -656,6 +721,18 @@ export default function AdminFines() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title="Delete event?"
+        message={deleteConfirmMessage}
+        confirmLabel="Delete event"
+        cancelLabel="Keep event"
+        destructive
+        busy={Boolean(deletingSessionId)}
+        onConfirm={() => void handleDeleteSession()}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
     </PageShell>
   )
 }

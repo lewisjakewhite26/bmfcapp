@@ -335,17 +335,17 @@
 
 @keyframes fine-mark-paid-invite {
   0%, 100% {
-    box-shadow: 0 4px 16px rgba(43, 95, 192, 0.28);
+    box-shadow: 0 2px 8px rgba(43, 95, 192, 0.1);
     transform: translateY(0);
   }
   50% {
-    box-shadow: 0 6px 22px rgba(43, 95, 192, 0.42);
-    transform: translateY(-1px);
+    box-shadow: 0 3px 12px rgba(43, 95, 192, 0.18);
+    transform: translateY(-0.5px);
   }
 }
 
 .fine-mark-paid-pulse {
-  animation: fine-mark-paid-invite 2.4s ease-in-out infinite;
+  animation: fine-mark-paid-invite 5s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
