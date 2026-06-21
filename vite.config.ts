@@ -25,6 +25,7 @@ export default defineConfig({
         'pwa-512.png',
         'pwa-512-maskable.png',
         'pwa-badge-96.png',
+        'notification-badge.svg',
         'apple-touch-icon.png',
       ],
       manifest: {

@@ -20,11 +20,14 @@ self.addEventListener('push', (event) => {
   const body = payload?.body ?? 'You have a new update'
   const url = payload?.url ?? '/dashboard'
 
+  const icon = new URL('/pwa-192.png', self.location.origin).href
+  const badge = new URL('/pwa-badge-96.png', self.location.origin).href
+
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: '/pwa-192.png',
-      badge: '/pwa-badge-96.png',
+      icon,
+      badge,
       data: { url },
     })
   )
