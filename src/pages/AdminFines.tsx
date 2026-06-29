@@ -6,6 +6,7 @@ import {
   FinePlayerPaymentCard,
 } from '../components/fines/FinePlayerPaymentCard'
 import { groupFineEntriesByPlayer } from '../lib/finePaymentGroups'
+import { sendFinePushNotification } from '../lib/finePush'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
@@ -295,6 +296,19 @@ export default function AdminFines() {
       }
     }
 
+    const playerId = editingPlayerId
+    const newFineLabels = updates.filter((u) => u.enabled).map((u) => u.label)
+
+    const remainingUnpaid = new Map<string, number>()
+    for (const entry of serverEntries) {
+      if (!entry.paid) remainingUnpaid.set(entry.fine_key, entry.amount)
+    }
+    for (const update of updates) {
+      if (update.enabled) remainingUnpaid.set(update.key, update.amount)
+      else remainingUnpaid.delete(update.key)
+    }
+    const owedTotal = [...remainingUnpaid.values()].reduce((sum, n) => sum + n, 0)
+
     setSavingPlayerFines(true)
     const scrollY = window.scrollY
     try {
@@ -302,7 +316,7 @@ export default function AdminFines() {
         updates.map((fine) =>
           setFineEntry(
             selectedId,
-            editingPlayerId,
+            playerId,
             fine.key,
             fine.label,
             fine.amount,
@@ -318,6 +332,7 @@ export default function AdminFines() {
       requestAnimationFrame(() => {
         window.scrollTo(0, scrollY)
       })
+      void sendFinePushNotification(playerId, newFineLabels, owedTotal)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't save fines")
     } finally {

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { fineAlertClasses, getFineAlertLevel, summarizeFineAlert, unpaidTotal, oldestUnpaidDays } from '../../lib/fineAlerts'
+import { FINE_BANNER } from '../../lib/finePlayerCopy'
 import type { FineEntry } from '../../types'
 
 interface FineAlertBannerProps {
@@ -24,12 +25,14 @@ export function FineAlertBanner({ entries, compact }: FineAlertBannerProps) {
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide font-semibold text-gray-500">Outstanding fines</p>
+          <p className="text-xs uppercase tracking-wide font-semibold text-gray-500">{FINE_BANNER.label}</p>
           <p className={`font-semibold mt-1 ${level === 'critical' ? 'text-red-800' : level === 'warning' ? 'text-amber-900' : 'text-brand-navy'}`}>
             {message}
           </p>
-          {!compact && (
-            <p className="text-sm text-gray-600 mt-1">Tap to see the full fines list</p>
+          {!compact ? (
+            <p className="text-sm text-gray-600 mt-1">{FINE_BANNER.fullHint}</p>
+          ) : (
+            <p className="text-sm text-gray-600 mt-1">{FINE_BANNER.viewHint}</p>
           )}
         </div>
         <span className="font-display text-2xl font-bold tabular-nums text-brand-navy shrink-0">

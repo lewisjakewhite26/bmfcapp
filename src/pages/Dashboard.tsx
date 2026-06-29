@@ -3,8 +3,9 @@ import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { FixtureCard } from '../components/club/FixtureCard'
 import { AvailabilityForm } from '../components/club/AvailabilityForm'
+import { FineAlertBanner } from '../components/fines/FineAlertBanner'
 import { useAuth } from '../hooks/useAuth'
-import { useCalendar, useDashboard } from '../hooks/useClubData'
+import { useCalendar, useDashboard, useMyUnpaidFines } from '../hooks/useClubData'
 import { getTimeGreeting } from '../lib/greeting'
 import { formatFixtureSchedule, formatMatchDate, formatMatchTime, formatScore } from '../lib/format'
 import { CLUB_NAME, LEAGUE_NAME } from '../lib/mockData'
@@ -28,6 +29,7 @@ export default function Dashboard() {
     reload: reloadCalendar,
     availabilitySaving,
   } = useCalendar(user?.id)
+  const { entries: myUnpaidFines } = useMyUnpaidFines()
 
   const nextAvailEntry = summary?.nextFixture
     ? availability.find((a) => a.fixture_id === summary.nextFixture?.id)
@@ -62,6 +64,8 @@ export default function Dashboard() {
         {!loading && summary && (
           <AvailabilityNudge summary={summary} availability={availability} />
         )}
+
+        {myUnpaidFines.length > 0 && <FineAlertBanner entries={myUnpaidFines} compact />}
 
         {loading ? (
           <DashboardSkeleton />

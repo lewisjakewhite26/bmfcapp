@@ -177,6 +177,13 @@ export function MobileBottomNav() {
           >
             My profile
           </Link>
+          <Link
+            to="/fines"
+            onClick={() => setMenuOpen(false)}
+            className="flex items-center min-h-[48px] px-3 rounded-xl text-brand-navy font-medium"
+          >
+            Fines
+          </Link>
           {passcodeOpen ? (
             <ChangePasscodeForm onClose={() => setPasscodeOpen(false)} />
           ) : (

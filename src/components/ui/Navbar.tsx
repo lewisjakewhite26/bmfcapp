@@ -42,6 +42,7 @@ export function Navbar() {
                 <Link to="/results" className={`nav-link ${isActive('/results') ? 'nav-link-active' : ''}`}>Results</Link>
                 <Link to="/stats" className={`nav-link ${isActive('/stats') ? 'nav-link-active' : ''}`}>Stats</Link>
                 <Link to="/calendar" className={`nav-link ${isActive('/calendar') ? 'nav-link-active' : ''}`}>Calendar</Link>
+                <Link to="/fines" className={`nav-link ${isActive('/fines') ? 'nav-link-active' : ''}`}>Fines</Link>
                 <Link to={`/player/${authUser.id}`} className="text-sm text-gray-600 hover:text-brand-blue transition-colors">
                   {authUser.display_name}
                 </Link>

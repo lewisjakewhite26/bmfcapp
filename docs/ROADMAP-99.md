@@ -25,11 +25,11 @@ Remaining lift to **99**:
 
 | Priority | Area | Notes |
 |----------|------|-------|
-| 1 | **Ops** | Generate team link, populate squad, DDSFL sync |
+| 1 | **Ops** | GitHub Actions secrets for DDSFL sync, team link, populate squad |
 | 2 | **Observability** | Sentry, admin audit log |
 | 3 | **Testing** | E2E for team join link; finance unit tests |
 | 4 | **A11y** | Fieldset, focus trap, contrast (optional for closed squad) |
-| 5 | **Fines** | Player UI release + auto push when fined (see Phase 6g) |
+| 5 | **Fines** | Admin shipped; player release + push (Phase 6g) |
 
 ---
 
@@ -42,7 +42,7 @@ Remaining lift to **99**:
 | v10 — GK fix + calendar + PWA prompt (`ed6bde1`) | 96 | ✅ |
 | **v11 — E2E CI + team invite + login split (`7265a28`)** | **98** | ✅ |
 | Apply migrations 001–028 on Club Hub | — | ✅ |
-| Ops: squad + team link + DDSFL sync | ~98 | ⚠️ Operator |
+| Ops: squad + team link + DDSFL sync | ~98 | ⚠️ GitHub secrets for nightly sync |
 | Audit log + Sentry | ~99 | Open |
 
 ---
@@ -65,7 +65,8 @@ gantt
     Generate team invite link (Admin)     :active, ops1, 2026-06-20, 1d
     Populate squad table (Admin)          :active, ops2, 2026-06-20, 1d
     Brief squad on ChrisL login           :ops3, 2026-06-20, 1d
-    npm run sync:ddsfl                      :ops4, 2026-06-21, 1d
+    GitHub Actions secrets (DDSFL sync)   :ops4, 2026-06-21, 1d
+    npm run sync:ddsfl / nightly Action   :ops5, 2026-06-21, 1d
     section Ops maturity — to 99
     Admin audit log                       :o1, 2026-07-10, 2d
     Sentry                                :o2, 2026-07-12, 1d
@@ -159,8 +160,10 @@ Admin fines tool is live (`Admin → Fines`, migration **032**). Player-facing U
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Apply migration **032_fines.sql** on Club Hub | ⚠️ | Required before production fines |
+| Apply migration **032_fines.sql** on Club Hub | ✅ | Core fines schema |
+| Apply migrations **033–035** on Club Hub | ⚠️ | Delete, late fees, auto title |
 | Admin fines sessions + payments + save modal | ✅ | Shipped |
+| **Player fines copy + layout** (`finePlayerCopy.ts`, your balance card) | ✅ | Built; route still hidden |
 | **Release player `/fines` page** | Open | Unhide route, nav links, dashboard alert banner |
 | **Auto push when player receives new fines** | Open | On admin Save fines: `send-push` to that `player_id` only; notify **new** fines added (not removals); body e.g. fine labels + total owed; tap opens `/fines`; non-blocking like `liveMatchPush.ts`; players need PWA + notifications enabled |
 | Optional: “Notify player” checkbox on save modal | Open | If admins want manual control |
@@ -183,7 +186,8 @@ Migrations 001–018, lazy routes, live matchday, photos, events, fundraisers, c
 | Add squad members (Admin → Squad) | ⚠️ | Required for stats + player profiles |
 | Brief squad on **ChrisL** login format | ⚠️ | Display name shown as **Chris L** in app |
 | Push smoke test (Admin → Notifications) | ⚠️ | Optional |
-| `npm run sync:ddsfl` | ⚠️ | When fixtures publish |
+| **GitHub Actions secrets for DDSFL sync** | ⚠️ | Repo → Settings → Secrets: `VITE_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (see [SUPABASE-SETUP.md](SUPABASE-SETUP.md)). Nightly workflow **Sync DDSFL to Supabase** fails without these (runs daily 20:00 UTC). Local `npm run sync:ddsfl` works with `.env.local`. |
+| `npm run sync:ddsfl` / nightly Action | ⚠️ | When fixtures publish; 2026/27 currently 0 fixtures on DDSFL, league table syncs OK |
 
 ---
 
@@ -245,7 +249,8 @@ Optional for ~25-player closed squad.
 
 | Task | Status |
 |------|--------|
-| Weekly DDSFL sync Action | ✅ |
+| Weekly DDSFL sync Action (`.github/workflows/sync-ddsfl.yml`) | ✅ |
+| **GitHub Actions secrets for automated DDSFL sync** | ⚠️ | Add `VITE_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`; re-run from Actions tab |
 | E2E in CI | ✅ |
 | Admin audit log | Open |
 | Sentry | Open |
@@ -262,7 +267,7 @@ Optional for ~25-player closed squad.
 | Accessibility | 53 | 53 | 65 | 9 |
 | User Experience | 98 | 99 | 99 | 7 |
 | Data Integrity | 85 | 86 | 87 | ✅ |
-| DDSFL Integration | 80 | 80 | 85 | 7 |
+| DDSFL Integration | 80 | 80 | 85 | 7 (secrets + sync) |
 | Database & Supabase | 98 | 98 | 98 | ✅ |
 | Testing | 64 | 78 | 85 | 2 |
 | DevOps | 98 | 99 | 99 | 10 |
@@ -276,9 +281,10 @@ Optional for ~25-player closed squad.
 1. **Generate the team invite link** in Admin → Squad members and share with the squad.
 2. **Add squad members** via Admin → Squad (stats and profiles require a squad row).
 3. **Brief the squad** on **ChrisL**-style login name (displayed elsewhere as **Chris L**).
-4. **Run `npm run sync:ddsfl`** when 2026/27 fixtures publish.
-5. **Sentry + admin audit log** — final lift to 99; optional push smoke test.
-6. **Fines player release** — unhide `/fines`, then wire **auto push on new fines** (Phase 6g).
+4. **Add GitHub Actions secrets** for DDSFL sync (`VITE_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`), then re-run **Sync DDSFL to Supabase** from the Actions tab.
+5. **Run `npm run sync:ddsfl`** when 2026/27 fixtures publish (or rely on nightly Action once secrets are set).
+6. **Sentry + admin audit log** — final lift to 99; optional push smoke test.
+7. **Fines player release** — unhide `/fines`, then wire **auto push on new fines** (Phase 6g).
 
 ---
 
@@ -298,4 +304,4 @@ Optional for ~25-player closed squad.
 
 ---
 
-*Roadmap updated 21 June 2026. Baseline: AUDIT.md v11 (app at `7265a28`). **98/100 reached; target 99.*
+*Roadmap updated 21 June 2026. Baseline: AUDIT.md v12 (app at `317875d`). **98/100 reached; target 99.*

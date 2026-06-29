@@ -56,11 +56,13 @@ export function summarizeFineAlert(totalOwed: number, oldestDays: number): strin
   const level = getFineAlertLevel(totalOwed, oldestDays)
   if (level === 'none') return ''
   const amount = `£${totalOwed.toFixed(totalOwed % 1 === 0 ? 0 : 2)}`
+  const age =
+    oldestDays > 0 ? ` · oldest fine ${oldestDays} day${oldestDays === 1 ? '' : 's'}` : ''
   if (level === 'critical') {
-    return `${amount} outstanding — pay up! (${oldestDays} day${oldestDays === 1 ? '' : 's'} overdue)`
+    return `${amount} still to pay${age}`
   }
   if (level === 'warning') {
-    return `${amount} still owed (${oldestDays} day${oldestDays === 1 ? '' : 's'})`
+    return `${amount} still to pay${age}`
   }
   return `${amount} outstanding`
 }
