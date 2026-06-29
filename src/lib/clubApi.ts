@@ -202,7 +202,7 @@ export async function fetchUpcomingFixtures(): Promise<FixtureWithResult[]> {
   const all = await fetchFixturesWithResults()
   return all
     .filter((f) => isUpcomingScheduledFixture(f))
-    .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())
+    .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
 }
 
 export async function fetchCompletedFixtures(): Promise<FixtureWithResult[]> {

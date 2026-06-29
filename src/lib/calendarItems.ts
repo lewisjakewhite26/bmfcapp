@@ -50,13 +50,27 @@ export function buildCalendarItems(input: {
     .filter(isCompletedFixture)
     .map((data) => ({ type: 'fixture' as const, data }))
 
-  return [
+  const all: CalendarItem[] = [
     ...upcomingFixtures,
     ...completedFixtures,
     ...training.map((data) => ({ type: 'training' as const, data })),
     ...activeEvents.map((data) => ({ type: 'event' as const, data })),
     ...fundraiserItems,
-  ].sort((a, b) => getCalendarItemDate(b).getTime() - getCalendarItemDate(a).getTime())
+  ]
+
+  const startOfToday = new Date(now)
+  startOfToday.setHours(0, 0, 0, 0)
+  const cutoff = startOfToday.getTime()
+
+  const future = all
+    .filter((item) => getCalendarItemDate(item).getTime() >= cutoff)
+    .sort((a, b) => getCalendarItemDate(a).getTime() - getCalendarItemDate(b).getTime())
+
+  const past = all
+    .filter((item) => getCalendarItemDate(item).getTime() < cutoff)
+    .sort((a, b) => getCalendarItemDate(b).getTime() - getCalendarItemDate(a).getTime())
+
+  return [...future, ...past]
 }
 
 export function isUpcomingFixtureItem(item: CalendarItem): boolean {
