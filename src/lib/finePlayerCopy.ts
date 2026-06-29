@@ -1,8 +1,8 @@
-/** Player-facing fines copy (en-GB, committee voice). Route stays hidden until release. */
+/** Player-facing fines copy (en-GB, committee voice). */
 
 export const FINE_PAGE = {
   title: 'Fines',
-  subtitle: 'Match-day fines from training and games. Pay the treasurer by the last Sunday of each month.',
+  subtitle: 'Match-day fines from training and games. Pay by the last Sunday of each month.',
 } as const
 
 export const FINE_YOUR_BALANCE = {
