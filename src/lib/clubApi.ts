@@ -909,6 +909,30 @@ export async function approveUser(userId: string, approved: boolean): Promise<vo
     p_approved: approved,
   })
   if (error) throw error
+
+  // Approved players must appear in the squad so they are included in fines,
+  // signing-on fees, availability, stats, etc. Only create a row when one is
+  // missing so we never overwrite an admin's existing squad data.
+  if (approved) {
+    const { data: existingSquad, error: squadLookupError } = await supabase
+      .from('squad')
+      .select('id')
+      .eq('player_id', userId)
+      .maybeSingle()
+    if (squadLookupError) throw squadLookupError
+    if (!existingSquad) {
+      const { error: squadError } = await supabase.rpc('admin_upsert_squad', {
+        p_admin_id: session.userId,
+        p_session_token: session.sessionToken,
+        p_player_id: userId,
+        p_position: null,
+        p_joined_date: new Date().toISOString().slice(0, 10),
+        p_squad_number: null,
+      })
+      if (squadError) throw squadError
+    }
+  }
+
   void recordAdminAudit(approved ? 'user_approved' : 'user_unapproved', {
     entityType: 'profile',
     entityId: userId,

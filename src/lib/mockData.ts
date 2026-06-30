@@ -818,6 +818,9 @@ export function mockLoginByCredentials(displayName: string, passcode: string): i
 export function setMockUserApproved(userId: string, approved: boolean) {
   const user = adminUsers.find((u) => u.id === userId)
   if (user) user.is_approved = approved
+  if (approved && user && !squad.some((s) => s.player_id === userId)) {
+    upsertMockSquad(userId, user.display_name, '')
+  }
   persistE2eMockSnapshot()
 }
 
