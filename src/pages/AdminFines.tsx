@@ -662,6 +662,7 @@ export default function AdminFines() {
                               <button
                                 type="button"
                                 aria-pressed={hasFines}
+                                data-testid={`fine-squad-player-${member.profile_id}`}
                                 onClick={() => setEditingPlayerId(member.profile_id)}
                                 className={`relative flex-1 flex items-center justify-between gap-2 px-3 py-3 min-h-[52px] rounded-card border text-left transition-colors touch-manipulation ${
                                   isActive

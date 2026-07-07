@@ -1,6 +1,9 @@
 import { test, expect } from './fixtures'
 import { loginAsAdmin } from './helpers/auth'
 
+/** Tom H — mock squad player with no fines on the Sat training session. */
+const TOM_PLAYER_ID = 'p1'
+
 test.describe('Admin fines picker', () => {
   test('lateness tile cycles and saves a single lateness fine', async ({ page }) => {
     await loginAsAdmin(page)
@@ -9,42 +12,33 @@ test.describe('Admin fines picker', () => {
 
     await page.getByRole('button', { name: /Sat training/i }).click()
 
-    const tomPlayerButton = () =>
-      page.getByRole('button', { name: /^Tom H/ }).first()
+    await page.getByTestId(`fine-squad-player-${TOM_PLAYER_ID}`).click()
 
-    await tomPlayerButton().click()
+    const picker = page.getByTestId('fine-picker')
+    await expect(picker).toBeVisible()
 
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
+    const lateness = picker.getByTestId('fine-lateness-tile')
 
-    const latenessTile = dialog.getByRole('button', { name: /Lateness|Late/i }).first()
+    await lateness.click()
+    await expect(lateness).toHaveAttribute('data-lateness-state', 'late')
 
-    await latenessTile.click()
-    await expect(latenessTile.getByText('Late', { exact: true })).toBeVisible()
-    await expect(latenessTile.getByText('£1', { exact: true })).toBeVisible()
+    await lateness.click()
+    await expect(lateness).toHaveAttribute('data-lateness-state', 'late_10')
 
-    await latenessTile.click()
-    await expect(latenessTile.getByText('Late 10+ mins')).toBeVisible()
-    await expect(latenessTile.getByText('£2', { exact: true })).toBeVisible()
+    await lateness.click()
+    await expect(lateness).toHaveAttribute('data-lateness-state', 'off')
 
-    await latenessTile.click()
-    await expect(latenessTile.getByText('Lateness', { exact: true })).toBeVisible()
-    await expect(latenessTile.getByText('Tap to cycle')).toBeVisible()
+    await lateness.click()
+    await lateness.click()
+    await expect(lateness).toHaveAttribute('data-lateness-state', 'late_10')
+    await expect(picker.getByTestId('fine-picker-summary')).toHaveText('1 fine · £2')
 
-    await latenessTile.click()
-    await latenessTile.click()
+    await picker.getByTestId('fine-picker-save').click()
+    await expect(picker).toBeHidden()
 
-    await dialog.getByRole('button', { name: /^Save/i }).click()
-    await expect(dialog).toBeHidden()
-    await expect(page.getByText('Fines saved')).toBeVisible()
-
-    await expect(tomPlayerButton()).toHaveAttribute('aria-pressed', 'true')
-    await tomPlayerButton().click()
-    const reopened = page.getByRole('dialog')
-    await expect(reopened).toBeVisible()
-    const latenessAfterSave = reopened.getByRole('button', { name: /Late 10\+ mins/i })
-    await expect(latenessAfterSave).toBeVisible()
-    await expect(latenessAfterSave.getByText('£2', { exact: true })).toBeVisible()
-    await expect(reopened.getByText('1 fine · £2')).toBeVisible()
+    await page.getByTestId(`fine-squad-player-${TOM_PLAYER_ID}`).click()
+    await expect(page.getByTestId('fine-picker')).toBeVisible()
+    await expect(page.getByTestId('fine-lateness-tile')).toHaveAttribute('data-lateness-state', 'late_10')
+    await expect(page.getByTestId('fine-picker-summary')).toHaveText('1 fine · £2')
   })
 })

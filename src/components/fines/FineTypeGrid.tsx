@@ -59,6 +59,8 @@ export function FineTypeGrid({
       <button
         type="button"
         disabled={disabled}
+        data-testid="fine-lateness-tile"
+        data-lateness-state={lateness}
         onClick={() => onLatenessChange(nextLateness(lateness))}
         className={`relative col-span-2 flex min-h-[72px] flex-col justify-center rounded-card border px-3 py-3 text-left transition-colors touch-manipulation ${
           activeLateness

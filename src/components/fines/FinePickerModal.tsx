@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import {
   FINE_CATALOG,
   formatFineAmount,
+  isLatenessFineKey,
   LATENESS_FINES,
   latenessStateFromKeys,
   type LatenessState,
@@ -47,6 +48,11 @@ function parseOneOff(label: string, amount: string): OneOffFineDraft | null {
   return { key: null, label: trimmed, amount: parsed }
 }
 
+/** Preset keys excluding lateness — lateness is edited via the cycling tile only. */
+function nonLatenessPresetKeys(keys: Set<string>): Set<string> {
+  return new Set([...keys].filter((key) => !isLatenessFineKey(key)))
+}
+
 export function FinePickerModal({
   open,
   playerName,
@@ -56,7 +62,9 @@ export function FinePickerModal({
   onClose,
   onSave,
 }: FinePickerModalProps) {
-  const [draftPresetKeys, setDraftPresetKeys] = useState<Set<string>>(() => new Set(initialPresetKeys))
+  const [draftPresetKeys, setDraftPresetKeys] = useState<Set<string>>(() =>
+    nonLatenessPresetKeys(initialPresetKeys),
+  )
   const [lateness, setLateness] = useState<LatenessState>(() => latenessStateFromKeys(initialPresetKeys))
   const [oneOffLabel, setOneOffLabel] = useState(initialOneOff?.label ?? '')
   const [oneOffAmount, setOneOffAmount] = useState(
@@ -66,7 +74,7 @@ export function FinePickerModal({
 
   useEffect(() => {
     if (open) {
-      setDraftPresetKeys(new Set(initialPresetKeys))
+      setDraftPresetKeys(nonLatenessPresetKeys(initialPresetKeys))
       setLateness(latenessStateFromKeys(initialPresetKeys))
       setOneOffLabel(initialOneOff?.label ?? '')
       setOneOffAmount(initialOneOff ? String(initialOneOff.amount) : '')
@@ -119,6 +127,7 @@ export function FinePickerModal({
     >
       <div
         className="fine-modal-panel glass-card flex w-full max-w-lg flex-col max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)))] sm:max-h-[min(85dvh,calc(100dvh-2rem))] overflow-hidden rounded-t-[1.25rem] sm:rounded-[20px] border-b-0 sm:border-b touch-auto !p-0"
+        data-testid="fine-picker"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sm:hidden flex shrink-0 justify-center pt-3 pb-1" aria-hidden>
@@ -131,7 +140,7 @@ export function FinePickerModal({
               <h2 id="fine-picker-title" className="font-semibold text-brand-navy text-lg">
                 {playerName}
               </h2>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <p className="text-sm text-gray-500 mt-0.5" data-testid="fine-picker-summary">
                 {selectedCount === 0
                   ? 'Tap fines to toggle, then save'
                   : `${selectedCount} fine${selectedCount === 1 ? '' : 's'} · ${formatFineAmount(draftTotal)}`}
@@ -186,6 +195,7 @@ export function FinePickerModal({
             <button
               type="button"
               className="btn-primary text-sm py-2.5 min-h-[44px] flex-1 touch-manipulation"
+              data-testid="fine-picker-save"
               disabled={saving}
               onClick={() =>
                 onSave({
