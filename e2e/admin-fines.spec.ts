@@ -17,16 +17,16 @@ test.describe('Admin fines picker', () => {
     const latenessTile = dialog.getByRole('button', { name: /Lateness|Late/i }).first()
 
     await latenessTile.click()
-    await expect(dialog.getByText('Late', { exact: true })).toBeVisible()
-    await expect(dialog.getByText('£1')).toBeVisible()
+    await expect(latenessTile.getByText('Late', { exact: true })).toBeVisible()
+    await expect(latenessTile.getByText('£1', { exact: true })).toBeVisible()
 
     await latenessTile.click()
-    await expect(dialog.getByText('Late 10+ mins')).toBeVisible()
-    await expect(dialog.getByText('£2')).toBeVisible()
+    await expect(latenessTile.getByText('Late 10+ mins')).toBeVisible()
+    await expect(latenessTile.getByText('£2', { exact: true })).toBeVisible()
 
     await latenessTile.click()
-    await expect(dialog.getByText('Lateness', { exact: true })).toBeVisible()
-    await expect(dialog.getByText('Tap to cycle')).toBeVisible()
+    await expect(latenessTile.getByText('Lateness', { exact: true })).toBeVisible()
+    await expect(latenessTile.getByText('Tap to cycle')).toBeVisible()
 
     await latenessTile.click()
     await latenessTile.click()
@@ -36,9 +36,11 @@ test.describe('Admin fines picker', () => {
     await expect(page.getByText('Fines saved')).toBeVisible()
 
     await page.getByRole('button', { name: 'Tom H', exact: true }).click()
-    await expect(page.getByRole('dialog')).toBeVisible()
-    await expect(page.getByRole('dialog').getByText('Late 10+ mins')).toBeVisible()
-    await expect(page.getByRole('dialog').getByText('Late', { exact: true })).toHaveCount(0)
-    await expect(page.getByRole('dialog').getByText('1 fine · £2')).toBeVisible()
+    const reopened = page.getByRole('dialog')
+    await expect(reopened).toBeVisible()
+    const latenessAfterSave = reopened.getByRole('button', { name: /Late 10\+ mins/i })
+    await expect(latenessAfterSave).toBeVisible()
+    await expect(latenessAfterSave.getByText('£2', { exact: true })).toBeVisible()
+    await expect(reopened.getByText('1 fine · £2')).toBeVisible()
   })
 })
