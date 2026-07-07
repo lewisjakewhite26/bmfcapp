@@ -2,8 +2,8 @@ name: Fines automation
 
 on:
   schedule:
-    # Every 15 minutes — no-vote fines, vote reminders, weekly late fees
-    - cron: '*/15 * * * *'
+    # Every 5 minutes — no-vote fines, vote reminders, weekly late fees
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 concurrency:

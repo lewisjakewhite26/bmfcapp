@@ -1,10 +1,8 @@
 // Fines automation orchestrator (canonical trigger for 26/27 fines rework).
 //
-// Invoked every 5 minutes via Supabase cron / pg_net (see migration 042).
+// Invoked every 5 minutes by GitHub Actions (.github/workflows/fines-automation.yml).
 // Order per tick: no-vote fines → vote reminders → weekly late fees.
 // Each step is idempotent; pushes are best-effort and never block the tick.
-//
-// GitHub Action `apply-fine-late-fees.yml` remains a late-fee backstop only.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3'

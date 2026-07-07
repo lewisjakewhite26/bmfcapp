@@ -1,5 +1,7 @@
 # BMFC Club Hub: Fines System Rework (26/27 Season)
 
+> **Post-audit corrections (July 2026):** Vote reminder pushes link to **`/dashboard`** (correct — `AvailabilityForm` lives there, not a separate page). Fixtures with **`kickoff_time IS NULL`** (TBC) are excluded from no-vote and reminder automation until kickoff is confirmed (migration **043**). **GitHub Actions** (`fines-automation.yml`, every **5 minutes**) is the canonical scheduler — not Supabase pg_cron.
+
 Single-pass implementation brief. Work through the sections in order. Where this document names existing files, tables, or RPCs, they are known to exist. Where it says INSPECT, discover the real names/shapes in the codebase before writing code and adapt. Do not guess schema names.
 
 UK English throughout all user-facing copy. Currency is GBP, amounts in pounds.

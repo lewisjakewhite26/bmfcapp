@@ -337,18 +337,18 @@ export default function AdminFines() {
     setSavingPlayerFines(true)
     const scrollY = window.scrollY
     try {
-      await Promise.all(
-        updates.map((fine) =>
-          setFineEntry(
+      await (async () => {
+        for (const fine of updates) {
+          await setFineEntry(
             selectedId,
             playerId,
             fine.key,
             fine.label,
             fine.amount,
             fine.enabled,
-          ),
-        ),
-      )
+          )
+        }
+      })()
 
       setEditingPlayerId(null)
       await loadDetail(selectedId, { silent: true })

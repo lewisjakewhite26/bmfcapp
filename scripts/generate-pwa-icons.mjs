@@ -56,21 +56,14 @@ async function writeMaskableIcon(src) {
   console.log('Wrote public/pwa-512-maskable.png (512×512 maskable)')
 }
 
-/**
- * Rasterise the hand-drawn notification badge SVG (white BM monogram).
- * Do not trace the crest — it collapses to a blob at status-bar size.
- */
+/** Status-bar badge: BM monogram SVG → 96×96 white-on-transparent PNG. */
 async function writeBadgeIcon() {
   const src = path.join(OUT, 'notification-badge.svg')
   if (!fs.existsSync(src)) {
     throw new Error('Missing public/notification-badge.svg')
   }
 
-  await sharp(src)
-    .resize(96, 96)
-    .png()
-    .toFile(path.join(OUT, 'pwa-badge-96.png'))
-
+  await sharp(src).resize(96, 96).png().toFile(path.join(OUT, 'pwa-badge-96.png'))
   console.log('Wrote public/pwa-badge-96.png (96×96 notification badge)')
 }
 

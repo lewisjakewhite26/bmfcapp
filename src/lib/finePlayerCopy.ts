@@ -1,3 +1,5 @@
+import { formatFineDueSummary } from './fineAlerts'
+
 /** Player-facing fines copy (en-GB, committee voice). */
 
 export const FINE_PAGE = {
@@ -33,10 +35,11 @@ export const FINE_DISCRETIONAL = {
   hint: "Committee/manager's discretion. Just for this player, this event.",
 } as const
 
-export function fineCardSummary(count: number, dueDate: string | null, isOverdue: boolean): string {
+export function fineCardSummary(count: number, dueDate: string | null, _isOverdue: boolean): string {
   const parts = [`${count} fine${count === 1 ? '' : 's'}`]
   if (dueDate) {
-    parts.push(isOverdue ? 'overdue' : `due ${dueDate}`)
+    const summary = formatFineDueSummary(dueDate)
+    if (summary) parts.push(summary)
   }
   return parts.join(' · ')
 }

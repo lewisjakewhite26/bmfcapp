@@ -1,8 +1,25 @@
 import { describe, expect, it } from 'vitest'
 import {
+  daysUntilDue,
   getDeadlineProximityScore,
   getFineAlertLevel,
+  londonCalendarDateYmd,
 } from './fineAlerts'
+
+describe('londonCalendarDateYmd', () => {
+  it('derives the UK calendar date during BST', () => {
+    expect(londonCalendarDateYmd(new Date('2026-07-02T23:00:00.000Z'))).toBe('2026-07-03')
+  })
+})
+
+describe('daysUntilDue', () => {
+  it('diffs due dates against Europe/London today', () => {
+    const now = new Date('2026-07-02T23:00:00.000Z')
+    expect(daysUntilDue('2026-07-05', now)).toBe(2)
+    expect(daysUntilDue('2026-07-03', now)).toBe(0)
+    expect(daysUntilDue('2026-07-02', now)).toBe(-1)
+  })
+})
 
 describe('getDeadlineProximityScore', () => {
   it('scores band edges from spec section 9', () => {

@@ -1,8 +1,8 @@
 # BMFC Fines System
 
-> **26/27 rework implemented** — see [FINES-REWORK-SPEC.md](./FINES-REWORK-SPEC.md) for the canonical spec. Migrations **037–042** supersede much of this document.
+> Canonical spec: [FINES-REWORK-SPEC.md](./FINES-REWORK-SPEC.md). Migrations **037–043** describe the live 26/27 rework.
 
-Technical rundown of match-day fines: catalog, totals pipeline, late fees, warning UI, and push notifications.
+Technical rundown of match-day fines: catalogue, due dates, automation, late fees, warning UI, and push notifications.
 
 **Last reviewed:** July 2026
 
@@ -16,316 +16,215 @@ Match-day fines live in Supabase (`fine_sessions` + `fine_entries`), with admin 
 
 ---
 
-## 1. List of fines
-
-### Preset match-day fines
+## 1. Fine catalogue
 
 Defined in `src/lib/fineCatalog.ts`:
 
-| Key | Label | Amount |
-|-----|-------|--------|
-| `late` | Late | £1 |
-| `sin_bin` | Sin bin | £5 |
-| `no_warm_up_top` | No warm up top | £1 |
-| `no_show` | No show | £5 |
+| Key | Label | Amount | Notes |
+|-----|-------|--------|-------|
+| `late` | Late | £1 | Cycling lateness tile (mutually exclusive with `late_10`) |
+| `late_10` | Late 10+ mins | £2 | 10+ minutes late for a match |
+| `no_show` | No show | £5 | |
+| `sin_bin` | Sin bin | £5 | £12 yellow-card payment is outside the app |
+| `no_vote` | No vote | £1 | Auto-applied; also manually toggleable |
+| `non_club_attire` | Non-club attire | £1 | Replaces removed picker preset `no_warm_up_top` |
 
-### One-off fines
+**Discretional fines** — key `oneoff:{uuid}`, user-facing label “Discretional fine”.
 
-- Key format: `oneoff:{uuid}`
-- Admin sets custom label and amount
-- One one-off per player per event in the UI (DB allows multiple via different UUIDs)
+**System-generated:** `late_fee` — “Late payment fee”, £2, not in the catalogue.
 
-### System-generated late payment fee
-
-- Key: `late_fee`
-- Label: `Late payment fee`
-- Amount: **£2** (hardcoded in SQL migration 034, not in the catalog)
+Legacy rows with `no_warm_up_top` or other absent keys still render from stored `label` and `amount`.
 
 ---
 
-## 2. Pipeline: fine logged → money total
+## 2. Due dates
 
-There is no single “totaliser” component — totals are computed at read time from `fine_entries` where `paid = false`.
+Every `fine_entries` row has `due_date` (migration **037**).
+
+**Grace rule** (`fine_due_date(created date)`):
+
+1. Let `LS` = last Sunday of the creation month.
+2. If created on or before the penultimate Sunday (`LS - 7 days`), `due_date = LS`.
+3. Otherwise `due_date` = last Sunday of the **following** month.
+
+**Exception:** `late_fee` rows get `due_date =` application date (immediately due; weekly compounding works).
+
+Player copy on `/fines` explains the grace window and £2/week after due date.
+
+---
+
+## 3. Weekly late payment fees
+
+**Rule:** On the **first successful tick of each ISO week**, charge **£2** to each player with any unpaid entry where `due_date < CURRENT_DATE`, excluding paused players.
+
+- Idempotency: `fine_late_fee_runs_weekly (period_year, period_week)` using `EXTRACT(ISOYEAR …)` and `EXTRACT(WEEK …)`.
+- Function: `apply_fine_late_fees()` (migrations **038**, **039**).
+- Session title pattern: `Late payment fees - w/c DD Mon YYYY`.
+- Push: “Late payment fee added” (from `fines-scheduler` Edge Function).
+
+The old monthly model (`fine_late_fee_runs`) is retained for history only.
+
+---
+
+## 4. Player pause
+
+`squad.paused` (migration **039**) freezes **automation only**:
+
+- No auto no-vote fines
+- No vote reminder pushes
+- No weekly late fees (existing debt frozen, not cleared)
+
+Manual admin fines still work. Toggle in Admin Fines squad list. RPC: `admin_set_player_pause`.
+
+---
+
+## 5. Automated no-vote fines
+
+**Rule:** After event start, each active non-paused squad member with **no** `availability` row for that fixture/training gets £1 `no_vote`, with a push.
+
+- Function: `apply_no_vote_fines()` (migrations **040**, **041**, **043**).
+- Idempotency: `fine_no_vote_runs (event_type, event_id)` — per event, not per player. Admin removal is final.
+- Fixture start: `fixture_start_time(match_date, kickoff_time)` — combines London calendar date + `kickoff_time`.
+- **TBC fixtures** (`kickoff_time IS NULL`) are **skipped** until kickoff is set (migration **043**).
+- Training: full `session_date` timestamptz.
+- 7-day lookback prevents ancient events firing when kickoff is confirmed late.
+
+---
+
+## 6. Vote reminders
+
+**Rule:** T-48h and T-24h pushes to non-voters (not fines).
+
+- Function: `apply_vote_reminders()` (same migrations as no-vote).
+- Idempotency: `fine_vote_reminder_runs (event_type, event_id, reminder_kind)`.
+- Push URL: **`/dashboard`** (availability voting lives there).
+- TBC fixtures excluded (migration **043**).
+
+---
+
+## 7. Automation architecture
 
 ```mermaid
-flowchart TD
-    A[Admin opens /admin/fines] --> B[Create session for a date]
-    B --> C[fine_sessions row]
-    C --> D[Admin taps squad player]
-    D --> E[FinePickerModal: presets + one-off]
-    E --> F[admin_set_fine_entry RPC per change]
-    F --> G[fine_entries INSERT/UPDATE/DELETE]
-    G --> H[Push notification - immediate]
-    G --> I[Totals recomputed on next read]
-
-    I --> J1[Admin Events list: session_total / unpaid_total]
-    I --> J2[Admin Payments tab: total_outstanding + players_owing]
-    I --> J3[Player /fines: your balance + squad owed]
-    I --> J4[Dashboard: FineAlertBanner]
+flowchart LR
+    GH[GitHub Action every 5 min] --> MJS[apply-fine-late-fees.mjs]
+    MJS --> EF[fines-scheduler Edge Function]
+    EF --> NV[apply_no_vote_fines]
+    EF --> VR[apply_vote_reminders]
+    EF --> LF[apply_fine_late_fees]
+    EF --> PUSH[Web Push via VAPID]
 ```
 
-### Step-by-step
+| Component | Role |
+|-----------|------|
+| `.github/workflows/fines-automation.yml` | **Canonical trigger** — every **5 minutes** + `workflow_dispatch` |
+| `scripts/apply-fine-late-fees.mjs` | HTTP invoke with 3× retry; loud warning + RPC fallback if scheduler unavailable |
+| `supabase-club/functions/fines-scheduler/index.ts` | Orchestrator: SQL steps + pushes |
+| Migration **043** | Unschedules legacy pg_cron jobs from migration 034 |
 
-1. **Create event** — Admin picks a date → `admin_create_fine_session` → `fine_sessions` row (title auto-generated from date in migration 035).
+**No pg_cron** fines jobs should exist in production. Migration 042 remains a historical placeholder only.
 
-2. **Log fines** — Admin taps a squad player → toggles presets / adds one-off → `handleSavePlayerFines` diffs draft vs server and calls `admin_set_fine_entry` for each change:
-   - `enabled = true` → upsert into `fine_entries`
-   - `enabled = false` → delete
-   - Player must be in active `squad`
+### Ops risks
 
-3. **Mark paid** — Admin Payments tab → “Mark all paid” → `admin_set_fine_paid` sets `paid`, `marked_by`, `marked_at`.
+- **GitHub Actions 60-day rule:** Scheduled workflows **auto-disable** after 60 days without repo commits. Mitigation: any commit re-enables; manually re-enable under Actions → Fines automation; consider a monthly off-season calendar reminder.
+- **Workflow failure:** Job exits non-zero if scheduler and RPC fallback both fail — GitHub emails on failure.
+- **Fallback RPC path:** Charges late fees only — **no** no-vote, **no** reminders, **no** pushes that tick.
 
-4. **Late fees (automated)** — Daily job calls `apply_fine_late_fees()` (see section 3).
+### Verification queries (production)
 
-### Where totals appear
+```sql
+-- No fines pg_cron jobs (or pg_cron extension absent)
+SELECT jobid, jobname, schedule, command FROM cron.job;
 
-| Location | What it shows | How |
-|----------|---------------|-----|
-| **Admin → Payments tab** | Club-wide **Total outstanding** + **Players owing** | SQL `SUM(amount) WHERE NOT paid` via `admin_list_fine_entries` |
-| **Admin → Events list** | Per-event total + unpaid | `session_total`, `unpaid_total` per session |
-| **Admin → Event detail** | Event total | `detail.session.session_total` |
-| **Admin → Payment cards** | Per-player owed | `finePaymentGroups.ts` → `unpaidTotal` |
-| **Player `/fines`** | Your balance | `unpaidTotal(myFines)` client-side |
-| **Player `/fines`** | Squad “Who still owes” | `outstanding_total` per player from `list_outstanding_fines_summary` |
-| **Dashboard** | Fines banner | `unpaidTotal(myUnpaidFines)` via `useMyUnpaidFines()` |
+-- Upcoming automatable fixtures
+SELECT id, opponent, match_date, kickoff_time,
+       public.fixture_start_time(match_date, kickoff_time) AS start_time
+FROM fixtures
+WHERE status IN ('scheduled', 'in_progress')
+ORDER BY start_time;
 
-### Core aggregation (client)
-
-`src/lib/fineAlerts.ts` — `unpaidTotal()` sums all unpaid `fine_entries` amounts.
-
-Admin Payments “totaliser” is the two big cards at the top of the Payments tab — **Total outstanding** and **Players owing**.
-
----
-
-## 3. Late fees — rules and timing
-
-### Player-facing rule
-
-Copy on `/fines`: *“Pay by the last Sunday of each month.”*
-
-### What gets charged
-
-- **£2 per player per calendar month** if they still have **any unpaid fines** after that month’s **last Sunday** deadline.
-- Late fee is its own `fine_entries` row (`fine_key = 'late_fee'`) in a session titled e.g. `Late payment fees - Jun 2026`.
-
-### When it runs
-
-| Mechanism | Schedule | Notes |
-|-----------|----------|-------|
-| **GitHub Action** | Daily **00:05 UTC** | Primary automation (`.github/workflows/apply-fine-late-fees.yml`) |
-| **pg_cron** (optional) | Daily 00:05 UTC | If extension enabled on Supabase (migration 034) |
-| **Manual** | On demand | `npm run apply:fine-late-fees` or Edge Function |
-
-### When a charge actually lands
-
-The job runs daily, but a late fee for month M is only applied once:
-
-1. **Last Sunday of month M has passed** (`deadline < CURRENT_DATE`)
-2. **No prior run** recorded in `fine_late_fee_runs` for that year/month
-3. Player has **any unpaid** `fine_entries` with `created_at::date <= deadline`
-
-So if the deadline is Sunday 29 June, the fee can appear any time from **Monday 30 June** onward (first daily run after the deadline). Worst case: up to ~24 hours after midnight UTC on the Monday.
-
-### Important edge cases
-
-- Counts **all** unpaid fines created on or before the deadline — not just fines from that month.
-- A player owing across multiple months gets **one £2 charge per month** they remain unpaid after each deadline.
-- Unpaid **late fee entries themselves** can trigger future late fees.
-- **No push notification** when late fees are auto-applied.
-- Idempotent via `fine_late_fee_runs` — each month processed at most once.
-
-### Implementation
-
-- SQL: `supabase-club/migrations/034_fine_late_fees.sql`
-- Function: `apply_fine_late_fees()`
-- Helper: `fine_last_sunday_of_month(year, month)`
-- Idempotency table: `fine_late_fee_runs`
+-- Recent weekly late-fee runs
+SELECT * FROM fine_late_fee_runs_weekly ORDER BY applied_at DESC LIMIT 5;
+```
 
 ---
 
-## 4. Warning UI — how and when
+## 8. Push notifications (four types)
 
-Warnings are **purely client-side** — no scheduled jobs, no push. They recalculate whenever the UI loads/re-renders from current unpaid data.
+All via `fines-scheduler` (automation) or `sendFinePushNotification` (admin save) → `send-push` Edge Function → Web Push.
 
-### Scoring (`src/lib/fineAlerts.ts`)
+| Trigger | Title | When |
+|---------|-------|------|
+| Admin saves new fine(s) | New fine added | Immediate on save |
+| Auto no-vote | No vote fine | After event start |
+| Vote reminder | Vote reminder | T-48h / T-24h |
+| Weekly late fee | Late payment fee added | First ISO-week tick with eligible debt |
 
-**Amount owed:**
+Errors are swallowed so automation and admin saves never block.
 
-| Threshold | Score |
-|-----------|-------|
-| ≥ £15 | +3 |
-| ≥ £8 | +2 |
-| ≥ £4 | +1 |
-
-**Oldest unpaid fine age** (days since `created_at`):
-
-| Threshold | Score |
-|-----------|-------|
-| ≥ 21 days | +3 |
-| ≥ 14 days | +2 |
-| ≥ 7 days | +1 |
-| ≥ 3 days | +0 |
-
-**Level from total score:**
-
-| Score | Level | Visual |
-|-------|-------|--------|
-| ≥ 4 | **critical** | Red border/bg, red text, **pulsing animation** (2s loop) |
-| ≥ 2 | **warning** | Amber border/bg |
-| > 0 | **normal** | Subtle blue styling |
-| 0 owed | **none** | Hidden |
-
-### Examples
-
-- £4 owed, 7 days old → 1+1 = **warning**
-- £8 owed, 3 days → 2+0 = **warning**
-- £15 owed, 21+ days → 3+3 = **critical**
-- £2 owed, 1 day → **normal**
-
-### Where warnings show
-
-| Component | Where | Data source |
-|-----------|-------|-------------|
-| `FineAlertBanner` | Dashboard (if you owe) | `useMyUnpaidFines()` |
-| `FineYourBalanceCard` | `/fines` — your balance | `list_my_unpaid_fines` |
-| `FineSquadOwedCard` | `/fines` — squad list | `outstanding_total`, `oldest_unpaid_days` from SQL |
-
-Squad cards use SQL for age (`list_outstanding_fines_summary` — `FLOOR(epoch(now() - MIN(created_at)) / 86400)`). Client-side uses the same floor logic in `daysSince()`.
-
-### Timing of warnings
-
-There is **no fixed schedule** — escalation is continuous:
-
-- Day 3+: age contributes (but +0 until day 7)
-- Day 7+: warning more likely from age alone
-- Day 14 / 21: stronger escalation
-- Combined with amount thresholds for critical
-
-Warnings appear as soon as the user opens Dashboard or `/fines` and the data crosses a threshold. No “warning push” or “deadline reminder” exists yet.
-
-### Visual styling
-
-- Critical pulse: `index.css` — `@keyframes fine-alert-pulse` (disabled with `prefers-reduced-motion`)
+Secrets: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` on the Supabase project.
 
 ---
 
-## 5. Push notifications — what and when
+## 9. Warning UI
 
-### Only one fines push type exists today
+Client-side scoring in `src/lib/fineAlerts.ts` — recalculates on page load.
 
-**Trigger:** Admin saves fines for a player (`handleSavePlayerFines` → `sendFinePushNotification`).
+**Amount owed:** ≥ £15 +3, ≥ £8 +2, ≥ £4 +1.
 
-**When:** Immediately after a successful save — not scheduled.
+**Deadline proximity** (earliest unpaid `due_date`, Europe/London “today”):
 
-**Payload:**
+| `days_until` | Score |
+|--------------|-------|
+| &lt; 0 (overdue) | +3 |
+| 0–3 | +2 |
+| 4–7 | +1 |
+| &gt; 7 | +0 |
 
-- Title: `New fine added`
-- Body: `{fine labels} · £{total owed}`
-- URL: `/fines`
-- Target: that player only (`player_ids: [playerId]`)
+**Levels:** ≥ 4 critical (red pulse), ≥ 2 warning (amber), &gt; 0 normal, nothing owed hidden.
 
-**What triggers it:**
-
-- Fines **enabled/added** in the current save batch (`updates.filter(u => u.enabled)`)
-
-**What does NOT trigger it:**
-
-- Removing fines
-- Marking paid/unpaid
-- Creating an empty session
-- **Late fee automation**
-- Warning escalation
-
-### Delivery chain
-
-1. `src/lib/finePush.ts` → `invokeSendPush()`
-2. Supabase Edge Function `send-push`
-3. Web Push (VAPID) → `push_subscriptions`
-4. Service worker (`src/sw.ts`)
-
-Requires the player to have push enabled and a subscription stored. Errors are swallowed so admin save is never blocked.
+Shown on `FineAlertBanner` (dashboard), `FineYourBalanceCard`, `FineSquadOwedCard` (with due-date copy).
 
 ---
 
-## 6. Quick reference: timings
+## 10. Admin UI
 
-| Event | Timing |
-|-------|--------|
-| Payment deadline | Last **Sunday** of each month |
-| Late fee job runs | Daily **00:05 UTC** |
-| Late fee applied | First run **after** last Sunday passes (up to ~24h later) |
-| Late fee amount | **£2**/player/month still owing |
-| Warning UI | Real-time on page load — based on amount + age |
-| Push on new fine | **Immediate** when admin saves |
-| Push on late fee | **Never** |
-| Push on deadline/warning | **Never** |
+- **Cycling lateness tile:** off → Late £1 → Late 10+ £2 → off.
+- **Grid:** lateness + No show, Sin bin, No vote, Non-club attire.
+- **Discretional fine** section (was “One-off”).
+- **Pause** toggle per squad member on Log fines tab.
+- Saves call `admin_set_fine_entry` **sequentially** (lateness exclusivity enforced server-side too).
 
 ---
 
-## 7. Database schema and migrations
+## 11. Database migrations (fines)
 
 | Migration | Purpose |
 |-----------|---------|
-| **032** | Core schema + all fines RPCs |
-| **033** | `admin_delete_fine_session` |
-| **034** | Late fees + `fine_late_fee_runs` + optional pg_cron |
-| **035** | Auto-generate session title from date |
-| **036** | Auto squad row on profile approval (fines eligibility) |
-
-### Tables
-
-- **`fine_sessions`** — `id`, `session_date`, `title`, `notes`, `logged_by`, `created_at`
-- **`fine_entries`** — `id`, `session_id`, `profile_id`, `fine_key`, `label`, `amount`, `paid`, `marked_by`, `marked_at`, `logged_by`, `created_at` (unique on `session_id, profile_id, fine_key`)
-- **`fine_late_fee_runs`** — `period_year`, `period_month`, `players_charged`, `total_amount`, `applied_at`
-
-All reads/writes go through `SECURITY DEFINER` RPCs; direct table access blocked by RLS.
+| **032** | Core schema + RPCs |
+| **034** | Monthly late fees (superseded; pg_cron job removed by **043**) |
+| **037** | `due_date`, `fine_due_date()`, trigger |
+| **038** | Weekly late fees + `fine_late_fee_runs_weekly` |
+| **039** | Squad pause + pause filter on late fees |
+| **040** | No-vote + vote reminders + seeding |
+| **041** | RPC updates (due_date reads, lateness exclusivity) |
+| **042** | Scheduler cron placeholder (historical) |
+| **043** | Unschedule pg_cron; TBC fixture exclusion |
 
 ---
 
-## 8. Key files
+## 12. Key files
 
-### Library / logic
-
-- `src/lib/fineCatalog.ts` — preset types, amounts
-- `src/lib/fineAlerts.ts` — warning level scoring
-- `src/lib/finePush.ts` — fine push notification
-- `src/lib/finePaymentGroups.ts` — group entries by player for admin payments
-- `src/lib/finePlayerCopy.ts` — player-facing strings
-- `src/lib/clubApi.ts` — fines API wrappers
-
-### Pages
-
-- `src/pages/AdminFines.tsx` — admin log + payments
-- `src/pages/Fines.tsx` — player fines page
-- `src/pages/Dashboard.tsx` — `FineAlertBanner` integration
-
-### Components (`src/components/fines/`)
-
-- `FineAlertBanner.tsx` — dashboard warning
-- `FineYourBalanceCard.tsx` — player balance + line items
-- `FineSquadOwedCard.tsx` — expandable squad owed card
-- `FinePickerModal.tsx` — admin fine picker
-- `FineTypeGrid.tsx` — preset fine toggles
-- `FineOneOffSection.tsx` — custom fine form
-- `FinePlayerPaymentCard.tsx` — admin grouped payment card
-
-### Automation
-
-- `.github/workflows/apply-fine-late-fees.yml`
-- `scripts/apply-fine-late-fees.mjs`
-- `supabase-club/functions/apply-fine-late-fees/index.ts`
+- **SQL:** `supabase-club/migrations/037`–`043`, functions `apply_no_vote_fines`, `apply_vote_reminders`, `apply_fine_late_fees`
+- **Edge Function:** `supabase-club/functions/fines-scheduler/index.ts`
+- **Automation:** `.github/workflows/fines-automation.yml`, `scripts/apply-fine-late-fees.mjs`
+- **Frontend:** `src/lib/fineCatalog.ts`, `fineAlerts.ts`, `finePlayerCopy.ts`, `src/pages/AdminFines.tsx`, `src/components/fines/*`
 
 ---
 
-## 9. Known gaps
+## 13. Manual admin pipeline
 
-1. **No proactive deadline reminders** — players only see “pay by last Sunday” copy and escalating UI; nothing fires before/on the deadline.
-2. **Late fees are silent** — £2 added with no push; players discover it on next visit to `/fines` or Dashboard.
-3. **Warnings are visual only** — no push at warning/critical levels.
-4. **Late fee timing is “day after deadline”** not “on deadline evening” — depends on the 00:05 UTC cron.
+1. Create session (date) → `admin_create_fine_session`
+2. Tap player → `FinePickerModal` → diff → `admin_set_fine_entry` per change
+3. Mark paid → Payments tab → `admin_set_fine_paid`
 
-### Main levers for changes
-
-- `supabase-club/migrations/034_fine_late_fees.sql` — late fee logic/schedule
-- `src/lib/fineAlerts.ts` — warning thresholds
-- `src/lib/finePush.ts` — what gets pushed and when
+Totals are computed at read time from unpaid `fine_entries`.

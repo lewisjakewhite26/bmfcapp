@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
@@ -20,6 +20,13 @@ interface PlayerAvailability {
   message: string | null
 }
 
+/** Players mark match availability on the dashboard; default admin view to the next match. */
+function defaultEventKey(events: EventOption[]): string {
+  const nextMatch = events.find((e) => e.kind === 'fixture')
+  const event = nextMatch ?? events[0]
+  return `${event.kind}:${event.id}`
+}
+
 export default function AdminAvailability() {
   const { rows, loading, error: availabilityError, reload } = useAdminAvailability()
   const { upcoming, error: fixturesError, reload: reloadFixtures } = useFixtures()
@@ -27,13 +34,22 @@ export default function AdminAvailability() {
   const [training, setTraining] = useState<TrainingSession[]>([])
   const [selectedKey, setSelectedKey] = useState('')
 
-  useEffect(() => {
-    fetchSquad().then(setSquad)
-    fetchTrainingSessions().then(setTraining)
+  const loadSquadAndTraining = useCallback(async () => {
+    const [squadRows, trainingRows] = await Promise.all([fetchSquad(), fetchTrainingSessions()])
+    setSquad(squadRows)
+    setTraining(trainingRows)
   }, [])
 
-  const now = Date.now()
+  useEffect(() => {
+    void loadSquadAndTraining()
+  }, [loadSquadAndTraining])
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([reload(), reloadFixtures(), loadSquadAndTraining()])
+  }, [reload, reloadFixtures, loadSquadAndTraining])
+
   const events: EventOption[] = useMemo(() => {
+    const now = Date.now()
     const fixtures = upcoming.map((f) => ({
       kind: 'fixture' as const,
       id: f.id,
@@ -51,11 +67,14 @@ export default function AdminAvailability() {
     return [...fixtures, ...sessions].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     )
-  }, [upcoming, training, now])
+  }, [upcoming, training])
 
   useEffect(() => {
-    if (events.length > 0 && !selectedKey) {
-      setSelectedKey(`${events[0].kind}:${events[0].id}`)
+    if (events.length === 0) return
+
+    const keys = new Set(events.map((e) => `${e.kind}:${e.id}`))
+    if (!selectedKey || !keys.has(selectedKey)) {
+      setSelectedKey(defaultEventKey(events))
     }
   }, [events, selectedKey])
 
@@ -95,14 +114,16 @@ export default function AdminAvailability() {
         <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         <div>
           <h1 className="font-display text-2xl text-brand-navy">Availability</h1>
-          <p className="text-sm text-gray-500 mt-1">See who&apos;s in, out, or hasn&apos;t responded</p>
+          <p className="text-sm text-gray-500 mt-1">
+            See who&apos;s in, out, or hasn&apos;t responded. Match and training are separate — check both if needed.
+          </p>
         </div>
 
         {availabilityError && (
-          <DataErrorBanner message={availabilityError} onRetry={reload} />
+          <DataErrorBanner message={availabilityError} onRetry={refreshAll} />
         )}
         {fixturesError && (
-          <DataErrorBanner message={fixturesError} onRetry={reloadFixtures} />
+          <DataErrorBanner message={fixturesError} onRetry={refreshAll} />
         )}
 
         {loading ? (
@@ -144,7 +165,7 @@ export default function AdminAvailability() {
           </>
         )}
 
-        <button type="button" onClick={() => reload()} className="text-sm text-brand-blue font-medium">
+        <button type="button" onClick={() => void refreshAll()} className="text-sm text-brand-blue font-medium">
           Refresh
         </button>
       </div>

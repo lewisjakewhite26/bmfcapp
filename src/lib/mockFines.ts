@@ -191,6 +191,20 @@ export function setMockFineEntry(
     return null
   }
 
+  if (fineKey === 'late' || fineKey === 'late_10') {
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const row = entries[i]
+      if (
+        row.session_id === sessionId &&
+        row.profile_id === profileId &&
+        (row.fine_key === 'late' || row.fine_key === 'late_10') &&
+        row.fine_key !== fineKey
+      ) {
+        entries.splice(i, 1)
+      }
+    }
+  }
+
   if (idx >= 0) {
     entries[idx] = { ...entries[idx], label, amount }
     refreshSessionTotals()

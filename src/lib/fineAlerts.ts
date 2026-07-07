@@ -5,6 +5,35 @@ export type FineAlertLevel = 'none' | 'normal' | 'warning' | 'critical'
 
 const MS_PER_DAY = 86_400_000
 
+const londonDateFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/London',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+/** Calendar date (yyyy-mm-dd) in Europe/London — matches server CURRENT_DATE for UK users. */
+export function londonCalendarDateYmd(now = new Date()): string {
+  const parts = londonDateFormatter.formatToParts(now)
+  const year = parts.find((p) => p.type === 'year')!.value
+  const month = parts.find((p) => p.type === 'month')!.value
+  const day = parts.find((p) => p.type === 'day')!.value
+  return `${year}-${month}-${day}`
+}
+
+function ymdToUtcMs(ymd: string): number {
+  const [y, m, d] = ymd.slice(0, 10).split('-').map(Number)
+  return Date.UTC(y, m - 1, d)
+}
+
+/** Whole days from today (Europe/London) until due_date (negative when overdue). */
+export function daysUntilDue(dueDate: string, now = new Date()): number {
+  const todayYmd = londonCalendarDateYmd(now)
+  const dueYmd = dueDate.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueYmd)) return 0
+  return Math.floor((ymdToUtcMs(dueYmd) - ymdToUtcMs(todayYmd)) / MS_PER_DAY)
+}
+
 export function unpaidTotal(entries: FineEntry[]): number {
   return entries.filter((e) => !e.paid).reduce((sum, e) => sum + e.amount, 0)
 }
@@ -13,15 +42,6 @@ export function earliestDueDate(entries: FineEntry[]): string | null {
   const unpaid = entries.filter((e) => !e.paid && e.due_date)
   if (unpaid.length === 0) return null
   return unpaid.reduce((min, e) => (e.due_date < min ? e.due_date : min), unpaid[0].due_date)
-}
-
-/** Whole days from today until due_date (negative when overdue). */
-export function daysUntilDue(dueDate: string): number {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const due = new Date(`${dueDate}T00:00:00`)
-  if (Number.isNaN(due.getTime())) return 0
-  return Math.floor((due.getTime() - today.getTime()) / MS_PER_DAY)
 }
 
 export function getDeadlineProximityScore(daysUntil: number): number {

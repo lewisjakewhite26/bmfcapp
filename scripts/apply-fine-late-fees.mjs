@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Fines automation backstop — invokes fines-scheduler (or RPC fallback).
+ * Fines automation — invokes fines-scheduler (canonical orchestrator).
  *
  * Requires `.env.local` or environment variables:
  *   VITE_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  *
- * Run: npm run apply:fine-late-fees
- * Scheduled: `.github/workflows/fines-automation.yml` (every 15 minutes)
+ * Run: npm run fines:automation
+ * Scheduled: `.github/workflows/fines-automation.yml` (every 5 minutes)
  */
 
 import fs from 'fs'
@@ -18,6 +18,9 @@ import { createClient } from '@supabase/supabase-js'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(__dirname, '..')
 const ENV_PATH = path.join(ROOT, '.env.local')
+
+const SCHEDULER_ATTEMPTS = 3
+const RETRY_BASE_MS = 500
 
 function loadEnv(filePath) {
   if (!fs.existsSync(filePath)) return {}
@@ -49,6 +52,10 @@ function resolveEnv() {
   }
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function invokeScheduler(url, serviceKey, schedulerSecret) {
   const endpoint = `${url.replace(/\/$/, '')}/functions/v1/fines-scheduler`
   const headers = {
@@ -68,6 +75,21 @@ async function invokeScheduler(url, serviceKey, schedulerSecret) {
   return body
 }
 
+async function invokeSchedulerWithRetry(url, serviceKey, schedulerSecret) {
+  let lastError
+  for (let attempt = 1; attempt <= SCHEDULER_ATTEMPTS; attempt++) {
+    try {
+      return await invokeScheduler(url, serviceKey, schedulerSecret)
+    } catch (err) {
+      lastError = err
+      if (attempt < SCHEDULER_ATTEMPTS) {
+        await sleep(RETRY_BASE_MS * attempt)
+      }
+    }
+  }
+  throw lastError
+}
+
 async function main() {
   const { url, serviceKey, schedulerSecret } = resolveEnv()
 
@@ -80,12 +102,12 @@ async function main() {
   }
 
   try {
-    const result = await invokeScheduler(url, serviceKey, schedulerSecret)
+    const result = await invokeSchedulerWithRetry(url, serviceKey, schedulerSecret)
     console.log(JSON.stringify(result, null, 2))
     return
   } catch (err) {
     console.warn(
-      'fines-scheduler invoke failed, falling back to apply_fine_late_fees RPC:',
+      'fines-scheduler invoke failed after retries, falling back to apply_fine_late_fees RPC:',
       err instanceof Error ? err.message : err,
     )
   }
@@ -98,6 +120,10 @@ async function main() {
     process.exit(1)
   }
 
+  console.error(
+    'WARNING: fines-scheduler was unavailable — this tick ran apply_fine_late_fees RPC only. ' +
+      'No-vote fines, vote reminders, and ALL push notifications were SKIPPED for this run.',
+  )
   console.log(JSON.stringify(data, null, 2))
 }
 
