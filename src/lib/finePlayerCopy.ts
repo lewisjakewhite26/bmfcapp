@@ -35,7 +35,7 @@ export const FINE_DISCRETIONAL = {
   hint: "Committee/manager's discretion. Just for this player, this event.",
 } as const
 
-export function fineCardSummary(count: number, dueDate: string | null, _isOverdue: boolean): string {
+export function fineCardSummary(count: number, dueDate: string | null): string {
   const parts = [`${count} fine${count === 1 ? '' : 's'}`]
   if (dueDate) {
     const summary = formatFineDueSummary(dueDate)

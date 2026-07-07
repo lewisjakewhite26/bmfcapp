@@ -38,7 +38,7 @@ export function FineSquadOwedCard({ row, expanded, isMe, onToggle }: FineSquadOw
             )}
           </p>
           <p className="text-sm text-gray-600 mt-0.5">
-            {fineCardSummary(row.unpaid_count, row.earliest_due_date, row.is_overdue)}
+            {fineCardSummary(row.unpaid_count, row.earliest_due_date)}
           </p>
         </div>
         <span

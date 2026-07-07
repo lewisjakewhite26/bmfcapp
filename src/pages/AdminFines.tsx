@@ -10,7 +10,7 @@ import { sendFinePushNotification } from '../lib/finePush'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
-import { FINE_CATALOG, fineEventPrimaryLabel, fineEventSubtitle, formatFineAmount, isCatalogFineKey, isLatenessFineKey, LATENESS_FINES, latenessStateFromKeys, LATE_FINE_KEYS, newOneOffFineKey } from '../lib/fineCatalog'
+import { FINE_CATALOG, fineEventPrimaryLabel, fineEventSubtitle, formatFineAmount, isCatalogFineKey, LATENESS_FINES, latenessStateFromKeys, LATE_FINE_KEYS, newOneOffFineKey } from '../lib/fineCatalog'
 import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
 import {
