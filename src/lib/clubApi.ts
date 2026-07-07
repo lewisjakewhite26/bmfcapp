@@ -2028,6 +2028,7 @@ function mapFineEntry(row: Record<string, unknown>): FineEntry {
     session_date: String(row.session_date).slice(0, 10),
     session_title: row.session_title as string,
     created_at: row.created_at as string,
+    due_date: String(row.due_date ?? row.session_date).slice(0, 10),
   }
 }
 
@@ -2220,9 +2221,41 @@ export async function fetchOutstandingFinesSummary(): Promise<PlayerFinesSummary
     display_name: row.display_name as string,
     outstanding_total: Number(row.outstanding_total),
     unpaid_count: Number(row.unpaid_count),
-    oldest_unpaid_days: Number(row.oldest_unpaid_days),
+    earliest_due_date: row.earliest_due_date
+      ? String(row.earliest_due_date).slice(0, 10)
+      : null,
+    is_overdue: Boolean(row.is_overdue),
     entries: ((row.entries ?? []) as Record<string, unknown>[]).map(mapFineEntry),
   }))
+}
+
+export async function setPlayerPause(
+  profileId: string,
+  paused: boolean,
+  reason?: string | null,
+): Promise<{ profile_id: string; paused: boolean; paused_reason: string | null }> {
+  if (isMockDataMode()) {
+    await delay(30)
+    return { profile_id: profileId, paused, paused_reason: reason ?? null }
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_set_player_pause', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_profile_id: profileId,
+    p_paused: paused,
+    p_reason: reason ?? null,
+  })
+  if (error) throw error
+  const row = data as Record<string, unknown>
+  return {
+    profile_id: row.profile_id as string,
+    paused: Boolean(row.paused),
+    paused_reason: (row.paused_reason as string | null) ?? null,
+  }
 }
 
 export async function fetchMyUnpaidFines(): Promise<FineEntry[]> {

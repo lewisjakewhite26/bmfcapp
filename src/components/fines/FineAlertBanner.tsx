@@ -1,5 +1,13 @@
 import { Link } from 'react-router-dom'
-import { fineAlertClasses, getFineAlertLevel, summarizeFineAlert, unpaidTotal, oldestUnpaidDays } from '../../lib/fineAlerts'
+import {
+  earliestDueDate,
+  fineAlertClasses,
+  formatFineDueSummary,
+  getFineAlertLevel,
+  summarizeFineAlert,
+  unpaidTotal,
+  daysUntilDue,
+} from '../../lib/fineAlerts'
 import { FINE_BANNER } from '../../lib/finePlayerCopy'
 import type { FineEntry } from '../../types'
 
@@ -12,9 +20,11 @@ export function FineAlertBanner({ entries, compact }: FineAlertBannerProps) {
   const total = unpaidTotal(entries)
   if (total <= 0) return null
 
-  const oldest = oldestUnpaidDays(entries)
-  const level = getFineAlertLevel(total, oldest)
-  const message = summarizeFineAlert(total, oldest)
+  const due = earliestDueDate(entries)
+  const days = due ? daysUntilDue(due) : 0
+  const level = getFineAlertLevel(total, days)
+  const message = summarizeFineAlert(total, days)
+  const dueSummary = formatFineDueSummary(due)
 
   return (
     <Link
@@ -29,6 +39,7 @@ export function FineAlertBanner({ entries, compact }: FineAlertBannerProps) {
           <p className={`font-semibold mt-1 ${level === 'critical' ? 'text-red-800' : level === 'warning' ? 'text-amber-900' : 'text-brand-navy'}`}>
             {message}
           </p>
+          {dueSummary && <p className="text-sm text-gray-600 mt-1">{dueSummary}</p>}
           {!compact ? (
             <p className="text-sm text-gray-600 mt-1">{FINE_BANNER.fullHint}</p>
           ) : (

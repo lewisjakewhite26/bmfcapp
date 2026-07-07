@@ -1,25 +1,50 @@
 /** Preset match-day fines — amounts in GBP. */
 import { formatMatchDate } from './format'
 
-export const FINE_CATALOG = [
+export const LATENESS_FINES = [
   { key: 'late', label: 'Late', amount: 1 },
-  { key: 'sin_bin', label: 'Sin bin', amount: 5 },
-  { key: 'no_warm_up_top', label: 'No warm up top', amount: 1 },
+  { key: 'late_10', label: 'Late 10+ mins', amount: 2 },
+] as const
+
+export type LatenessFineKey = (typeof LATENESS_FINES)[number]['key']
+export type LatenessState = 'off' | LatenessFineKey
+
+export const FINE_CATALOG = [
   { key: 'no_show', label: 'No show', amount: 5 },
+  { key: 'sin_bin', label: 'Sin bin', amount: 5 },
+  { key: 'no_vote', label: 'No vote', amount: 1 },
+  { key: 'non_club_attire', label: 'Non-club attire', amount: 1 },
 ] as const
 
 export type FineCatalogKey = (typeof FINE_CATALOG)[number]['key']
+
+export const LATE_FINE_KEYS = new Set<string>(LATENESS_FINES.map((f) => f.key))
+
+export const ALL_PRESET_FINE_KEYS = new Set<string>([
+  ...LATENESS_FINES.map((f) => f.key),
+  ...FINE_CATALOG.map((f) => f.key),
+])
 
 export const ONE_OFF_FINE_KEY_PREFIX = 'oneoff:'
 
 const CATALOG_KEYS = new Set<string>(FINE_CATALOG.map((f) => f.key))
 
 export function isCatalogFineKey(key: string): boolean {
-  return CATALOG_KEYS.has(key)
+  return CATALOG_KEYS.has(key) || LATE_FINE_KEYS.has(key)
 }
 
 export function isOneOffFineKey(key: string): boolean {
   return key.startsWith(ONE_OFF_FINE_KEY_PREFIX)
+}
+
+export function isLatenessFineKey(key: string): boolean {
+  return LATE_FINE_KEYS.has(key)
+}
+
+export function latenessStateFromKeys(keys: Set<string>): LatenessState {
+  if (keys.has('late_10')) return 'late_10'
+  if (keys.has('late')) return 'late'
+  return 'off'
 }
 
 export function newOneOffFineKey(): string {
@@ -27,7 +52,7 @@ export function newOneOffFineKey(): string {
 }
 
 export function getFinePreset(key: string) {
-  return FINE_CATALOG.find((f) => f.key === key)
+  return LATENESS_FINES.find((f) => f.key === key) ?? FINE_CATALOG.find((f) => f.key === key)
 }
 
 export function formatFineAmount(amount: number): string {

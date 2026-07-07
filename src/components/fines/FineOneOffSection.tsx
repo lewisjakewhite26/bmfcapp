@@ -1,3 +1,5 @@
+import { FINE_DISCRETIONAL } from '../../lib/finePlayerCopy'
+
 interface FineOneOffSectionProps {
   label: string
   amount: string
@@ -15,8 +17,8 @@ export function FineOneOffSection({
 }: FineOneOffSectionProps) {
   return (
     <div className="rounded-card border border-brand-blue/10 bg-white/50 p-3 space-y-3">
-      <h3 className="text-sm font-semibold text-brand-navy">One-off fine</h3>
-      <p className="text-xs text-gray-500 -mt-1">Optional. Just for this player, this event.</p>
+      <h3 className="text-sm font-semibold text-brand-navy">{FINE_DISCRETIONAL.heading}</h3>
+      <p className="text-xs text-gray-500 -mt-1">{FINE_DISCRETIONAL.hint}</p>
       <label className="block">
         <span className="text-xs text-gray-500">What for?</span>
         <input

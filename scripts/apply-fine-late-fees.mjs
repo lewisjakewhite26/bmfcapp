@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Apply monthly £2 late fees for unpaid fines (calls apply_fine_late_fees RPC).
+ * Fines automation backstop — invokes fines-scheduler (or RPC fallback).
  *
  * Requires `.env.local` or environment variables:
  *   VITE_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  *
  * Run: npm run apply:fine-late-fees
- * Scheduled: `.github/workflows/apply-fine-late-fees.yml` (daily 00:05 UTC)
+ * Scheduled: `.github/workflows/fines-automation.yml` (every 15 minutes)
  */
 
 import fs from 'fs'
@@ -45,11 +45,31 @@ function resolveEnv() {
   return {
     url: process.env.VITE_SUPABASE_URL?.trim() || file.VITE_SUPABASE_URL,
     serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || file.SUPABASE_SERVICE_ROLE_KEY,
+    schedulerSecret: process.env.FINES_SCHEDULER_SECRET?.trim() || file.FINES_SCHEDULER_SECRET,
   }
 }
 
+async function invokeScheduler(url, serviceKey, schedulerSecret) {
+  const endpoint = `${url.replace(/\/$/, '')}/functions/v1/fines-scheduler`
+  const headers = {
+    Authorization: `Bearer ${serviceKey}`,
+    apikey: serviceKey,
+    'Content-Type': 'application/json',
+  }
+  if (schedulerSecret) {
+    headers['x-fines-scheduler-secret'] = schedulerSecret
+  }
+
+  const res = await fetch(endpoint, { method: 'POST', headers, body: '{}' })
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(body.error ?? `fines-scheduler HTTP ${res.status}`)
+  }
+  return body
+}
+
 async function main() {
-  const { url, serviceKey } = resolveEnv()
+  const { url, serviceKey, schedulerSecret } = resolveEnv()
 
   if (!url || !serviceKey) {
     console.error(
@@ -57,6 +77,17 @@ async function main() {
         'Add both to .env.local (see .env.example).',
     )
     process.exit(1)
+  }
+
+  try {
+    const result = await invokeScheduler(url, serviceKey, schedulerSecret)
+    console.log(JSON.stringify(result, null, 2))
+    return
+  } catch (err) {
+    console.warn(
+      'fines-scheduler invoke failed, falling back to apply_fine_late_fees RPC:',
+      err instanceof Error ? err.message : err,
+    )
   }
 
   const supabase = createClient(url, serviceKey)

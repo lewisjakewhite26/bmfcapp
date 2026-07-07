@@ -22,6 +22,7 @@
     "scrape:ddsfl:save": "tsx scripts/scrape-ddsfl.mjs --out scraped.json",
     "sync:ddsfl": "tsx scripts/sync-ddsfl-to-supabase.mjs",
     "apply:fine-late-fees": "node scripts/apply-fine-late-fees.mjs",
+    "fines:automation": "node scripts/apply-fine-late-fees.mjs",
     "screenshots": "node scripts/capture-screenshots.mjs",
     "screenshots:mobile": "node scripts/capture-screenshots.mjs --mobile",
     "screenshots:desktop": "node scripts/capture-screenshots.mjs --desktop"

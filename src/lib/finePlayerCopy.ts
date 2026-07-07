@@ -2,7 +2,8 @@
 
 export const FINE_PAGE = {
   title: 'Fines',
-  subtitle: 'Match-day fines from training and games. Pay by the last Sunday of each month.',
+  subtitle:
+    'Fines are due by the last Sunday of the month. Fined in the final week? You get until the following month\'s last Sunday. Anything unpaid after its due date picks up £2 every week until it\'s cleared.',
 } as const
 
 export const FINE_YOUR_BALANCE = {
@@ -12,7 +13,7 @@ export const FINE_YOUR_BALANCE = {
 
 export const FINE_SQUAD = {
   heading: 'Who still owes',
-  hint: 'Tap a name to see each fine and when it was logged.',
+  hint: 'Tap a name to see each fine and when it is due.',
   youTag: 'you',
 } as const
 
@@ -27,13 +28,15 @@ export const FINE_BANNER = {
   fullHint: 'Tap for your fines and the squad list',
 } as const
 
-export function fineAgeLabel(days: number): string {
-  if (days <= 0) return ''
-  return `${days} day${days === 1 ? '' : 's'}`
-}
+export const FINE_DISCRETIONAL = {
+  heading: 'Discretional fine',
+  hint: "Committee/manager's discretion. Just for this player, this event.",
+} as const
 
-export function fineCardSummary(count: number, oldestDays: number): string {
+export function fineCardSummary(count: number, dueDate: string | null, isOverdue: boolean): string {
   const parts = [`${count} fine${count === 1 ? '' : 's'}`]
-  if (oldestDays > 0) parts.push(`oldest ${fineAgeLabel(oldestDays)}`)
+  if (dueDate) {
+    parts.push(isOverdue ? 'overdue' : `due ${dueDate}`)
+  }
   return parts.join(' · ')
 }

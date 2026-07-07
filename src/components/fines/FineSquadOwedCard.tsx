@@ -1,5 +1,9 @@
 import { fineEventDisplayLabel, formatFineAmount } from '../../lib/fineCatalog'
-import { fineAlertClasses, getFineAlertLevel } from '../../lib/fineAlerts'
+import {
+  daysUntilDue,
+  fineAlertClasses,
+  getFineAlertLevel,
+} from '../../lib/fineAlerts'
 import { FINE_SQUAD, fineCardSummary } from '../../lib/finePlayerCopy'
 import type { PlayerFinesSummaryRow } from '../../types'
 
@@ -11,7 +15,8 @@ type FineSquadOwedCardProps = {
 }
 
 export function FineSquadOwedCard({ row, expanded, isMe, onToggle }: FineSquadOwedCardProps) {
-  const level = getFineAlertLevel(row.outstanding_total, row.oldest_unpaid_days)
+  const days = row.earliest_due_date ? daysUntilDue(row.earliest_due_date) : 0
+  const level = getFineAlertLevel(row.outstanding_total, days)
 
   return (
     <div
@@ -33,7 +38,7 @@ export function FineSquadOwedCard({ row, expanded, isMe, onToggle }: FineSquadOw
             )}
           </p>
           <p className="text-sm text-gray-600 mt-0.5">
-            {fineCardSummary(row.unpaid_count, row.oldest_unpaid_days)}
+            {fineCardSummary(row.unpaid_count, row.earliest_due_date, row.is_overdue)}
           </p>
         </div>
         <span

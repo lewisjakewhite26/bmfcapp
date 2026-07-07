@@ -1,5 +1,12 @@
 import { fineEventDisplayLabel, formatFineAmount } from '../../lib/fineCatalog'
-import { fineAlertClasses, getFineAlertLevel, oldestUnpaidDays, unpaidTotal } from '../../lib/fineAlerts'
+import {
+  earliestDueDate,
+  fineAlertClasses,
+  formatFineDueSummary,
+  getFineAlertLevel,
+  unpaidTotal,
+  daysUntilDue,
+} from '../../lib/fineAlerts'
 import { FINE_YOUR_BALANCE } from '../../lib/finePlayerCopy'
 import type { FineEntry } from '../../types'
 
@@ -11,8 +18,10 @@ export function FineYourBalanceCard({ entries }: FineYourBalanceCardProps) {
   const total = unpaidTotal(entries)
   if (total <= 0) return null
 
-  const oldest = oldestUnpaidDays(entries)
-  const level = getFineAlertLevel(total, oldest)
+  const due = earliestDueDate(entries)
+  const days = due ? daysUntilDue(due) : 0
+  const level = getFineAlertLevel(total, days)
+  const dueSummary = formatFineDueSummary(due)
 
   return (
     <section
@@ -28,6 +37,7 @@ export function FineYourBalanceCard({ entries }: FineYourBalanceCardProps) {
               {FINE_YOUR_BALANCE.heading}
             </h2>
             <p className="text-sm text-gray-600 mt-1">{FINE_YOUR_BALANCE.count(entries.length)}</p>
+            {dueSummary && <p className="text-sm font-medium text-brand-navy mt-1">{dueSummary}</p>}
           </div>
           <p
             className={`font-display text-3xl font-bold tabular-nums shrink-0 ${
@@ -47,6 +57,9 @@ export function FineYourBalanceCard({ entries }: FineYourBalanceCardProps) {
                 <p className="font-medium text-brand-navy">{entry.label}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {fineEventDisplayLabel(entry.session_title, entry.session_date)}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {formatFineDueSummary(entry.due_date)}
                 </p>
               </div>
               <span className="font-semibold tabular-nums text-brand-navy">

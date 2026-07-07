@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { FINE_CATALOG, formatFineAmount } from '../../lib/fineCatalog'
+import {
+  FINE_CATALOG,
+  formatFineAmount,
+  LATENESS_FINES,
+  latenessStateFromKeys,
+  type LatenessState,
+} from '../../lib/fineCatalog'
 import { FineOneOffSection } from './FineOneOffSection'
 import { FineTypeGrid } from './FineTypeGrid'
 
@@ -11,6 +17,7 @@ export type OneOffFineDraft = {
 }
 
 export type FinePickerSavePayload = {
+  lateness: LatenessState
   presetKeys: Set<string>
   oneOff: OneOffFineDraft | null
 }
@@ -50,6 +57,7 @@ export function FinePickerModal({
   onSave,
 }: FinePickerModalProps) {
   const [draftPresetKeys, setDraftPresetKeys] = useState<Set<string>>(() => new Set(initialPresetKeys))
+  const [lateness, setLateness] = useState<LatenessState>(() => latenessStateFromKeys(initialPresetKeys))
   const [oneOffLabel, setOneOffLabel] = useState(initialOneOff?.label ?? '')
   const [oneOffAmount, setOneOffAmount] = useState(
     initialOneOff ? String(initialOneOff.amount) : '',
@@ -59,6 +67,7 @@ export function FinePickerModal({
   useEffect(() => {
     if (open) {
       setDraftPresetKeys(new Set(initialPresetKeys))
+      setLateness(latenessStateFromKeys(initialPresetKeys))
       setOneOffLabel(initialOneOff?.label ?? '')
       setOneOffAmount(initialOneOff ? String(initialOneOff.amount) : '')
       setOneOffKey(initialOneOff?.key ?? null)
@@ -90,10 +99,13 @@ export function FinePickerModal({
     const presetTotal = FINE_CATALOG
       .filter((f) => draftPresetKeys.has(f.key))
       .reduce((s, f) => s + f.amount, 0)
-    return presetTotal + (draftOneOff?.amount ?? 0)
-  }, [draftPresetKeys, draftOneOff])
+    const latenessTotal =
+      lateness === 'off' ? 0 : (LATENESS_FINES.find((f) => f.key === lateness)?.amount ?? 0)
+    return presetTotal + latenessTotal + (draftOneOff?.amount ?? 0)
+  }, [draftPresetKeys, draftOneOff, lateness])
 
-  const selectedCount = draftPresetKeys.size + (draftOneOff ? 1 : 0)
+  const selectedCount =
+    draftPresetKeys.size + (draftOneOff ? 1 : 0) + (lateness === 'off' ? 0 : 1)
 
   if (!open) return null
 
@@ -139,8 +151,10 @@ export function FinePickerModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 space-y-4">
           <FineTypeGrid
+            lateness={lateness}
             activeKeys={draftPresetKeys}
             disabled={saving}
+            onLatenessChange={setLateness}
             onToggle={(key, _label, _amount, enabled) => {
               setDraftPresetKeys((prev) => {
                 const next = new Set(prev)
@@ -175,6 +189,7 @@ export function FinePickerModal({
               disabled={saving}
               onClick={() =>
                 onSave({
+                  lateness,
                   presetKeys: draftPresetKeys,
                   oneOff: draftOneOff ? { ...draftOneOff, key: oneOffKey } : null,
                 })

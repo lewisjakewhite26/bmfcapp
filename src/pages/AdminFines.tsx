@@ -10,7 +10,7 @@ import { sendFinePushNotification } from '../lib/finePush'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
-import { FINE_CATALOG, fineEventPrimaryLabel, fineEventSubtitle, formatFineAmount, isCatalogFineKey, newOneOffFineKey } from '../lib/fineCatalog'
+import { FINE_CATALOG, fineEventPrimaryLabel, fineEventSubtitle, formatFineAmount, isCatalogFineKey, isLatenessFineKey, LATENESS_FINES, latenessStateFromKeys, LATE_FINE_KEYS, newOneOffFineKey } from '../lib/fineCatalog'
 import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
 import {
@@ -21,6 +21,7 @@ import {
   fetchFinesOverview,
   setFineEntry,
   setFinePaid,
+  setPlayerPause,
 } from '../lib/clubApi'
 import type { FineEntry, FineSession, FineSessionDetail } from '../types'
 
@@ -176,7 +177,7 @@ export default function AdminFines() {
     [detail, editingPlayerId],
   )
 
-  const editingPlayerPresetKeys = useMemo(() => {
+  const editingPlayerAllPresetKeys = useMemo(() => {
     if (!detail || !editingPlayerId) return new Set<string>()
     return new Set(
       detail.entries
@@ -235,13 +236,14 @@ export default function AdminFines() {
     }
   }
 
-  const handleSavePlayerFines = async ({ presetKeys, oneOff }: FinePickerSavePayload) => {
+  const handleSavePlayerFines = async ({ lateness, presetKeys, oneOff }: FinePickerSavePayload) => {
     if (!selectedId || !detail || !editingPlayerId) return
 
     const serverEntries = detail.entries.filter((e) => e.profile_id === editingPlayerId)
     const serverPresetKeys = new Set(
       serverEntries.filter((e) => isCatalogFineKey(e.fine_key)).map((e) => e.fine_key),
     )
+    const serverLateness = latenessStateFromKeys(serverPresetKeys)
     const serverOneOffEntries = serverEntries.filter((e) => !isCatalogFineKey(e.fine_key))
 
     type FineUpdate = {
@@ -263,6 +265,29 @@ export default function AdminFines() {
           amount: fine.amount,
           enabled: inDraft,
         })
+      }
+    }
+
+    if (lateness !== serverLateness) {
+      if (lateness !== 'off') {
+        const fine = LATENESS_FINES.find((f) => f.key === lateness)!
+        updates.push({
+          key: fine.key,
+          label: fine.label,
+          amount: fine.amount,
+          enabled: true,
+        })
+      }
+      for (const key of LATE_FINE_KEYS) {
+        if (serverPresetKeys.has(key) && key !== lateness) {
+          const fine = LATENESS_FINES.find((f) => f.key === key)!
+          updates.push({
+            key: fine.key,
+            label: fine.label,
+            amount: fine.amount,
+            enabled: false,
+          })
+        }
       }
     }
 
@@ -337,6 +362,17 @@ export default function AdminFines() {
       toast.error(err instanceof Error ? err.message : "Couldn't save fines")
     } finally {
       setSavingPlayerFines(false)
+    }
+  }
+
+  const handleTogglePause = async (member: FineSessionDetail['squad'][number]) => {
+    const nextPaused = !member.paused
+    try {
+      await setPlayerPause(member.profile_id, nextPaused, member.paused_reason)
+      if (selectedId) await loadDetail(selectedId, { silent: true })
+      toast.success(nextPaused ? `${member.display_name} paused` : `${member.display_name} unpaused`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't update pause")
     }
   }
 
@@ -622,12 +658,12 @@ export default function AdminFines() {
                           const isActive = editingPlayerId === member.profile_id
                           const hasFines = fineCount > 0
                           return (
-                            <li key={member.profile_id}>
+                            <li key={member.profile_id} className="flex gap-1">
                               <button
                                 type="button"
                                 aria-pressed={hasFines}
                                 onClick={() => setEditingPlayerId(member.profile_id)}
-                                className={`relative w-full flex items-center justify-between gap-2 px-3 py-3 min-h-[52px] rounded-card border text-left transition-colors touch-manipulation ${
+                                className={`relative flex-1 flex items-center justify-between gap-2 px-3 py-3 min-h-[52px] rounded-card border text-left transition-colors touch-manipulation ${
                                   isActive
                                     ? 'border-brand-blue bg-brand-blue/10 ring-2 ring-brand-blue/25'
                                     : hasFines
@@ -637,6 +673,11 @@ export default function AdminFines() {
                               >
                                 <span className="font-medium text-brand-navy truncate pr-1">
                                   {member.display_name}
+                                  {member.paused && (
+                                    <span className="ml-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                                      Paused
+                                    </span>
+                                  )}
                                 </span>
                                 {fineCount > 0 && (
                                   <span
@@ -647,6 +688,18 @@ export default function AdminFines() {
                                   </span>
                                 )}
                               </button>
+                              <button
+                                type="button"
+                                title={member.paused ? 'Unpause automation' : 'Pause automation'}
+                                onClick={() => void handleTogglePause(member)}
+                                className={`shrink-0 px-2 min-h-[52px] rounded-card border text-xs font-semibold touch-manipulation ${
+                                  member.paused
+                                    ? 'border-amber-400/50 bg-amber-50 text-amber-900'
+                                    : 'border-brand-blue/10 text-gray-500 hover:bg-brand-light/50'
+                                }`}
+                              >
+                                {member.paused ? '▶' : '⏸'}
+                              </button>
                             </li>
                           )
                         })}
@@ -656,7 +709,7 @@ export default function AdminFines() {
                     <FinePickerModal
                       open={Boolean(editingPlayer)}
                       playerName={editingPlayer?.display_name ?? ''}
-                      initialPresetKeys={editingPlayerPresetKeys}
+                      initialPresetKeys={editingPlayerAllPresetKeys}
                       initialOneOff={editingPlayerOneOff}
                       saving={savingPlayerFines}
                       onClose={() => setEditingPlayerId(null)}

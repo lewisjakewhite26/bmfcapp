@@ -40,6 +40,7 @@ const entries: FineEntry[] = [
     session_date: '2026-06-14',
     session_title: 'Sat training',
     created_at: '2026-06-14T10:05:00.000Z',
+    due_date: '2026-06-28',
   },
   {
     id: 'fine-2',
@@ -53,6 +54,7 @@ const entries: FineEntry[] = [
     session_date: '2026-06-14',
     session_title: 'Sat training',
     created_at: '2026-06-14T10:05:00.000Z',
+    due_date: '2026-06-28',
   },
   {
     id: 'fine-3',
@@ -68,6 +70,7 @@ const entries: FineEntry[] = [
     session_date: '2026-06-14',
     session_title: 'Sat training',
     created_at: '2026-06-14T10:06:00.000Z',
+    due_date: '2026-06-28',
   },
   {
     id: 'fine-4',
@@ -83,6 +86,7 @@ const entries: FineEntry[] = [
     session_date: '2026-06-07',
     session_title: 'League match vs Shildon',
     created_at: '2026-06-07T18:35:00.000Z',
+    due_date: '2026-06-28',
   },
   {
     id: 'fine-5',
@@ -98,6 +102,7 @@ const entries: FineEntry[] = [
     session_date: '2026-06-07',
     session_title: 'League match vs Shildon',
     created_at: '2026-06-07T18:36:00.000Z',
+    due_date: '2026-06-28',
   },
 ]
 
@@ -114,6 +119,8 @@ function squadList() {
   return getMockSquad().map((m) => ({
     profile_id: m.player_id,
     display_name: m.display_name,
+    paused: false,
+    paused_reason: null,
   }))
 }
 
@@ -202,6 +209,7 @@ export function setMockFineEntry(
     session_date: session.session_date,
     session_title: session.title,
     created_at: new Date().toISOString(),
+    due_date: '2026-07-26',
   }
   entries.push(row)
   refreshSessionTotals()
@@ -242,21 +250,21 @@ export function getMockOutstandingFinesSummary(): PlayerFinesSummaryRow[] {
     byPlayer.set(entry.profile_id, list)
   }
 
-  const MS_PER_DAY = 86_400_000
   const rows: PlayerFinesSummaryRow[] = []
   for (const [profileId, playerEntries] of byPlayer) {
     const outstanding = playerEntries.reduce((s, e) => s + e.amount, 0)
-    const oldest = Math.max(
-      ...playerEntries.map((e) =>
-        Math.floor((Date.now() - new Date(e.created_at).getTime()) / MS_PER_DAY),
-      ),
+    const earliest = playerEntries.reduce(
+      (min, e) => (e.due_date < min ? e.due_date : min),
+      playerEntries[0].due_date,
     )
+    const today = new Date().toISOString().slice(0, 10)
     rows.push({
       profile_id: profileId,
       display_name: playerEntries[0]?.display_name ?? 'Unknown',
       outstanding_total: outstanding,
       unpaid_count: playerEntries.length,
-      oldest_unpaid_days: oldest,
+      earliest_due_date: earliest,
+      is_overdue: earliest < today,
       entries: [...playerEntries].sort((a, b) => b.created_at.localeCompare(a.created_at)),
     })
   }

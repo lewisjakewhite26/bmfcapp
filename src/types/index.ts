@@ -349,12 +349,13 @@ export interface FineEntry {
   session_date: string
   session_title: string
   created_at: string
+  due_date: string
 }
 
 export interface FineSessionDetail {
   session: FineSession
   entries: FineEntry[]
-  squad: { profile_id: string; display_name: string }[]
+  squad: { profile_id: string; display_name: string; paused?: boolean; paused_reason?: string | null }[]
 }
 
 export interface PlayerFinesSummaryRow {
@@ -362,7 +363,8 @@ export interface PlayerFinesSummaryRow {
   display_name: string
   outstanding_total: number
   unpaid_count: number
-  oldest_unpaid_days: number
+  earliest_due_date: string | null
+  is_overdue: boolean
   entries: FineEntry[]
 }
 

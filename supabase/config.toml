@@ -7,6 +7,6 @@
 verify_jwt = false
 entrypoint = "../supabase-club/functions/send-push/index.ts"
 
-[functions.apply-fine-late-fees]
+[functions.fines-scheduler]
 verify_jwt = false
-entrypoint = "../supabase-club/functions/apply-fine-late-fees/index.ts"
+entrypoint = "../supabase-club/functions/fines-scheduler/index.ts"
