@@ -9,7 +9,10 @@ test.describe('Admin fines picker', () => {
 
     await page.getByRole('button', { name: /Sat training/i }).click()
 
-    await page.getByRole('button', { name: 'Tom H', exact: true }).click()
+    const tomPlayerButton = () =>
+      page.getByRole('button', { name: /^Tom H/ }).first()
+
+    await tomPlayerButton().click()
 
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
@@ -35,7 +38,8 @@ test.describe('Admin fines picker', () => {
     await expect(dialog).toBeHidden()
     await expect(page.getByText('Fines saved')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Tom H', exact: true }).click()
+    await expect(tomPlayerButton()).toHaveAttribute('aria-pressed', 'true')
+    await tomPlayerButton().click()
     const reopened = page.getByRole('dialog')
     await expect(reopened).toBeVisible()
     const latenessAfterSave = reopened.getByRole('button', { name: /Late 10\+ mins/i })
