@@ -13,7 +13,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { createClient } from '@supabase/supabase-js'
+import { createServiceClient } from './supabaseServiceClient.mjs'
 import {
   DDSFL_ACTIVE_SEASON,
   ddsflFixturesUrl,
@@ -108,9 +108,7 @@ async function main() {
 
   console.error(`Parsed ${scrapedFixtures.length} fixtures, ${scrapedTable.length} table rows`)
 
-  const supabase = createClient(url, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
+  const supabase = createServiceClient(url, serviceKey)
 
   let fixturesUpserted = 0
   let resultsUpserted = 0
