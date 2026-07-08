@@ -119,22 +119,18 @@ export function FinePickerModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/40 px-0 sm:px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-0 sm:pb-[max(1rem,var(--mobile-bottom-nav-clearance,1rem))] touch-none"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,var(--mobile-bottom-nav-clearance,1rem))] touch-none overscroll-none"
       role="dialog"
       aria-modal="true"
       aria-labelledby="fine-picker-title"
       onClick={onClose}
     >
       <div
-        className="fine-modal-panel glass-card flex w-full max-w-lg flex-col max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)))] sm:max-h-[min(85dvh,calc(100dvh-2rem))] overflow-hidden rounded-t-[1.25rem] sm:rounded-[20px] border-b-0 sm:border-b touch-auto !p-0"
+        className="fine-modal-panel dialog-panel flex w-full max-w-lg flex-col max-h-[min(85dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] overflow-hidden shadow-xl touch-auto !p-0"
         data-testid="fine-picker"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sm:hidden flex shrink-0 justify-center pt-3 pb-1" aria-hidden>
-          <span className="h-1 w-10 rounded-full bg-brand-blue/15" />
-        </div>
-
-        <header className="shrink-0 border-b border-brand-blue/10 px-4 pb-3 pt-1 sm:pt-4 sm:px-5">
+        <header className="shrink-0 border-b border-brand-blue/10 px-4 pb-3 pt-4 sm:px-5 sm:pt-5">
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
               <h2 id="fine-picker-title" className="font-semibold text-brand-navy text-lg">
@@ -182,7 +178,7 @@ export function FinePickerModal({
           />
         </div>
 
-        <footer className="shrink-0 border-t border-brand-blue/10 px-4 py-4 sm:px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <footer className="shrink-0 border-t border-brand-blue/10 px-4 py-4 sm:px-5">
           <div className="flex flex-col-reverse sm:flex-row gap-2">
             <button
               type="button"

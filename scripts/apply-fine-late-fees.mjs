@@ -13,7 +13,7 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { createClient } from '@supabase/supabase-js'
+import { createServiceClient } from './supabaseServiceClient.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(__dirname, '..')
@@ -57,22 +57,24 @@ function sleep(ms) {
 }
 
 async function invokeScheduler(url, serviceKey, schedulerSecret) {
-  const endpoint = `${url.replace(/\/$/, '')}/functions/v1/fines-scheduler`
-  const headers = {
-    Authorization: `Bearer ${serviceKey}`,
-    apikey: serviceKey,
-    'Content-Type': 'application/json',
-  }
+  const supabase = createServiceClient(url, serviceKey)
+  const headers = {}
   if (schedulerSecret) {
     headers['x-fines-scheduler-secret'] = schedulerSecret
   }
 
-  const res = await fetch(endpoint, { method: 'POST', headers, body: '{}' })
-  const body = await res.json().catch(() => ({}))
-  if (!res.ok) {
-    throw new Error(body.error ?? `fines-scheduler HTTP ${res.status}`)
+  const { data, error } = await supabase.functions.invoke('fines-scheduler', {
+    body: {},
+    headers,
+  })
+
+  if (error) {
+    throw new Error(error.message ?? 'fines-scheduler invoke failed')
   }
-  return body
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
+    throw new Error(String(data.error))
+  }
+  return data
 }
 
 async function invokeSchedulerWithRetry(url, serviceKey, schedulerSecret) {
@@ -96,7 +98,8 @@ async function main() {
   if (!url || !serviceKey) {
     console.error(
       'Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.\n' +
-        'Add both to .env.local (see .env.example).',
+        'Local: add both to .env.local (see .env.example).\n' +
+        'GitHub Actions: add both as repository secrets (Settings → Secrets and variables → Actions).',
     )
     process.exit(1)
   }
@@ -112,7 +115,7 @@ async function main() {
     )
   }
 
-  const supabase = createClient(url, serviceKey)
+  const supabase = createServiceClient(url, serviceKey)
   const { data, error } = await supabase.rpc('apply_fine_late_fees')
 
   if (error) {

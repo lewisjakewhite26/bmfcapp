@@ -48,7 +48,7 @@ export function ConfirmDialog({
       onClick={onCancel}
     >
       <div
-        className="glass-card w-full max-w-sm p-5 shadow-xl touch-auto"
+        className="dialog-panel w-full max-w-sm p-5 shadow-xl touch-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="confirm-dialog-title" className="font-semibold text-brand-navy text-lg">

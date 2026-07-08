@@ -29,7 +29,7 @@ export function PwaIosInstallDialog({ onClose, titleId = 'pwa-ios-install-title'
       onClick={onClose}
     >
       <div
-        className="glass-card w-full max-w-sm p-4 shadow-xl max-h-[min(85dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] overflow-y-auto overscroll-contain touch-auto"
+        className="dialog-panel w-full max-w-sm p-4 shadow-xl max-h-[min(85dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] overflow-y-auto overscroll-contain touch-auto"
         onClick={(event) => event.stopPropagation()}
       >
         <p id={titleId} className="font-semibold text-brand-navy">

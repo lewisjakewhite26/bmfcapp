@@ -33,6 +33,17 @@ function formatGbp(amount: number): string {
   return `£${amount.toFixed(amount % 1 === 0 ? 0 : 2)}`
 }
 
+/** When platform env omits SUPABASE_SERVICE_ROLE_KEY, accept a service_role JWT from the caller. */
+function looksLikeServiceRoleJwt(token: string): boolean {
+  if (!token.startsWith('eyJ')) return false
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.role === 'service_role'
+  } catch {
+    return false
+  }
+}
+
 async function sendSystemPush(
   supabase: ReturnType<typeof createClient>,
   playerIds: string[],
@@ -91,15 +102,16 @@ Deno.serve(async (req) => {
   const providedSecret = req.headers.get('x-fines-scheduler-secret')?.trim()
   const authHeader = req.headers.get('authorization') ?? ''
   const apiKey = req.headers.get('apikey') ?? ''
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  const serverServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim() ?? ''
   const bearerToken = authHeader.replace(/^Bearer\s+/i, '').trim()
+  const incomingKey = bearerToken || apiKey.trim()
 
   const authorized =
     (schedulerSecret && providedSecret === schedulerSecret) ||
-    (serviceKey &&
-      (bearerToken === serviceKey ||
-        apiKey.trim() === serviceKey ||
-        authHeader === `Bearer ${serviceKey}`))
+    (incomingKey &&
+      serverServiceKey &&
+      incomingKey === serverServiceKey) ||
+    (incomingKey && !serverServiceKey && looksLikeServiceRoleJwt(incomingKey))
 
   if (!authorized) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -110,6 +122,7 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceKey = serverServiceKey || incomingKey
     if (!supabaseUrl || !serviceKey) {
       return new Response(JSON.stringify({ error: 'Supabase not configured' }), {
         status: 500,

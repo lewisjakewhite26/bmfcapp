@@ -16,7 +16,7 @@ export function FineOneOffSection({
   onAmountChange,
 }: FineOneOffSectionProps) {
   return (
-    <div className="rounded-card border border-brand-blue/10 bg-white/50 p-3 space-y-3">
+    <div className="rounded-card border border-brand-blue/10 p-3 space-y-3">
       <h3 className="text-sm font-semibold text-brand-navy">{FINE_DISCRETIONAL.heading}</h3>
       <p className="text-xs text-gray-500 -mt-1">{FINE_DISCRETIONAL.hint}</p>
       <label className="block">

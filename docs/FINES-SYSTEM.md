@@ -125,6 +125,8 @@ flowchart LR
 
 ### Ops risks
 
+- **GitHub Actions secrets:** Add `VITE_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` under repo **Settings → Secrets and variables → Actions** (same as DDSFL sync). Optional: `FINES_SCHEDULER_SECRET` if set on the Supabase Edge Function. Without secrets the workflow fails every 5 minutes and GitHub emails you.
+- **Deploy `fines-scheduler`:** `supabase functions deploy fines-scheduler --project-ref YOUR_REF` after auth changes.
 - **GitHub Actions 60-day rule:** Scheduled workflows **auto-disable** after 60 days without repo commits. Mitigation: any commit re-enables; manually re-enable under Actions → Fines automation; consider a monthly off-season calendar reminder.
 - **Workflow failure:** Job exits non-zero if scheduler and RPC fallback both fail — GitHub emails on failure.
 - **Fallback RPC path:** Charges late fees only — **no** no-vote, **no** reminders, **no** pushes that tick.
