@@ -16,6 +16,7 @@ import {
   regenerateTeamInvite,
   resetUserPasscode,
   setUserCommittee,
+  setUserFinesAdmin,
   updatePlayerNames,
 } from '../lib/clubApi'
 import { validateNamePart } from '../lib/playerNames'
@@ -439,6 +440,8 @@ export default function AdminUsers() {
                               ? `${u.first_name} ${u.last_name} · @${u.username}`
                               : u.is_admin
                                 ? 'Admin'
+                                : u.is_fines_admin
+                                ? 'Fines helper'
                                 : u.is_committee
                                   ? 'Committee'
                                   : `@${u.username}`}
@@ -484,6 +487,7 @@ export default function AdminUsers() {
                                   <input
                                     type="checkbox"
                                     checked={u.is_committee}
+                                    disabled={u.is_fines_admin}
                                     onChange={(e) => {
                                       setUserCommittee(u.id, e.target.checked)
                                         .then(() => { toast.success('Role updated'); reload() })
@@ -491,6 +495,21 @@ export default function AdminUsers() {
                                     }}
                                   />
                                   Committee
+                                </label>
+                              )}
+                              {!u.is_admin && (
+                                <label className="inline-flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={u.is_fines_admin}
+                                    disabled={u.is_committee}
+                                    onChange={(e) => {
+                                      setUserFinesAdmin(u.id, e.target.checked)
+                                        .then(() => { toast.success('Role updated'); reload() })
+                                        .catch(() => toast.error("Couldn't update role"))
+                                    }}
+                                  />
+                                  Fines helper
                                 </label>
                               )}
                               <button

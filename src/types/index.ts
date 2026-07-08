@@ -4,6 +4,7 @@ export interface User {
   display_name: string
   is_admin: boolean
   is_committee: boolean
+  is_fines_admin: boolean
   is_approved: boolean
   session_token?: string
 }
@@ -18,6 +19,7 @@ export interface AdminUserRow {
   invite_label?: string | null
   is_admin: boolean
   is_committee: boolean
+  is_fines_admin: boolean
   is_approved: boolean
   created_at: string
   invite_pending?: boolean

@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { adminNavTarget, canAccessAdminHub } from '../../lib/roles'
 import { PwaInstallNavButton } from './PwaInstallNavButton'
 
 export function Navbar() {
@@ -46,8 +47,10 @@ export function Navbar() {
                 <Link to={`/player/${authUser.id}`} className="text-sm text-gray-600 hover:text-brand-blue transition-colors">
                   {authUser.display_name}
                 </Link>
-                {(authUser.is_admin || authUser.is_committee) && (
-                  <Link to="/admin" className={`nav-link ${isAdminActive ? 'nav-link-active' : ''}`}>Admin</Link>
+                {canAccessAdminHub(authUser) && (
+                  <Link to={adminNavTarget(authUser)} className={`nav-link ${isAdminActive ? 'nav-link-active' : ''}`}>
+                    {authUser.is_fines_admin && !authUser.is_admin && !authUser.is_committee ? 'Fines admin' : 'Admin'}
+                  </Link>
                 )}
                 <button onClick={logout} className="text-sm text-gray-500 hover:text-red-500 transition-colors min-h-[44px] px-2">
                   Logout

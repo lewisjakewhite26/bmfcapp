@@ -46,6 +46,7 @@ import {
   saveMockLineup,
   setMockUserApproved,
   setMockUserCommittee,
+  setMockUserFinesAdmin,
   upsertMockAvailability,
   upsertMockSquad,
   getMockFundraisers,
@@ -641,6 +642,35 @@ export async function changePasscode(currentPasscode: string, newPasscode: strin
     p_new_passcode: newPasscode,
   })
   if (error) throw error
+}
+
+export async function setUserFinesAdmin(userId: string, isFinesAdmin: boolean): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    setMockUserFinesAdmin(userId, isFinesAdmin)
+    void recordAdminAudit('user_roles_updated', {
+      entityType: 'profile',
+      entityId: userId,
+      details: { is_fines_admin: isFinesAdmin },
+    })
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_set_fines_admin', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_target_id: userId,
+    p_is_fines_admin: isFinesAdmin,
+  })
+  if (error) throw error
+  void recordAdminAudit('user_roles_updated', {
+    entityType: 'profile',
+    entityId: userId,
+    details: { is_fines_admin: isFinesAdmin },
+  })
 }
 
 export async function setUserCommittee(userId: string, isCommittee: boolean): Promise<void> {

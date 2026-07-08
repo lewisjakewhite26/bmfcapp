@@ -16,6 +16,7 @@ import PendingApproval from './pages/PendingApproval'
 import { PageBackground } from './components/ui/PageBackground'
 import { MobileBottomNav } from './components/ui/MobileBottomNav'
 import { InAppBrowserBanner } from './components/ui/InAppBrowserBanner'
+import { canAccessAdminHub, isFinesOnlyAdmin } from './lib/roles'
 import { isSupabaseConfigured } from './lib/supabase'
 import ConfigRequired from './pages/ConfigRequired'
 import NotFound from './pages/NotFound'
@@ -65,12 +66,15 @@ function ProtectedRoute({
   children,
   adminOnly = false,
   requireAdmin = false,
+  finesAdminOk = false,
   allowPending = false,
 }: {
   children: React.ReactNode
   adminOnly?: boolean
-  /** Admin-only routes (committee cannot access). */
+  /** Admin-only routes (committee and fines helpers cannot access). */
   requireAdmin?: boolean
+  /** Also allow fines-only admins (Admin → Fines). */
+  finesAdminOk?: boolean
   allowPending?: boolean
 }) {
   const { user, loading } = useAuth()
@@ -86,11 +90,15 @@ function ProtectedRoute({
   }
 
   if (requireAdmin && !user.is_admin) {
-    return <Navigate to="/admin" replace />
+    return <Navigate to={isFinesOnlyAdmin(user) ? '/admin/fines' : '/admin'} replace />
   }
 
-  if (adminOnly && !user.is_admin && !user.is_committee) {
+  if (adminOnly && !canAccessAdminHub(user)) {
     return <Navigate to="/dashboard" replace />
+  }
+
+  if (adminOnly && !finesAdminOk && isFinesOnlyAdmin(user)) {
+    return <Navigate to="/admin/fines" replace />
   }
 
   return <>{children}</>
@@ -290,7 +298,7 @@ function AppRoutes() {
       <Route
         path="/admin/fines"
         element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute adminOnly finesAdminOk>
             <AdminFines />
           </ProtectedRoute>
         }

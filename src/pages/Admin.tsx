@@ -1,7 +1,8 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { useAuth } from '../hooks/useAuth'
+import { isFinesOnlyAdmin } from '../lib/roles'
 import { pageContainerClass } from '../lib/layout'
 
 const LINKS = [
@@ -15,14 +16,22 @@ const LINKS = [
   { to: '/admin/squad', title: 'Squad list', desc: 'Positions for stats and result entry' },
   { to: '/admin/events', title: 'Other events', desc: 'Socials, AGM, committee meetings & more' },
   { to: '/admin/fundraisers', title: 'Fundraisers', desc: 'Track squad participation in fundraising events' },
-  { to: '/admin/fines', title: 'Fines', desc: 'Log squad fines and track payments' },
+  { to: '/admin/fines', title: 'Fines', desc: 'Log squad fines and track payments', finesOk: true },
   { to: '/admin/finance', title: 'Finance', desc: 'Sponsorships, expenses and club balance' },
   { to: '/admin/users', title: 'Squad members', desc: 'Create accounts, invite links & passcodes', adminOnly: true },
 ]
 
 export default function Admin() {
   const { user } = useAuth()
-  const visibleLinks = LINKS.filter((link) => !link.adminOnly || user?.is_admin)
+
+  if (isFinesOnlyAdmin(user)) {
+    return <Navigate to="/admin/fines" replace />
+  }
+
+  const visibleLinks = LINKS.filter((link) => {
+    if (link.adminOnly && !user?.is_admin) return false
+    return true
+  })
 
   return (
     <PageShell>

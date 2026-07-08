@@ -13,6 +13,8 @@ import { PageShell } from '../components/ui/PageBackground'
 import { FINE_CATALOG, fineEventPrimaryLabel, fineEventSubtitle, formatFineAmount, isCatalogFineKey, LATENESS_FINES, latenessStateFromKeys, LATE_FINE_KEYS, newOneOffFineKey } from '../lib/fineCatalog'
 import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
+import { useAuth } from '../hooks/useAuth'
+import { isFinesOnlyAdmin } from '../lib/roles'
 import {
   createFineSession,
   deleteFineSession,
@@ -73,6 +75,7 @@ function EventCheckIcon() {
 }
 
 export default function AdminFines() {
+  const { user } = useAuth()
   const [tab, setTab] = useState<Tab>('sessions')
   const [sessions, setSessions] = useState<FineSession[]>([])
   const [loadingSessions, setLoadingSessions] = useState(true)
@@ -495,7 +498,9 @@ export default function AdminFines() {
     <PageShell>
       <Navbar />
       <div className={pageContainerClass()}>
-        <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
+        {!isFinesOnlyAdmin(user) && (
+          <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
+        )}
         <div>
           <h1 className="font-display text-2xl text-brand-navy">Fines</h1>
           <p className="text-sm text-gray-500 mt-1">

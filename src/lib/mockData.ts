@@ -138,6 +138,7 @@ export const MOCK_ADMIN_USERS: AdminUserRow[] = [
     last_name: 'Lee',
     is_admin: false,
     is_committee: false,
+    is_fines_admin: false,
     is_approved: true,
     created_at: '2025-08-01T00:00:00Z',
   },
@@ -147,6 +148,7 @@ export const MOCK_ADMIN_USERS: AdminUserRow[] = [
     display_name: 'Pending Player',
     is_admin: false,
     is_committee: false,
+    is_fines_admin: false,
     is_approved: false,
     created_at: '2026-05-01T00:00:00Z',
   },
@@ -193,6 +195,7 @@ const E2E_SEED_USERS: MockAdminUser[] =
           last_name: 'E2e',
           is_admin: false,
           is_committee: false,
+          is_fines_admin: false,
           is_approved: false,
           created_at: '2026-06-01T00:00:00Z',
         },
@@ -468,6 +471,7 @@ export function createMockInvite(
     invite_label: label,
     is_admin: false,
     is_committee: false,
+    is_fines_admin: false,
     is_approved: true,
     created_at: new Date().toISOString(),
     invite_pending: true,
@@ -492,7 +496,18 @@ export function createMockInvite(
 
 export function setMockUserCommittee(userId: string, isCommittee: boolean) {
   const user = adminUsers.find((u) => u.id === userId)
-  if (user && !user.is_admin) user.is_committee = isCommittee
+  if (user && !user.is_admin) {
+    user.is_committee = isCommittee
+    if (isCommittee) user.is_fines_admin = false
+  }
+}
+
+export function setMockUserFinesAdmin(userId: string, isFinesAdmin: boolean) {
+  const user = adminUsers.find((u) => u.id === userId)
+  if (user && !user.is_admin) {
+    user.is_fines_admin = isFinesAdmin
+    if (isFinesAdmin) user.is_committee = false
+  }
 }
 
 export function resetMockPasscode(userId: string, passcode: string) {
@@ -695,6 +710,7 @@ export function completeMockInvite(
     display_name: user.display_name,
     is_admin: user.is_admin,
     is_committee: user.is_committee,
+    is_fines_admin: user.is_fines_admin,
     is_approved: false,
     session_token: 'mock-invite-session',
   }
@@ -773,6 +789,7 @@ export function completeMockTeamInvite(
     invite_label: null,
     is_admin: false,
     is_committee: false,
+    is_fines_admin: false,
     is_approved: false,
     created_at: new Date().toISOString(),
     invite_pending: false,
@@ -788,6 +805,7 @@ export function completeMockTeamInvite(
     display_name: user.display_name,
     is_admin: user.is_admin,
     is_committee: user.is_committee,
+    is_fines_admin: user.is_fines_admin,
     is_approved: false,
     session_token: 'mock-team-invite-session',
   }
@@ -810,6 +828,7 @@ export function mockLoginByCredentials(displayName: string, passcode: string): i
     display_name: user.display_name,
     is_admin: user.is_admin,
     is_committee: user.is_committee,
+    is_fines_admin: user.is_fines_admin,
     is_approved: true,
     session_token: 'mock-e2e-login',
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { adminNavTarget, canAccessAdminHub } from '../../lib/roles'
 import { NotificationToggle } from './NotificationToggle'
 import { ChangePasscodeForm } from '../auth/ChangePasscodeForm'
 
@@ -196,9 +197,9 @@ export function MobileBottomNav() {
             </button>
           )}
           <NotificationToggle playerId={user.id} />
-          {(user.is_admin || user.is_committee) && (
-            <Link to="/admin" onClick={() => setMenuOpen(false)} className="flex items-center min-h-[48px] px-3 rounded-xl text-brand-navy font-medium">
-              Admin
+          {canAccessAdminHub(user) && (
+            <Link to={adminNavTarget(user)} onClick={() => setMenuOpen(false)} className="flex items-center min-h-[48px] px-3 rounded-xl text-brand-navy font-medium">
+              {user.is_fines_admin && !user.is_admin && !user.is_committee ? 'Fines admin' : 'Admin'}
             </Link>
           )}
           <button

@@ -8,6 +8,7 @@ export const DEV_USER: User = {
   display_name: 'Chris L',
   is_admin: false,
   is_committee: false,
+  is_fines_admin: false,
   is_approved: true,
   session_token: DEV_BYPASS_TOKEN,
 }
@@ -18,6 +19,7 @@ export const DEV_ADMIN: User = {
   display_name: 'Preview Admin',
   is_admin: true,
   is_committee: true,
+  is_fines_admin: false,
   is_approved: true,
   session_token: DEV_BYPASS_TOKEN,
 }
@@ -28,6 +30,7 @@ export const DEV_PENDING: User = {
   display_name: 'Pending Player',
   is_admin: false,
   is_committee: false,
+  is_fines_admin: false,
   is_approved: false,
   session_token: DEV_BYPASS_TOKEN,
 }

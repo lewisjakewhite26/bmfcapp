@@ -32,6 +32,7 @@ const DEV_USER = {
   display_name: 'Preview Player',
   is_admin: false,
   is_committee: false,
+  is_fines_admin: false,
   is_approved: true,
   session_token: 'dev-bypass-token',
 }
@@ -42,6 +43,7 @@ const DEV_ADMIN = {
   display_name: 'Preview Admin',
   is_admin: true,
   is_committee: true,
+  is_fines_admin: false,
   is_approved: true,
   session_token: 'dev-bypass-token',
 }
@@ -52,6 +54,7 @@ const DEV_PENDING = {
   display_name: 'Pending Player',
   is_admin: false,
   is_committee: false,
+  is_fines_admin: false,
   is_approved: false,
   session_token: 'dev-bypass-token',
 }

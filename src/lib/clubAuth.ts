@@ -34,6 +34,7 @@ function mapRpcUser(row: Record<string, unknown>): User {
     display_name: row.display_name as string,
     is_admin: Boolean(row.is_admin),
     is_committee: Boolean(row.is_committee),
+    is_fines_admin: Boolean(row.is_fines_admin),
     is_approved: Boolean(row.is_approved),
     session_token: row.session_token as string | undefined,
   }

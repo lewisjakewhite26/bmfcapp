@@ -12,6 +12,7 @@ const DEV_USER = {
   display_name: 'Chris L',
   is_admin: false,
   is_committee: false,
+  is_fines_admin: false,
   is_approved: true,
   session_token: DEV_BYPASS_TOKEN,
 }
@@ -22,6 +23,7 @@ const DEV_ADMIN = {
   display_name: 'Preview Admin',
   is_admin: true,
   is_committee: true,
+  is_fines_admin: false,
   is_approved: true,
   session_token: DEV_BYPASS_TOKEN,
 }
