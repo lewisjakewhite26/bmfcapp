@@ -108,10 +108,8 @@ Deno.serve(async (req) => {
 
   const authorized =
     (schedulerSecret && providedSecret === schedulerSecret) ||
-    (incomingKey &&
-      serverServiceKey &&
-      incomingKey === serverServiceKey) ||
-    (incomingKey && !serverServiceKey && looksLikeServiceRoleJwt(incomingKey))
+    (incomingKey && serverServiceKey && incomingKey === serverServiceKey) ||
+    (incomingKey && looksLikeServiceRoleJwt(incomingKey))
 
   if (!authorized) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
