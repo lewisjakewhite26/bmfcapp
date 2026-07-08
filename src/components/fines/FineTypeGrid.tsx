@@ -64,8 +64,8 @@ export function FineTypeGrid({
         onClick={() => onLatenessChange(nextLateness(lateness))}
         className={`relative col-span-2 flex min-h-[72px] flex-col justify-center rounded-card border px-3 py-3 text-left transition-colors touch-manipulation ${
           activeLateness
-            ? 'border-brand-blue bg-brand-blue/10 ring-2 ring-brand-blue/25'
-            : 'border-brand-blue/10 hover:bg-brand-light/50'
+            ? 'border-brand-blue bg-white ring-2 ring-brand-blue/25 shadow-sm'
+            : 'border-brand-blue/10 bg-white hover:bg-brand-light/80 hover:border-brand-blue/20'
         } ${disabled ? 'opacity-60' : ''}`}
       >
         <span
@@ -100,8 +100,8 @@ export function FineTypeGrid({
               fullWidth ? 'col-span-2' : ''
             } ${
               active
-                ? 'border-brand-blue bg-brand-blue/10 ring-2 ring-brand-blue/25'
-                : 'border-brand-blue/10 hover:bg-brand-light/50'
+                ? 'border-brand-blue bg-white ring-2 ring-brand-blue/25 shadow-sm'
+                : 'border-brand-blue/10 bg-white hover:bg-brand-light/80 hover:border-brand-blue/20'
             } ${disabled ? 'opacity-60' : ''}`}
           >
             <span

@@ -82,11 +82,9 @@
     box-shadow: 0 8px 32px rgba(13, 27, 75, 0.08);
   }
 
-  /* Portaled dialogs — same glass look as cards, opaque enough over the dimmed backdrop. */
+  /* Portaled dialogs — crisp white panel; same border/shadow as glass-card (no frosted blur). */
   .dialog-panel {
-    background: rgba(255, 255, 255, 0.94);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: #ffffff;
     border: 1px solid rgba(43, 95, 192, 0.15);
     border-radius: 20px;
     box-shadow: 0 8px 32px rgba(13, 27, 75, 0.08);

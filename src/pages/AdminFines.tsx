@@ -666,10 +666,10 @@ export default function AdminFines() {
                                 onClick={() => setEditingPlayerId(member.profile_id)}
                                 className={`relative flex-1 flex items-center justify-between gap-2 px-3 py-3 min-h-[52px] rounded-card border text-left transition-colors touch-manipulation ${
                                   isActive
-                                    ? 'border-brand-blue bg-brand-blue/10 ring-2 ring-brand-blue/25'
+                                    ? 'border-brand-blue bg-white ring-2 ring-brand-blue/25 shadow-sm'
                                     : hasFines
-                                      ? 'border-brand-blue/20 bg-white/70 hover:bg-brand-light/50'
-                                      : 'border-brand-blue/10 hover:bg-brand-light/50'
+                                      ? 'border-brand-blue/20 bg-white hover:bg-brand-light/80 hover:border-brand-blue/30'
+                                      : 'border-brand-blue/10 bg-white hover:bg-brand-light/80 hover:border-brand-blue/20'
                                 }`}
                               >
                                 <span className="font-medium text-brand-navy truncate pr-1">
@@ -696,7 +696,7 @@ export default function AdminFines() {
                                 className={`shrink-0 px-2 min-h-[52px] rounded-card border text-xs font-semibold touch-manipulation ${
                                   member.paused
                                     ? 'border-amber-400/50 bg-amber-50 text-amber-900'
-                                    : 'border-brand-blue/10 text-gray-500 hover:bg-brand-light/50'
+                                    : 'border-brand-blue/10 bg-white text-gray-500 hover:bg-brand-light/80 hover:border-brand-blue/20'
                                 }`}
                               >
                                 {member.paused ? '▶' : '⏸'}

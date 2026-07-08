@@ -154,7 +154,7 @@ export function FinePickerModal({
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-brand-light/50 px-4 py-4 sm:px-5 space-y-4">
           <FineTypeGrid
             lateness={lateness}
             activeKeys={draftPresetKeys}
