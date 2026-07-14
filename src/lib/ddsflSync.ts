@@ -70,6 +70,73 @@ export function mapScrapedFixture(row: ScrapedFixture): DdsflFixtureRow {
   }
 }
 
+/** Strip common club noise so "Ferryhill Ivorson FC" ≈ "Ferryhill The Ivorson". */
+export function normalizeOpponentKey(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(
+      /\b(fc|football\s+club|afc|wmc|the|o40s|o40|over\s*40s|juniors|jun)\b/g,
+      ' ',
+    )
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function fixtureDateKey(matchDate: string): string {
+  return matchDate.slice(0, 10)
+}
+
+/**
+ * True when two opponent labels likely refer to the same club.
+ * Handles DDSFL vs short admin names (e.g. Iron Horse vs Newton Aycliffe Iron horse).
+ */
+export function opponentsLikelySame(a: string, b: string): boolean {
+  const na = normalizeOpponentKey(a)
+  const nb = normalizeOpponentKey(b)
+  if (!na || !nb) return false
+  if (na === nb) return true
+  if (na.includes(nb) || nb.includes(na)) return true
+
+  const tokensA = new Set(na.split(' ').filter((t) => t.length > 1))
+  const tokensB = new Set(nb.split(' ').filter((t) => t.length > 1))
+  if (tokensA.size === 0 || tokensB.size === 0) return false
+
+  let overlap = 0
+  for (const t of tokensA) {
+    if (tokensB.has(t)) overlap++
+  }
+  const smaller = Math.min(tokensA.size, tokensB.size)
+  return overlap >= Math.max(1, Math.ceil(smaller * 0.6))
+}
+
+export interface ManualFixtureCandidate {
+  id: string
+  match_date: string
+  opponent: string
+  home_away: 'home' | 'away'
+  ddsfl_fixture_id?: string | null
+}
+
+/** Find a manually added fixture that is the same match as a scraped DDSFL row. */
+export function findManualFixtureMatch(
+  scraped: Pick<DdsflFixtureRow, 'match_date' | 'opponent' | 'home_away'>,
+  candidates: ManualFixtureCandidate[],
+): ManualFixtureCandidate | null {
+  const date = fixtureDateKey(scraped.match_date)
+  const matches = candidates.filter(
+    (c) =>
+      !c.ddsfl_fixture_id &&
+      fixtureDateKey(c.match_date) === date &&
+      c.home_away === scraped.home_away &&
+      opponentsLikelySame(c.opponent, scraped.opponent),
+  )
+  return matches[0] ?? null
+}
+
 export function mapScrapedResult(row: ScrapedFixture): DdsflResultRow | null {
   if (row.status !== 'completed' || row.goals_for == null || row.goals_against == null) {
     return null

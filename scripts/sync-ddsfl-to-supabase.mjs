@@ -7,7 +7,12 @@
  *   SUPABASE_SERVICE_ROLE_KEY  (Dashboard → Settings → API → service_role)
  *
  * Run: npm run sync:ddsfl
- * Scheduled: `.github/workflows/sync-ddsfl.yml` (Sundays 20:00 UTC + manual)
+ * Scheduled: `.github/workflows/sync-ddsfl.yml` (daily 20:00 UTC + manual)
+ *
+ * Deduping: if an admin already added the same match manually (same date,
+ * home/away, similar opponent), the scrape links that row to the DDSFL id
+ * instead of inserting a duplicate. If both a linked scrape row and a manual
+ * match exist, the manual row is kept and the orphan scrape row is removed.
  */
 
 import fs from 'fs'
@@ -22,6 +27,7 @@ import {
 } from '../src/lib/ddsflConstants.ts'
 import { parseFixturesHtml, parseLeagueTableHtml } from '../src/lib/ddsflScraper.ts'
 import {
+  findManualFixtureMatch,
   mapScrapedFixture,
   mapScrapedLeagueTable,
   mapScrapedResult,
@@ -72,6 +78,18 @@ function resolveEnv() {
   }
 }
 
+/** When linking a manual row, keep admin kick-off/venue; attach DDSFL identity. */
+function linkUpdateFromScraped(fixtureRow) {
+  return {
+    ddsfl_fixture_id: fixtureRow.ddsfl_fixture_id,
+    opponent: fixtureRow.opponent,
+    competition: fixtureRow.competition,
+    status: fixtureRow.status,
+    home_away: fixtureRow.home_away,
+    match_date: fixtureRow.match_date,
+  }
+}
+
 async function main() {
   const { VITE_SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: serviceKey } = resolveEnv()
 
@@ -110,33 +128,114 @@ async function main() {
 
   const supabase = createServiceClient(url, serviceKey)
 
+  const { data: allFixtures, error: listErr } = await supabase
+    .from('fixtures')
+    .select('id, match_date, opponent, home_away, ddsfl_fixture_id')
+
+  if (listErr) throw new Error(`Could not load existing fixtures: ${listErr.message}`)
+
+  /** @type {Array<{id: string, match_date: string, opponent: string, home_away: 'home'|'away', ddsfl_fixture_id: string|null}>} */
+  let knownFixtures = allFixtures ?? []
+
   let fixturesUpserted = 0
+  let fixturesLinkedManual = 0
+  let fixturesMergedDuplicates = 0
   let resultsUpserted = 0
   let resultsSkipped = 0
 
   for (const scraped of scrapedFixtures) {
     const fixtureRow = mapScrapedFixture(scraped)
 
-    const { data: existing, error: lookupErr } = await supabase
-      .from('fixtures')
-      .select('id')
-      .eq('ddsfl_fixture_id', scraped.ddsfl_fixture_id)
-      .maybeSingle()
-
-    if (lookupErr) {
-      throw new Error(`Fixture ${scraped.ddsfl_fixture_id}: ${lookupErr.message}`)
-    }
+    const existingById = knownFixtures.find(
+      (f) => f.ddsfl_fixture_id === scraped.ddsfl_fixture_id,
+    )
+    const manualMatch = findManualFixtureMatch(fixtureRow, knownFixtures)
 
     let fixture
-    if (existing) {
+
+    if (existingById && manualMatch && existingById.id !== manualMatch.id) {
+      // Keep the admin-created row (availability etc.), drop the scrape duplicate.
+      // Clear DDSFL id first so the unique constraint allows linking the manual row.
+      const { error: clearErr } = await supabase
+        .from('fixtures')
+        .update({ ddsfl_fixture_id: null })
+        .eq('id', existingById.id)
+      if (clearErr) {
+        throw new Error(
+          `Could not clear DDSFL id on duplicate ${existingById.id}: ${clearErr.message}`,
+        )
+      }
+
+      const { data, error: linkErr } = await supabase
+        .from('fixtures')
+        .update(linkUpdateFromScraped(fixtureRow))
+        .eq('id', manualMatch.id)
+        .select('id, ddsfl_fixture_id')
+        .single()
+      if (linkErr) throw new Error(`Fixture ${scraped.ddsfl_fixture_id}: ${linkErr.message}`)
+
+      const { error: delErr } = await supabase.from('fixtures').delete().eq('id', existingById.id)
+      if (delErr) {
+        throw new Error(
+          `Could not remove duplicate DDSFL row ${existingById.id}: ${delErr.message}`,
+        )
+      }
+
+      knownFixtures = knownFixtures
+        .filter((f) => f.id !== existingById.id)
+        .map((f) =>
+          f.id === manualMatch.id
+            ? { ...f, ddsfl_fixture_id: scraped.ddsfl_fixture_id, opponent: fixtureRow.opponent }
+            : f,
+        )
+
+      fixture = data
+      fixturesMergedDuplicates++
+      console.error(
+        `Merged duplicate: kept manual ${manualMatch.opponent} (${manualMatch.id}), removed scrape ${existingById.id}`,
+      )
+    } else if (existingById) {
       const { data, error: updateErr } = await supabase
         .from('fixtures')
         .update(fixtureRow)
-        .eq('id', existing.id)
+        .eq('id', existingById.id)
         .select('id, ddsfl_fixture_id')
         .single()
       if (updateErr) throw new Error(`Fixture ${scraped.ddsfl_fixture_id}: ${updateErr.message}`)
       fixture = data
+      knownFixtures = knownFixtures.map((f) =>
+        f.id === existingById.id
+          ? {
+              ...f,
+              match_date: fixtureRow.match_date,
+              opponent: fixtureRow.opponent,
+              home_away: fixtureRow.home_away,
+            }
+          : f,
+      )
+    } else if (manualMatch) {
+      const { data, error: linkErr } = await supabase
+        .from('fixtures')
+        .update(linkUpdateFromScraped(fixtureRow))
+        .eq('id', manualMatch.id)
+        .select('id, ddsfl_fixture_id')
+        .single()
+      if (linkErr) throw new Error(`Fixture ${scraped.ddsfl_fixture_id}: ${linkErr.message}`)
+      fixture = data
+      fixturesLinkedManual++
+      knownFixtures = knownFixtures.map((f) =>
+        f.id === manualMatch.id
+          ? {
+              ...f,
+              ddsfl_fixture_id: scraped.ddsfl_fixture_id,
+              opponent: fixtureRow.opponent,
+              match_date: fixtureRow.match_date,
+            }
+          : f,
+      )
+      console.error(
+        `Linked manual fixture ${manualMatch.opponent} → DDSFL ${scraped.ddsfl_fixture_id}`,
+      )
     } else {
       const { data, error: insertErr } = await supabase
         .from('fixtures')
@@ -145,6 +244,13 @@ async function main() {
         .single()
       if (insertErr) throw new Error(`Fixture ${scraped.ddsfl_fixture_id}: ${insertErr.message}`)
       fixture = data
+      knownFixtures.push({
+        id: data.id,
+        match_date: fixtureRow.match_date,
+        opponent: fixtureRow.opponent,
+        home_away: fixtureRow.home_away,
+        ddsfl_fixture_id: scraped.ddsfl_fixture_id,
+      })
     }
 
     fixturesUpserted++
@@ -199,6 +305,8 @@ async function main() {
     season: seasonInfo.appSeason,
     scraped_at: scrapedAt,
     fixtures_upserted: fixturesUpserted,
+    fixtures_linked_manual: fixturesLinkedManual,
+    fixtures_merged_duplicates: fixturesMergedDuplicates,
     results_upserted: resultsUpserted,
     results_skipped_has_events: resultsSkipped,
     league_table_rows: leagueRows.length,
