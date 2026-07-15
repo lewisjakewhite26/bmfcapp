@@ -45,11 +45,12 @@ test.describe('Onboarding', () => {
     await page.getByRole('link', { name: 'Squad members' }).click()
     await expect(page).toHaveURL(/\/admin\/users/)
 
-    const addPlayer = page.locator('section').filter({
-      has: page.getByRole('heading', { name: 'Add a player' }),
+    const inviteLink = page.locator('section').filter({
+      has: page.getByRole('heading', { name: 'Invite link (optional)' }),
     })
-    await addPlayer.getByPlaceholder('e.g. trialist A (optional)').fill('E2E Trialist')
-    await addPlayer.getByRole('button', { name: 'Create invite' }).click()
+    await expect(inviteLink.getByPlaceholder(/trialist/i)).toBeVisible()
+    await inviteLink.getByPlaceholder(/trialist/i).fill('E2E Trialist')
+    await inviteLink.getByRole('button', { name: 'Create invite' }).click()
 
     await expect(page.getByText('Latest invite link')).toBeVisible()
     await expect(page.locator('text=/\\/invite\\/[a-f0-9]+/i')).toBeVisible()
