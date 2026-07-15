@@ -10,6 +10,7 @@ function isMockDataMode(): boolean {
 
 export const ADMIN_AUDIT_ACTIONS = [
   'invite_created',
+  'player_created',
   'invite_regenerated',
   'team_invite_generated',
   'team_invite_regenerated',
@@ -58,6 +59,7 @@ export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number]
 
 const ACTION_LABELS: Record<AdminAuditAction, string> = {
   invite_created: 'Invite created',
+  player_created: 'Player created',
   invite_regenerated: 'Invite link regenerated',
   team_invite_generated: 'Team invite link generated',
   team_invite_regenerated: 'Team invite link regenerated',

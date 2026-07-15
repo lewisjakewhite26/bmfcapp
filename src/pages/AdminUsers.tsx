@@ -6,6 +6,7 @@ import { PageShell } from '../components/ui/PageBackground'
 import { inviteUrl, teamInviteUrl } from '../lib/clubAuth'
 import {
   approveUser,
+  createApprovedPlayer,
   createInvite,
   disableTeamInvite,
   enableTeamInvite,
@@ -22,7 +23,7 @@ import {
 import { validateNamePart } from '../lib/playerNames'
 import { SQUAD_POSITIONS } from '../lib/squadPositions'
 import { pageContainerClass } from '../lib/layout'
-import type { AdminUserRow, SquadPosition, TeamInviteSettings } from '../types'
+import type { AdminUserRow, CreatePlayerResult, SquadPosition, TeamInviteSettings } from '../types'
 
 function copyText(text: string) {
   navigator.clipboard.writeText(text).then(
@@ -40,9 +41,15 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<AdminUserRow[]>([])
   const [loading, setLoading] = useState(true)
   const [inviteLabel, setInviteLabel] = useState('')
-  const [newPosition, setNewPosition] = useState<SquadPosition>('Midfielder')
+  const [invitePosition, setInvitePosition] = useState<SquadPosition>('Midfielder')
   const [creating, setCreating] = useState(false)
   const [lastInviteLink, setLastInviteLink] = useState<string | null>(null)
+  const [addFirstName, setAddFirstName] = useState('')
+  const [addLastName, setAddLastName] = useState('')
+  const [addPasscode, setAddPasscode] = useState('')
+  const [addPosition, setAddPosition] = useState<SquadPosition | ''>('')
+  const [addingPlayer, setAddingPlayer] = useState(false)
+  const [lastCreatedPlayer, setLastCreatedPlayer] = useState<CreatePlayerResult | null>(null)
   const [resetTarget, setResetTarget] = useState<AdminUserRow | null>(null)
   const [editTarget, setEditTarget] = useState<AdminUserRow | null>(null)
   const [editFirstName, setEditFirstName] = useState('')
@@ -109,7 +116,7 @@ export default function AdminUsers() {
 
     setCreating(true)
     try {
-      const result = await createInvite(newPosition, inviteLabel.trim() || null)
+      const result = await createInvite(invitePosition, inviteLabel.trim() || null)
       const link = inviteUrl(result.invite_token)
       setLastInviteLink(link)
       setInviteLabel('')
@@ -119,6 +126,44 @@ export default function AdminUsers() {
       toast.error(err instanceof Error ? err.message : "Couldn't create invite")
     } finally {
       setCreating(false)
+    }
+  }
+
+  const handleAddPlayer = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    try {
+      validateNamePart(addFirstName, 'First name')
+      validateNamePart(addLastName, 'Last name')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Enter a valid name')
+      return
+    }
+
+    if (!/^\d{4}$/.test(addPasscode)) {
+      toast.error('Passcode must be 4 digits')
+      return
+    }
+
+    setAddingPlayer(true)
+    try {
+      const created = await createApprovedPlayer(
+        addFirstName,
+        addLastName,
+        addPasscode,
+        addPosition || null,
+      )
+      setLastCreatedPlayer(created)
+      setAddFirstName('')
+      setAddLastName('')
+      setAddPasscode('')
+      setAddPosition('')
+      toast.success(`${created.display_name} added — login ${created.login_name}`)
+      reload()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't add player")
+    } finally {
+      setAddingPlayer(false)
     }
   }
 
@@ -199,7 +244,72 @@ export default function AdminUsers() {
       <div className={pageContainerClass()}>
         <Link to="/admin" className="text-brand-blue text-sm font-medium">← Admin</Link>
         <h1 className="font-display text-2xl text-brand-navy">Squad members</h1>
-          <p className="text-sm text-gray-500">Create invite links. Players enter their name when they open the link. Position is optional but helps stats.</p>
+        <p className="text-sm text-gray-500">
+          Add players straight onto the squad, or send invite links for them to set up themselves.
+        </p>
+
+        <section className="glass-card p-5 space-y-4">
+          <h2 className="font-semibold text-brand-navy">Add player now</h2>
+          <p className="text-sm text-gray-500">
+            Creates an approved account and puts them on the squad. Tell them their login name and passcode.
+          </p>
+          <form onSubmit={handleAddPlayer} className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                type="text"
+                value={addFirstName}
+                onChange={(e) => setAddFirstName(e.target.value)}
+                className="input-field"
+                placeholder="First name"
+                required
+              />
+              <input
+                type="text"
+                value={addLastName}
+                onChange={(e) => setAddLastName(e.target.value)}
+                className="input-field"
+                placeholder="Surname"
+                required
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="password"
+                inputMode="numeric"
+                pattern="\d{4}"
+                maxLength={4}
+                value={addPasscode}
+                onChange={(e) => setAddPasscode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                className="input-field sm:w-36"
+                placeholder="4-digit passcode"
+                required
+              />
+              <select
+                value={addPosition}
+                onChange={(e) => setAddPosition(e.target.value as SquadPosition | '')}
+                className="input-field sm:w-40"
+              >
+                <option value="">Position (optional)</option>
+                {SQUAD_POSITIONS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+              <button type="submit" disabled={addingPlayer} className="btn-primary shrink-0">
+                {addingPlayer ? 'Adding...' : 'Add to squad'}
+              </button>
+            </div>
+          </form>
+
+          {lastCreatedPlayer && (
+            <div className="rounded-card bg-brand-light/70 border border-brand-blue/15 p-4 space-y-1">
+              <p className="text-sm font-medium text-brand-navy">{lastCreatedPlayer.display_name} is ready</p>
+              <p className="text-sm text-gray-600">
+                Login name: <span className="font-mono font-semibold">{lastCreatedPlayer.login_name}</span>
+              </p>
+              <p className="text-xs text-gray-500">Send them that login name and the passcode you just set.</p>
+            </div>
+          )}
+        </section>
 
         <section className="glass-card p-5 space-y-4">
           <h2 className="font-semibold text-brand-navy">Team invite link</h2>
@@ -273,7 +383,10 @@ export default function AdminUsers() {
         </section>
 
         <section className="glass-card p-5 space-y-4">
-          <h2 className="font-semibold text-brand-navy">Add a player</h2>
+          <h2 className="font-semibold text-brand-navy">Invite link (optional)</h2>
+          <p className="text-sm text-gray-500">
+            For trialists or when the player should enter their own name. They still need approval after setup unless you used Add player now.
+          </p>
           <form onSubmit={handleCreate} className="space-y-3">
             <div className="flex flex-col sm:flex-row gap-3">
               <input
@@ -284,8 +397,8 @@ export default function AdminUsers() {
                 placeholder="e.g. trialist A (optional)"
               />
               <select
-                value={newPosition}
-                onChange={(e) => setNewPosition(e.target.value as SquadPosition)}
+                value={invitePosition}
+                onChange={(e) => setInvitePosition(e.target.value as SquadPosition)}
                 className="input-field sm:w-40"
               >
                 {SQUAD_POSITIONS.map((p) => (

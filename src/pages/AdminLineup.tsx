@@ -6,6 +6,7 @@ import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import {
   fetchAvailablePlayersForFixture,
+  fetchCompletedFixtures,
   fetchLineup,
   fetchSquad,
   fetchUpcomingFixtures,
@@ -146,7 +147,9 @@ function PlayerPill({ player, assigned, highlight, variant, onTap }: PlayerPillP
 }
 
 export default function AdminLineup() {
-  const [fixtures, setFixtures] = useState<FixtureWithResult[]>([])
+  const [fixtureTab, setFixtureTab] = useState<'upcoming' | 'past'>('upcoming')
+  const [upcomingFixtures, setUpcomingFixtures] = useState<FixtureWithResult[]>([])
+  const [pastFixtures, setPastFixtures] = useState<FixtureWithResult[]>([])
   const [fixtureId, setFixtureId] = useState('')
   const [formation, setFormation] = useState<FormationId>('4-2-1-3')
   const [assignments, setAssignments] = useState<Record<string, string>>({})
@@ -158,6 +161,7 @@ export default function AdminLineup() {
   const [loadingPlayers, setLoadingPlayers] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  const fixtures = fixtureTab === 'upcoming' ? upcomingFixtures : pastFixtures
   const slotDefs = FORMATION_SLOTS[formation]
 
   const playerNameById = useMemo(() => {
@@ -187,10 +191,13 @@ export default function AdminLineup() {
     ;(async () => {
       setLoadingFixtures(true)
       try {
-        const rows = await fetchUpcomingFixtures()
+        const [upcoming, past] = await Promise.all([
+          fetchUpcomingFixtures(),
+          fetchCompletedFixtures(),
+        ])
         if (!cancelled) {
-          setFixtures(rows)
-          if (rows.length > 0) setFixtureId((prev) => prev || rows[0].id)
+          setUpcomingFixtures(upcoming)
+          setPastFixtures(past)
         }
       } catch {
         if (!cancelled) toast.error("Couldn't load fixtures")
@@ -200,6 +207,15 @@ export default function AdminLineup() {
     })()
     return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    const list = fixtureTab === 'upcoming' ? upcomingFixtures : pastFixtures
+    if (list.length === 0) {
+      setFixtureId('')
+      return
+    }
+    setFixtureId((prev) => (list.some((f) => f.id === prev) ? prev : list[0].id))
+  }, [fixtureTab, upcomingFixtures, pastFixtures])
 
   const loadFixtureData = useCallback(async (id: string) => {
     if (!id) return
@@ -314,8 +330,34 @@ export default function AdminLineup() {
 
         <FadeUp delay={0.05}>
           <div>
-            <h1 className="font-display text-2xl text-brand-navy">Pick a lineup</h1>
-            <p className="text-sm text-gray-500 mt-1">Tap a position, then tap a player</p>
+            <h1 className="font-display text-2xl text-brand-navy">
+              {fixtureTab === 'past' ? 'Past team sheet' : 'Pick a lineup'}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {fixtureTab === 'past'
+                ? 'Backfill who started for a finished game. Saved sheets count toward appearances.'
+                : 'Tap a position, then tap a player'}
+            </p>
+          </div>
+        </FadeUp>
+
+        <FadeUp delay={0.08}>
+          <div className="flex gap-2 p-1 glass-card w-fit">
+            {([
+              { id: 'upcoming' as const, label: 'Upcoming' },
+              { id: 'past' as const, label: 'Past games' },
+            ]).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setFixtureTab(tab.id)}
+                className={`text-sm font-semibold px-4 py-2 rounded-pill ${
+                  fixtureTab === tab.id ? 'bg-brand-blue text-white' : 'text-brand-navy'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </FadeUp>
 
@@ -330,12 +372,17 @@ export default function AdminLineup() {
               onChange={(e) => setFixtureId(e.target.value)}
             >
               {fixtures.length === 0 ? (
-                <option value="">No upcoming matches</option>
+                <option value="">
+                  {fixtureTab === 'past' ? 'No completed matches yet' : 'No upcoming matches'}
+                </option>
               ) : (
                 fixtures.map((f) => (
                   <option key={f.id} value={f.id}>
                     vs {f.opponent.replace(' FC', '')} · {formatMatchDate(f.match_date)}
                     {f.kickoff_time ? ` · ${formatMatchTime(f.match_date, f.kickoff_time)}` : ''}
+                    {fixtureTab === 'past' && f.result
+                      ? ` · ${f.result.goals_for}–${f.result.goals_against}`
+                      : ''}
                   </option>
                 ))
               )}
@@ -414,10 +461,16 @@ export default function AdminLineup() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="text-xs font-semibold text-brand-navy uppercase tracking-wide">Available</span>
+                      <span className="text-xs font-semibold text-brand-navy uppercase tracking-wide">
+                        {fixtureTab === 'past' ? 'Marked available (if any)' : 'Available'}
+                      </span>
                     </div>
                     {availablePlayers.length === 0 ? (
-                      <p className="text-sm text-gray-500">No one marked available yet.</p>
+                      <p className="text-sm text-gray-500">
+                        {fixtureTab === 'past'
+                          ? 'No availability saved — pick from the full squad below.'
+                          : 'No one marked available yet.'}
+                      </p>
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {availablePlayers.map((player) => (

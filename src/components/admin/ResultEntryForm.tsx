@@ -134,65 +134,102 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
         </p>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold text-brand-navy">Match events</p>
-          <button type="button" onClick={addEvent} className="text-sm text-brand-blue font-medium">+ Add</button>
+          <button type="button" onClick={addEvent} className="text-sm text-brand-blue font-medium min-h-[44px] px-2">
+            + Add
+          </button>
         </div>
         {events.map((ev, i) => (
-          <div key={i} className="grid grid-cols-[1fr_auto_64px_auto] gap-2 items-center">
-            <select
-              value={ev.player_id}
-              onChange={(e) => setEvents((prev) => prev.map((row, j) => (j === i ? { ...row, player_id: e.target.value } : row)))}
-              className="input-field text-sm"
-            >
-              {squad.map((s) => (
-                <option key={s.player_id} value={s.player_id}>{s.display_name}</option>
-              ))}
-            </select>
-            <select
-              value={ev.event_type}
-              onChange={(e) => setEvents((prev) => prev.map((row, j) => (j === i ? { ...row, event_type: e.target.value as MatchEventType } : row)))}
-              className="input-field text-sm"
-            >
-              <option value="goal">Goal</option>
-              <option value="assist">Assist</option>
-              <option value="motm">MOTM</option>
-              <option value="yellow_card">Yellow</option>
-              <option value="red_card">Red</option>
-              <option value="substitution">Substitution off</option>
-            </select>
+          <div
+            key={i}
+            className="rounded-card border border-brand-blue/15 bg-brand-light/40 p-3 space-y-2"
+          >
+            <div className="flex gap-2 items-start">
+              <select
+                value={ev.player_id}
+                onChange={(e) =>
+                  setEvents((prev) =>
+                    prev.map((row, j) => (j === i ? { ...row, player_id: e.target.value } : row)),
+                  )
+                }
+                className="input-field text-sm flex-1 min-w-0"
+                aria-label="Player"
+              >
+                {squad.map((s) => (
+                  <option key={s.player_id} value={s.player_id}>
+                    {s.display_name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setEvents((prev) => prev.filter((_, j) => j !== i))}
+                className="shrink-0 min-h-[44px] min-w-[44px] text-red-500 text-sm font-semibold"
+                aria-label="Remove event"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-[minmax(0,1fr)_5.5rem] gap-2">
+              <select
+                value={ev.event_type}
+                onChange={(e) =>
+                  setEvents((prev) =>
+                    prev.map((row, j) =>
+                      j === i ? { ...row, event_type: e.target.value as MatchEventType } : row,
+                    ),
+                  )
+                }
+                className="input-field text-sm min-w-0 w-full"
+                aria-label="Event type"
+              >
+                <option value="goal">Goal</option>
+                <option value="assist">Assist</option>
+                <option value="motm">MOTM</option>
+                <option value="yellow_card">Yellow card</option>
+                <option value="red_card">Red card</option>
+                <option value="substitution">Sub off</option>
+              </select>
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                placeholder="Min"
+                value={ev.minute}
+                onChange={(e) =>
+                  setEvents((prev) =>
+                    prev.map((row, j) => (j === i ? { ...row, minute: e.target.value } : row)),
+                  )
+                }
+                className="input-field text-sm w-full"
+                aria-label="Minute"
+              />
+            </div>
+
             {ev.event_type === 'substitution' && (
               <select
                 value={ev.related_player_id ?? ''}
                 onChange={(e) =>
                   setEvents((prev) =>
-                    prev.map((row, j) => (j === i ? { ...row, related_player_id: e.target.value } : row)),
+                    prev.map((row, j) =>
+                      j === i ? { ...row, related_player_id: e.target.value } : row,
+                    ),
                   )
                 }
-                className="input-field text-sm col-span-2"
+                className="input-field text-sm w-full min-w-0"
+                aria-label="Player coming on"
               >
                 <option value="">Player on…</option>
                 {squad.map((s) => (
-                  <option key={s.player_id} value={s.player_id}>{s.display_name}</option>
+                  <option key={s.player_id} value={s.player_id}>
+                    {s.display_name}
+                  </option>
                 ))}
               </select>
             )}
-            <input
-              type="number"
-              min={0}
-              placeholder="e.g. 67"
-              value={ev.minute}
-              onChange={(e) => setEvents((prev) => prev.map((row, j) => (j === i ? { ...row, minute: e.target.value } : row)))}
-              className="input-field text-sm"
-            />
-            <button
-              type="button"
-              onClick={() => setEvents((prev) => prev.filter((_, j) => j !== i))}
-              className="text-red-500 text-sm px-2"
-            >
-              ✕
-            </button>
           </div>
         ))}
       </div>

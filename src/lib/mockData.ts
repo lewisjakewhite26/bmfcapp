@@ -494,6 +494,57 @@ export function createMockInvite(
   return { id, display_name: label ?? 'New player', invite_label: label, invite_token: token }
 }
 
+export function createMockApprovedPlayer(
+  firstName: string,
+  lastName: string,
+  passcode: string,
+  position?: string | null,
+): {
+  id: string
+  username: string
+  login_name: string
+  display_name: string
+  first_name: string
+  last_name: string
+  is_approved: boolean
+  squad_position: string | null
+} {
+  if (!/^\d{4}$/.test(passcode)) throw new Error('Passcode must be exactly 4 digits')
+
+  const id = crypto.randomUUID()
+  const username = `inv_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
+
+  adminUsers.push({
+    id,
+    username,
+    display_name: 'New player',
+    invite_label: null,
+    is_admin: false,
+    is_committee: false,
+    is_fines_admin: false,
+    is_approved: true,
+    created_at: new Date().toISOString(),
+    invite_pending: false,
+  })
+  applyMockPlayerNames(id, firstName, lastName)
+  mockPasscodes.set(id, passcode)
+
+  const user = adminUsers.find((u) => u.id === id)!
+  upsertMockSquad(id, user.display_name, position?.trim() || '', null)
+
+  persistE2eMockSnapshot()
+  return {
+    id: user.id,
+    username: user.username,
+    login_name: user.login_name ?? user.display_name,
+    display_name: user.display_name,
+    first_name: user.first_name ?? firstName,
+    last_name: user.last_name ?? lastName,
+    is_approved: true,
+    squad_position: position?.trim() || null,
+  }
+}
+
 export function setMockUserCommittee(userId: string, isCommittee: boolean) {
   const user = adminUsers.find((u) => u.id === userId)
   if (user && !user.is_admin) {

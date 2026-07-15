@@ -54,6 +54,18 @@ export function aggregatePlayerStats(
       if (event.event_type === 'yellow_card') player.yellow_cards++
       if (event.event_type === 'red_card') player.red_cards++
     }
+
+    // Backfilled / saved team sheets also count as appearances (XI on the pitch)
+    const lineup = lineupsByFixtureId.get(fixture.id)
+    if (lineup) {
+      for (const slot of lineup.slots) {
+        if (!stats.has(slot.player_id)) continue
+        if (!appearanceFixtures.has(slot.player_id)) {
+          appearanceFixtures.set(slot.player_id, new Set())
+        }
+        appearanceFixtures.get(slot.player_id)!.add(fixture.id)
+      }
+    }
   }
 
   for (const [playerId, fixtureIds] of appearanceFixtures) {

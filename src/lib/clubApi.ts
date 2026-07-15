@@ -31,6 +31,7 @@ import {
   updateMockFixture,
   removeMockFixture,
   createMockInvite,
+  createMockApprovedPlayer,
   regenerateMockInvite,
   getMockTeamInviteSettings,
   generateMockTeamInvite,
@@ -101,6 +102,7 @@ import type {
   MatchEvent,
   AvailablePlayer,
   CreateInviteResult,
+  CreatePlayerResult,
   Fixture,
   FormationId,
   Fundraiser,
@@ -484,6 +486,44 @@ export async function createInvite(
     entityType: 'profile',
     entityId: result.id,
     details: { display_name: result.display_name, invite_label: result.invite_label ?? null },
+  })
+  return result
+}
+
+export async function createApprovedPlayer(
+  firstName: string,
+  lastName: string,
+  passcode: string,
+  position?: SquadPosition | null,
+): Promise<CreatePlayerResult> {
+  if (isMockDataMode()) {
+    await delay()
+    const row = createMockApprovedPlayer(firstName, lastName, passcode, position)
+    void recordAdminAudit('player_created', {
+      entityType: 'profile',
+      entityId: row.id,
+      details: { display_name: row.display_name, login_name: row.login_name },
+    })
+    return row
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_create_player', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_first_name: firstName,
+    p_last_name: lastName,
+    p_passcode: passcode,
+    p_position: position ?? null,
+  })
+  if (error) throw error
+  const result = data as CreatePlayerResult
+  void recordAdminAudit('player_created', {
+    entityType: 'profile',
+    entityId: result.id,
+    details: { display_name: result.display_name, login_name: result.login_name },
   })
   return result
 }

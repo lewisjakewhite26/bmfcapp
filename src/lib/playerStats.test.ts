@@ -130,6 +130,46 @@ describe('aggregatePlayerStats', () => {
       lineupsByFixtureId: lineups,
     })
     expect(stats.find((s) => s.player_id === 'gk1')?.clean_sheets).toBe(1)
+    expect(stats.find((s) => s.player_id === 'gk1')?.appearances).toBe(1)
     expect(cleanSheetMissingFixtureIds).toEqual([])
+  })
+
+  it('counts appearances from a saved team sheet even with no match events', () => {
+    const quietFixture: FixtureWithResult = {
+      ...fixtures[1],
+      id: 'f3',
+      events: [],
+      result: {
+        id: 'r3',
+        fixture_id: 'f3',
+        goals_for: 0,
+        goals_against: 1,
+        notes: null,
+        created_at: '2025-09-15T12:00:00.000Z',
+      },
+    }
+    const lineups = new Map<string, Lineup | null>([
+      [
+        'f3',
+        {
+          id: 'l3',
+          fixture_id: 'f3',
+          formation: '4-4-2',
+          slots: [
+            { position: 'GK', player_id: 'gk1' },
+            { position: 'ST1', player_id: 'fwd1' },
+          ],
+          created_at: '2025-09-15T12:00:00.000Z',
+          updated_at: '2025-09-15T12:00:00.000Z',
+        },
+      ],
+    ])
+
+    const { stats } = aggregatePlayerStats(squad, [...fixtures, quietFixture], {
+      lineupsByFixtureId: lineups,
+    })
+    expect(stats.find((s) => s.player_id === 'gk1')?.appearances).toBe(1)
+    // fwd already has 2 from events + 1 from lineup sheet
+    expect(stats.find((s) => s.player_id === 'fwd1')?.appearances).toBe(3)
   })
 })

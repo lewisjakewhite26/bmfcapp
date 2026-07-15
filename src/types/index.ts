@@ -60,6 +60,17 @@ export interface CreateInviteResult {
   invite_expires_at: string | null
 }
 
+export interface CreatePlayerResult {
+  id: string
+  username: string
+  login_name: string
+  display_name: string
+  first_name: string
+  last_name: string
+  is_approved: boolean
+  squad_position: string | null
+}
+
 export type FixtureStatus = 'scheduled' | 'in_progress' | 'completed' | 'postponed' | 'cancelled'
 export type HomeAway = 'home' | 'away'
 export type AvailabilityStatus = 'yes' | 'no' | 'maybe'
