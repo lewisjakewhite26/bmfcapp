@@ -24,10 +24,19 @@ export const FINE_EMPTY = {
   body: 'Nobody owes anything right now.',
 } as const
 
+/** Club fines bank account for transfers. */
+export const FINE_BANK = {
+  heading: 'How to pay',
+  hint: 'Bank transfer to the fines account. Use your name as the reference.',
+  accountName: 'Jack Marley',
+  sortCode: '40-47-65',
+  accountNumber: '55841976',
+} as const
+
 export const FINE_BANNER = {
   label: 'Your fines',
   viewHint: 'View breakdown',
-  fullHint: 'Tap for your fines and the squad list',
+  fullHint: 'Tap for bank details and the full fines list',
 } as const
 
 export const FINE_DISCRETIONAL = {

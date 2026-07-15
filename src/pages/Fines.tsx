@@ -4,6 +4,7 @@ import { PageShell } from '../components/ui/PageBackground'
 import { DataErrorBanner } from '../components/ui/DataErrorBanner'
 import { FineSquadOwedCard } from '../components/fines/FineSquadOwedCard'
 import { FineYourBalanceCard } from '../components/fines/FineYourBalanceCard'
+import { FinePaymentDetails } from '../components/fines/FinePaymentDetails'
 import { pageContainerClass } from '../lib/layout'
 import { FINE_EMPTY, FINE_PAGE, FINE_SQUAD } from '../lib/finePlayerCopy'
 import { fetchMyUnpaidFines, fetchOutstandingFinesSummary } from '../lib/clubApi'
@@ -55,6 +56,8 @@ export default function Fines() {
         </div>
 
         {error && <DataErrorBanner message={error} onRetry={load} />}
+
+        <FinePaymentDetails />
 
         {loading ? (
           <div className="glass-card p-8 animate-pulse bg-brand-light/40 h-40 rounded-card" />
