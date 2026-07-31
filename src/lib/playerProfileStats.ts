@@ -83,6 +83,12 @@ export function getRadarAxes(stats: PlayerStats): RadarAxis[] {
   ]
 }
 
+export function formatAppearances(stats: PlayerStats): string | number {
+  return stats.sub_appearances > 0
+    ? `${stats.appearances} (${stats.sub_appearances} as sub)`
+    : stats.appearances
+}
+
 export interface StatRow {
   icon: string
   label: string
@@ -92,7 +98,7 @@ export interface StatRow {
 
 export function getDetailedStatRows(stats: PlayerStats): StatRow[] {
   const rows: StatRow[] = [
-    { icon: '👟', label: 'Matches played', value: stats.appearances },
+    { icon: '👟', label: 'Matches played', value: formatAppearances(stats) },
     { icon: '⚽', label: 'Goals', value: stats.goals, highlight: stats.goals > 0 },
     { icon: '🅰️', label: 'Assists', value: stats.assists, highlight: stats.assists > 0 },
     { icon: '⭐', label: 'Man of the match', value: stats.motm, highlight: stats.motm > 0 },

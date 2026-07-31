@@ -1431,11 +1431,12 @@ export async function fetchLineup(fixtureId: string): Promise<Lineup | null> {
 export async function saveLineup(
   fixtureId: string,
   formation: FormationId,
-  slots: LineupSlotAssignment[]
+  slots: LineupSlotAssignment[],
+  substitutes: string[]
 ): Promise<Lineup> {
   if (isMockDataMode()) {
     await delay(80)
-    const lineup = saveMockLineup(fixtureId, formation, slots)
+    const lineup = saveMockLineup(fixtureId, formation, slots, substitutes)
     void recordAdminAudit('lineup_saved', { entityType: 'fixture', entityId: fixtureId, details: { formation } })
     return lineup
   }
@@ -1449,6 +1450,7 @@ export async function saveLineup(
     p_fixture_id: fixtureId,
     p_formation: formation,
     p_slots: slots,
+    p_substitutes: substitutes,
   })
   if (error) throw error
   void recordAdminAudit('lineup_saved', { entityType: 'fixture', entityId: fixtureId, details: { formation } })

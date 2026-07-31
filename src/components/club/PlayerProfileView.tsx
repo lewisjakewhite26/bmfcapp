@@ -5,6 +5,7 @@ import { formatMatchDate, resultColor, resultLabel } from '../../lib/format'
 import { PlayerPhotoAvatar } from './PlayerPhotoAvatar'
 import { ChangePasscodeForm } from '../auth/ChangePasscodeForm'
 import {
+  formatAppearances,
   getDetailedStatRows,
   getMatchPerformances,
   getRadarAxes,
@@ -103,7 +104,7 @@ export function PlayerProfileView({
             )}
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Matches</span>
-              <span className="font-semibold text-brand-navy">{stats.appearances}</span>
+              <span className="font-semibold text-brand-navy">{formatAppearances(stats)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Goals</span>

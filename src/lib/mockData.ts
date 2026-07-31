@@ -1129,7 +1129,8 @@ export function getMockLineup(fixtureId: string): Lineup | null {
 export function saveMockLineup(
   fixtureId: string,
   formation: FormationId,
-  slots: LineupSlotAssignment[]
+  slots: LineupSlotAssignment[],
+  substitutes: string[]
 ): Lineup {
   const existing = mockLineups.get(fixtureId)
   const now = new Date().toISOString()
@@ -1138,6 +1139,7 @@ export function saveMockLineup(
     fixture_id: fixtureId,
     formation,
     slots: [...slots],
+    substitutes: [...substitutes],
     created_at: existing?.created_at ?? now,
     updated_at: now,
   }

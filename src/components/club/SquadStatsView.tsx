@@ -96,6 +96,7 @@ function PlayerStatCard({ player, maxGoals, filter }: { player: PlayerStats; max
           <StatChip label="G" value={player.goals} highlight={player.goals > 0} />
           <StatChip label="A" value={player.assists} />
           <StatChip label="Apps" value={player.appearances} />
+          {player.sub_appearances > 0 && <StatChip label="Sub" value={player.sub_appearances} />}
           {player.clean_sheets > 0 && <StatChip label="CS" value={player.clean_sheets} />}
           {player.yellow_cards > 0 && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-pill text-xs font-semibold bg-amber-100 text-amber-800">

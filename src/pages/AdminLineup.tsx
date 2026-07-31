@@ -153,6 +153,7 @@ export default function AdminLineup() {
   const [fixtureId, setFixtureId] = useState('')
   const [formation, setFormation] = useState<FormationId>('4-2-1-3')
   const [assignments, setAssignments] = useState<Record<string, string>>({})
+  const [substitutes, setSubstitutes] = useState<string[]>([])
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
   const [availablePlayers, setAvailablePlayers] = useState<AvailablePlayer[]>([])
   const [squadPlayers, setSquadPlayers] = useState<AvailablePlayer[]>([])
@@ -173,6 +174,8 @@ export default function AdminLineup() {
   }, [availablePlayers, squadPlayers])
 
   const assignedPlayerIds = useMemo(() => new Set(Object.values(assignments)), [assignments])
+
+  const substitutePlayerIds = useMemo(() => new Set(substitutes), [substitutes])
 
   const availableIds = useMemo(
     () => new Set(availablePlayers.map((p) => p.player_id)),
@@ -237,13 +240,16 @@ export default function AdminLineup() {
       if (lineup && FORMATION_IDS.includes(lineup.formation)) {
         setFormation(lineup.formation)
         setAssignments(assignmentsFromSlots(lineup.slots))
+        setSubstitutes(lineup.substitutes ?? [])
       } else {
         setFormation('4-2-1-3')
         setAssignments({})
+        setSubstitutes([])
       }
     } catch {
       toast.error("Couldn't load lineup data")
       setAssignments({})
+      setSubstitutes([])
       setAvailablePlayers([])
       setSquadPlayers([])
     } finally {
@@ -298,10 +304,25 @@ export default function AdminLineup() {
       next[selectedSlot] = playerId
       return next
     })
+    setSubstitutes((prev) => prev.filter((id) => id !== playerId))
+  }
+
+  const handleSubTap = (playerId: string) => {
+    setSubstitutes((prev) =>
+      prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]
+    )
+    setAssignments((prev) => {
+      const next = { ...prev }
+      for (const [key, id] of Object.entries(next)) {
+        if (id === playerId) delete next[key]
+      }
+      return next
+    })
   }
 
   const handleClear = () => {
     setAssignments({})
+    setSubstitutes([])
     setSelectedSlot(null)
   }
 
@@ -311,7 +332,9 @@ export default function AdminLineup() {
     try {
       const validKeys = new Set(slotDefs.map((s) => s.key))
       const slots = assignmentsToSlots(assignments).filter((s) => validKeys.has(s.position))
-      await saveLineup(fixtureId, formation, slots)
+      const startingIds = new Set(slots.map((s) => s.player_id))
+      const subs = substitutes.filter((id) => !startingIds.has(id))
+      await saveLineup(fixtureId, formation, slots, subs)
       toast.success('Lineup saved')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't save lineup")
@@ -516,6 +539,86 @@ export default function AdminLineup() {
           </div>
         </FadeUp>
 
+        <FadeUp delay={0.28}>
+          <div className="glass-card p-4 space-y-3">
+            <p className="text-sm text-gray-500">Substitutes ({substitutes.length})</p>
+
+            {substitutes.length === 0 ? (
+              <p className="text-sm text-gray-400">Tap a squad player below to add them to the bench.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {substitutes.map((playerId) => (
+                  <button
+                    key={playerId}
+                    type="button"
+                    onClick={() => handleSubTap(playerId)}
+                    className="shrink-0 min-h-[40px] px-4 rounded-pill text-sm font-semibold touch-manipulation border bg-brand-gold text-brand-navy border-brand-gold"
+                  >
+                    {playerNameById.get(playerId) ?? 'Unknown player'}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="max-h-[min(42vh,300px)] overflow-y-auto space-y-4 pr-1">
+              {loadingPlayers ? (
+                <p className="text-sm text-gray-500">Loading players...</p>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="text-xs font-semibold text-brand-navy uppercase tracking-wide">
+                        {fixtureTab === 'past' ? 'Marked available (if any)' : 'Available'}
+                      </span>
+                    </div>
+                    {availablePlayers.filter((p) => !assignedPlayerIds.has(p.player_id)).length === 0 ? (
+                      <p className="text-sm text-gray-500">No one left to add to the bench.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {availablePlayers
+                          .filter((p) => !assignedPlayerIds.has(p.player_id))
+                          .map((player) => (
+                            <PlayerPill
+                              key={player.player_id}
+                              player={player}
+                              variant="available"
+                              assigned={false}
+                              highlight={substitutePlayerIds.has(player.player_id)}
+                              onTap={() => handleSubTap(player.player_id)}
+                            />
+                          ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Full squad</span>
+                    {squadOnlyPlayers.filter((p) => !assignedPlayerIds.has(p.player_id)).length === 0 ? (
+                      <p className="text-sm text-gray-400">Everyone available is listed above.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {squadOnlyPlayers
+                          .filter((p) => !assignedPlayerIds.has(p.player_id))
+                          .map((player) => (
+                            <PlayerPill
+                              key={player.player_id}
+                              player={player}
+                              variant="squad"
+                              assigned={false}
+                              highlight={substitutePlayerIds.has(player.player_id)}
+                              onTap={() => handleSubTap(player.player_id)}
+                            />
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </FadeUp>
+
         <FadeUp delay={0.3}>
           <div className="flex flex-col sm:flex-row gap-3">
             <button
@@ -529,7 +632,7 @@ export default function AdminLineup() {
             <button
               type="button"
               onClick={handleClear}
-              disabled={Object.keys(assignments).length === 0}
+              disabled={Object.keys(assignments).length === 0 && substitutes.length === 0}
               className="btn-secondary flex-1"
             >
               Clear

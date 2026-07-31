@@ -120,6 +120,7 @@ describe('aggregatePlayerStats', () => {
           fixture_id: 'f1',
           formation: '4-4-2',
           slots: [{ position: 'GK', player_id: 'gk1' }],
+          substitutes: [],
           created_at: '2025-09-01T12:00:00.000Z',
           updated_at: '2025-09-01T12:00:00.000Z',
         },
@@ -159,6 +160,7 @@ describe('aggregatePlayerStats', () => {
             { position: 'GK', player_id: 'gk1' },
             { position: 'ST1', player_id: 'fwd1' },
           ],
+          substitutes: [],
           created_at: '2025-09-15T12:00:00.000Z',
           updated_at: '2025-09-15T12:00:00.000Z',
         },
@@ -171,5 +173,89 @@ describe('aggregatePlayerStats', () => {
     expect(stats.find((s) => s.player_id === 'gk1')?.appearances).toBe(1)
     // fwd already has 2 from events + 1 from lineup sheet
     expect(stats.find((s) => s.player_id === 'fwd1')?.appearances).toBe(3)
+  })
+})
+
+describe('aggregatePlayerStats substitutions', () => {
+  const squadWithSubs: SquadMember[] = [
+    ...squad,
+    {
+      id: 's3',
+      player_id: 'sub1',
+      display_name: 'Ollie Sub',
+      squad_number: null,
+      position: 'Midfielder',
+      joined_date: '2023-08-01',
+      active: true,
+    },
+    {
+      id: 's4',
+      player_id: 'sub2',
+      display_name: 'Bench Only',
+      squad_number: null,
+      position: 'Defender',
+      joined_date: '2023-08-01',
+      active: true,
+    },
+  ]
+
+  const subFixture: FixtureWithResult = {
+    id: 'f-sub',
+    match_date: '2025-09-22T12:00:00.000Z',
+    opponent: 'Bench FC',
+    home_away: 'home',
+    competition: 'League',
+    venue: null,
+    kickoff_time: '10:30:00',
+    ddsfl_fixture_id: '102',
+    status: 'completed',
+    created_at: '2025-09-22T12:00:00.000Z',
+    result: {
+      id: 'r-sub',
+      fixture_id: 'f-sub',
+      goals_for: 1,
+      goals_against: 0,
+      notes: null,
+      created_at: '2025-09-22T12:00:00.000Z',
+    },
+    events: [
+      {
+        id: 'e-sub',
+        fixture_id: 'f-sub',
+        player_id: 'fwd1',
+        related_player_id: 'sub1',
+        event_type: 'substitution',
+        minute: 60,
+        created_at: '2025-09-22T12:00:00.000Z',
+      },
+    ],
+  }
+
+  it('credits an appearance and a sub_appearance to the player brought on', () => {
+    const { stats } = aggregatePlayerStats(squadWithSubs, [subFixture])
+    const sub = stats.find((s) => s.player_id === 'sub1')
+    expect(sub?.appearances).toBe(1)
+    expect(sub?.sub_appearances).toBe(1)
+  })
+
+  it('does not credit an appearance just for being named on the bench in a saved lineup', () => {
+    const lineups = new Map<string, Lineup | null>([
+      [
+        'f-sub',
+        {
+          id: 'l-sub',
+          fixture_id: 'f-sub',
+          formation: '4-4-2',
+          slots: [{ position: 'GK', player_id: 'gk1' }],
+          substitutes: ['sub2'],
+          created_at: '2025-09-22T12:00:00.000Z',
+          updated_at: '2025-09-22T12:00:00.000Z',
+        },
+      ],
+    ])
+    const { stats } = aggregatePlayerStats(squadWithSubs, [subFixture], { lineupsByFixtureId: lineups })
+    const benchOnly = stats.find((s) => s.player_id === 'sub2')
+    expect(benchOnly?.appearances).toBe(0)
+    expect(benchOnly?.sub_appearances).toBe(0)
   })
 })

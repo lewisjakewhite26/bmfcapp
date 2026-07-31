@@ -26,6 +26,7 @@ export function aggregatePlayerStats(
       squad_number: member.squad_number,
       position: member.position,
       appearances: 0,
+      sub_appearances: 0,
       goals: 0,
       assists: 0,
       motm: 0,
@@ -37,22 +38,38 @@ export function aggregatePlayerStats(
 
   const completedFixtures = fixtures.filter((f) => f.status === 'completed' && f.result)
   const appearanceFixtures = new Map<string, Set<string>>()
+  const subAppearanceFixtures = new Map<string, Set<string>>()
 
   for (const fixture of completedFixtures) {
     for (const event of fixture.events ?? []) {
       const player = stats.get(event.player_id)
-      if (!player) continue
+      if (player) {
+        if (!appearanceFixtures.has(event.player_id)) {
+          appearanceFixtures.set(event.player_id, new Set())
+        }
+        appearanceFixtures.get(event.player_id)!.add(fixture.id)
 
-      if (!appearanceFixtures.has(event.player_id)) {
-        appearanceFixtures.set(event.player_id, new Set())
+        if (event.event_type === 'goal') player.goals++
+        if (event.event_type === 'assist') player.assists++
+        if (event.event_type === 'motm') player.motm++
+        if (event.event_type === 'yellow_card') player.yellow_cards++
+        if (event.event_type === 'red_card') player.red_cards++
       }
-      appearanceFixtures.get(event.player_id)!.add(fixture.id)
 
-      if (event.event_type === 'goal') player.goals++
-      if (event.event_type === 'assist') player.assists++
-      if (event.event_type === 'motm') player.motm++
-      if (event.event_type === 'yellow_card') player.yellow_cards++
-      if (event.event_type === 'red_card') player.red_cards++
+      if (event.event_type === 'substitution' && event.related_player_id) {
+        const subPlayer = stats.get(event.related_player_id)
+        if (subPlayer) {
+          if (!appearanceFixtures.has(event.related_player_id)) {
+            appearanceFixtures.set(event.related_player_id, new Set())
+          }
+          appearanceFixtures.get(event.related_player_id)!.add(fixture.id)
+
+          if (!subAppearanceFixtures.has(event.related_player_id)) {
+            subAppearanceFixtures.set(event.related_player_id, new Set())
+          }
+          subAppearanceFixtures.get(event.related_player_id)!.add(fixture.id)
+        }
+      }
     }
 
     // Backfilled / saved team sheets also count as appearances (XI on the pitch)
@@ -71,6 +88,11 @@ export function aggregatePlayerStats(
   for (const [playerId, fixtureIds] of appearanceFixtures) {
     const player = stats.get(playerId)
     if (player) player.appearances = fixtureIds.size
+  }
+
+  for (const [playerId, fixtureIds] of subAppearanceFixtures) {
+    const player = stats.get(playerId)
+    if (player) player.sub_appearances = fixtureIds.size
   }
 
   const cleanSheetMissingFixtureIds = applyCleanSheetCredits(

@@ -181,6 +181,7 @@ export interface PlayerStats {
   squad_number: number | null
   position: string | null
   appearances: number
+  sub_appearances: number
   goals: number
   assists: number
   motm: number
@@ -230,6 +231,7 @@ export interface Lineup {
   fixture_id: string
   formation: FormationId
   slots: LineupSlotAssignment[]
+  substitutes: string[]
   created_at: string
   updated_at: string
 }
