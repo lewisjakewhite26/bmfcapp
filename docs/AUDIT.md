@@ -1,15 +1,15 @@
 # BMFC Club Hub — Pre-Launch Audit
 
-> **Current audit (v12)** — see [ROADMAP-99.md](ROADMAP-99.md) for path to 99/100.  
-> **Last updated:** 21 June 2026 · **Commit:** `317875d` on `main`
+> **Current audit (v14)** — see [ROADMAP-99.md](ROADMAP-99.md) for path to 99/100.  
+> **Last updated:** 14 August 2026 · **Commit:** `062ed1c` on `main` (this doc ships in the commit immediately after)
 
 **Scope:** Full codebase + local build verification  
 **Operator context:** Closed BMFC squad app — not a public internet product; ~20–25 players, invite-only sign-up  
-**Build verified:** `npm run build` succeeds — ~661 kB JS (~185 kB gzip main chunk), admin routes lazy-loaded  
+**Build verified:** `npm run build` succeeds — ~691 kB JS (~192 kB gzip main chunk), admin routes lazy-loaded  
 **Lint verified:** `npm run lint` — **0 errors, 0 warnings**  
-**Tests verified:** **23** unit tests (Vitest) + **17** E2E tests (Playwright); GitHub Actions CI — verify job + e2e job on every push to `main`
+**Tests verified:** **38** unit tests (Vitest, 8 files) + **26** E2E tests (Playwright, 6 spec files across chromium + 2 iOS device projects) — **unchanged since v13**, see Testing section for why that's a flagged gap this cycle
 
-**Supabase:** Club Hub project confirmed (`kqxsbb…` — EvidInsight); separate from WC predictor (`owkql…`).
+**Supabase:** Club Hub project confirmed (`kqxsbb…` — EvidInsight); separate from WC predictor (`owkql…`). **Operator confirmed this cycle: all migrations through 049 applied.**
 
 ### Audit history
 
@@ -25,8 +25,10 @@
 | v8 | 20 Jun 2026 | 94/100 | Finance admin — sponsorships, expenses, ledger dashboard; migration 022 |
 | v9 | 20 Jun 2026 | 95/100 | All migrations 001–022 applied on Club Hub |
 | v10 | 20 Jun 2026 | 96/100 | GK clean sheets; calendar archive; PWA install prompt; migrations 023–024 |
-| **v11** | 20 Jun 2026 | 98/100 | E2E in CI; team invite link; login/display split; migrations 025–028 |
-| **v12 (this doc)** | **21 Jun 2026** | **98/100** | Admin fines (032–035); late-fee automation; player `/fines` built but hidden |
+| v11 | 20 Jun 2026 | 98/100 | E2E in CI; team invite link; login/display split; migrations 025–028 |
+| v12 | 21 Jun 2026 | 98/100 | Admin fines (032–035); late-fee automation; player `/fines` built but hidden |
+| v13 | 13 Aug 2026 | 98/100 | Player `/fines` released; fines system rework (26/27); DDSFL vote-loss bug found + fixed; substitute appearance credit UX; migrations 036–047 |
+| **v14 (this doc)** | **14 Aug 2026** | **98/100** | Admin audit log routed (closes that named blocker); player-managed sponsor logos; committee to-do list; Canva graphics foundation (paused — mock only); all docs brought current through migration 049 |
 
 **Scoring key:** 90+ excellent · 75–89 strong · 60–74 acceptable · 40–59 significant gaps · below 40 critical
 
@@ -36,47 +38,46 @@
 
 | Item | Status |
 |------|--------|
-| Supabase migrations **001–028** | ✅ Applied on Club Hub project |
-| Supabase migrations **032–035** (fines) | ⚠️ Apply **032–035** on Club Hub if not already (032 core, 033 delete, 034 late fees, 035 auto title) |
+| Supabase migrations **001–049** | ✅ **All applied on Club Hub** — operator confirmed this cycle |
 | Vercel production (`bmfcapp`) | ✅ Working |
 | Vercel env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_CLUB_DATA_SOURCE`) | ✅ Set by operator |
 | `VITE_VAPID_PUBLIC_KEY` on Vercel | ✅ Set by operator |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ Local only — not on Vercel; ⚠️ also needed as GitHub Actions secret for nightly DDSFL + late-fee workflows |
-| DDSFL data in production DB | ⚠️ Nightly **Sync DDSFL to Supabase** fails until GitHub secrets set; local `npm run sync:ddsfl` OK |
+| `SUPABASE_SERVICE_ROLE_KEY` as GitHub Actions secret | ⚠️ Needed by **two** workflows: `sync-ddsfl.yml` (daily) and `fines-automation.yml` (every 5 min) — confirm both have secrets set |
 | Admin fines (log + payments) | ✅ Shipped — `/admin/fines`, migrations **032+** |
-| Player fines page (`/fines`) | ⚠️ Built (`Fines.tsx`) — route hidden until release (Phase 6g) |
-| Monthly £2 late-fee automation | ✅ Migration **034** + GitHub Action `apply-fine-late-fees.yml` (daily 00:05 UTC) |
-| Production `squad` table populated | ⚠️ Add players via Admin → Squad (required for stats/profiles) |
-| Admin accounts (DanJ, JordanC, etc.) | ✅ Created — passcode **0000** until changed |
-| README + `docs/SUPABASE-SETUP.md` | ✅ Accurate |
+| Player fines page (`/fines`) | ✅ Live — dashboard alert banner, auto push on new fines, bank details for paying |
+| **Admin audit log** | ✅ **Routed this cycle** — `/admin/audit`, admin-only (matches the RPC's own gate), linked from Admin hub |
+| **Player-managed sponsor logos** | ✅ New this cycle — self-service upload on own player profile (migration 048); admin sees + downloads from Admin → Squad list (no new migration needed, reused the existing public grant) |
+| **Committee to-do list** | ✅ New this cycle — `/admin/todo`, migration 049, RLS-gated, atomic `completed_by`/`completed_at` |
+| **Canva graphics foundation** | ⚠️ **Deliberately paused** — `lib/canva.ts` + `canva-autofill` Edge Function scaffolded and working end-to-end in mock mode; real API path written but untested (no Canva account linked yet, `CANVA_ACCESS_TOKEN` unset). Operator asked to leave this as-is for now. |
+| README + `docs/SUPABASE-SETUP.md` | ✅ **Fixed this cycle** — migration table now runs through 049, roles table includes Fines Helper, both edge functions and new admin tools documented |
 | ESLint | ✅ 0 / 0 |
-| GitHub Actions CI | ✅ Lint, build, Vitest, Playwright E2E |
-| PWA icons | ✅ Official club crest |
-| PWA “Add to home screen” prompt | ✅ Dashboard banner + navbar install button |
-| Push notifications | ✅ Edge fn + Vercel VAPID key; install required on iOS |
+| GitHub Actions CI | ✅ Lint, build, Vitest, Playwright E2E (chromium + 2 iOS device projects) |
+| Push notifications | ✅ Edge fn + Vercel VAPID key; fires on new fines |
 | `send-push` edge function | ✅ Deployed to Club Hub |
+| `fines-scheduler` edge function | ⚠️ Confirm deployed (`supabase functions deploy fines-scheduler`) |
+| `canva-autofill` edge function | ⚠️ Registered in `supabase/config.toml`; deploy only when Canva is actually linked — no rush while `CANVA_ACCESS_TOKEN` is unset |
 
-**Security posture note:** 4-digit passcode, no login rate limiting, and no server-side session invalidation are **accepted** for this closed-squad deployment. Players can change their own passcode; admin reset remains for forgotten codes.
+**Security posture note:** 4-digit passcode, no login rate limiting, and no server-side session invalidation are **accepted** for this closed-squad deployment. New this cycle: sponsor-logo self-service RPCs authenticate as the **player themselves** (`assert_approved_player`), not an admin acting on their behalf — a player can only ever touch their own sponsor data. The `canva-autofill` Edge Function was deliberately designed so a future Canva OAuth token stays server-side-only (Supabase secret), never a client-exposed `VITE_` variable that would leak to every browser.
 
-**Onboarding note:** Players sign in with **login name** (e.g. **`ChrisL`** — no space). The app shows **display name** elsewhere (e.g. **`Chris L`**). One-time invites use `/invite/:token`; reusable squad link uses `/join/:token` (migration 028). Approval still required after sign-up.
+**Onboarding note:** Unchanged since v13 — login name (`ChrisL`) vs display name (`Chris L`), one-time and team invite links, quick admin add (migration 045).
 
 ---
 
-## Changes since audit v11 (98/100)
+## Changes since audit v13 (98/100)
+
+Smaller cycle than v13 by commit count, but closes the single item that's blocked "path to 99" the longest.
 
 | Item | Status |
 |------|--------|
-| **Admin fines** — log by date, squad grid, picker modal, grouped payments tab (`AdminFines.tsx`, **032**) | ✅ Shipped |
-| Fine session delete RPC (**033**) | ✅ Shipped |
-| **Automatic £2/month late fees** — `apply_fine_late_fees()`, idempotent runs table (**034**) | ✅ Shipped |
-| Date-only event create — auto title from date (**035**) | ✅ Shipped in code; ⚠️ apply migration on Supabase |
-| Admin fines UX redesign — collapsed create form, payment cards, confirm dialogs, calmer pulse | ✅ `b55cc89` |
-| Event-based copy (dates not “sessions”); scroll preserved on save | ✅ `317875d` |
-| Player `/fines` page — squad owed list, your balance card, how-to-pay note | ✅ Built; **hidden** (no route/nav yet) |
-| `FineAlertBanner` + `finePlayerCopy.ts` for dashboard release | ✅ Ready; not wired |
-| Auto push when player fined | ❌ Open (Phase 6g) |
-| GitHub Actions secrets for DDSFL sync | ⚠️ Operator — nightly workflow failing |
-| Sentry / admin audit log | ❌ Open |
+| **Admin audit log routed** — `/admin/audit`, linked from Admin hub. Backend (migration 029) and the page component both existed before v11; the only thing missing for three audit cycles was a `<Route>` and a nav link. | ✅ |
+| **Player-managed sponsor logos** — migration 048 adds `sponsor_name`/`sponsor_logo_url` to `profiles` (publicly SELECT-granted, mirroring `photo_url`) plus a `sponsor-logos` Storage bucket. Self-service RPCs (`prepare_sponsor_logo_upload`, `confirm_sponsor_logo_upload`, `delete_sponsor_logo`, `save_sponsor_name`) reuse the time-limited storage-grant pattern from player photos (migration 016), but authenticated as the player, not an admin. Initially placed on Dashboard, **relocated to the player's own profile page** per operator correction — matches the existing convention for self-editable fields (passcode change lives there too). | ✅ |
+| **Admin visibility for sponsor data** — Admin → Squad list now shows each player's sponsor name + logo thumbnail with a genuine one-click download (fetches the blob client-side and forces a save with a sensible filename, not just an "open in new tab" link). No new migration — reused the public grant already in 048. | ✅ |
+| **Committee to-do list** — migration 049, `committee_todo` table, RLS blocks direct access (same convention as fines/finance/lineups). `admin_set_todo_status` sets `completed_by`/`completed_at` atomically server-side, mirroring how fines RPCs never trust client-supplied `logged_by`. `/admin/todo` — add, assign to any squad/committee member, mark done/undo, full attribution shown. | ✅ |
+| **Canva graphics foundation** — `lib/canva.ts` (mockable service), `canva-autofill` Edge Function (mirrors `send-push`'s session-auth pattern), `/admin/canva` template picker + generate flow. Deliberately built so the real Canva OAuth token can never live client-side. Operator has asked to pause here — no Canva account linked yet. | ⚠️ Paused by request |
+| **Docs brought current** — `README.md` and `docs/SUPABASE-SETUP.md` were stale at migration 030 for three audit cycles running. Both now cover 031–049, the Fines Helper role, both new Edge Functions, and the four new admin tools. | ✅ |
+| GitHub Actions secrets for DDSFL sync **and** fines automation | ⚠️ Still operator |
+| Sentry | ❌ Still open — the one item with zero progress across **five** consecutive audits now |
+| Test coverage for the four new features (audit log, sponsor logos, committee to-do, Canva) | ❌ None written — see Testing section |
 
 ---
 
@@ -84,13 +85,13 @@
 
 | | |
 |---|---|
-| **Overall score** | **98 / 100** *(unchanged)* |
+| **Overall score** | **98 / 100** *(unchanged — see below)* |
 | **Overall rating** | **Excellent — ready for player onboarding** |
-| **Previous score** | 98 / 100 (audit v11, 20 Jun 2026) |
-| **Public-launch equivalent** | ~77 / 100 |
-| **99 target** | See [ROADMAP-99.md](ROADMAP-99.md) — Sentry, audit log, player `/fines` release, ops closure |
+| **Previous score** | 98 / 100 (audit v13, 13 Aug 2026) |
+| **Public-launch equivalent** | ~78 / 100 |
+| **99 target** | See [ROADMAP-99.md](ROADMAP-99.md) — **Sentry is now the only named blocker** |
 
-Since v11: full **admin fines** system shipped — log fines by date, mark payments, grouped payment view, preset catalogue + one-offs, session delete, and automated **£2/month late fees** after the last Sunday deadline. Player-facing fines UI is built (squad owed list + personal balance) but deliberately **hidden** until committee release. Migrations **032–035** extend the schema; operator must ensure all are applied and GitHub Actions secrets are set for automated sync jobs.
+Why the overall number still holds flat: v13 named two items as the last mile to 99 — a reachable admin audit log, and Sentry. The audit log is done this cycle. That leaves exactly **one** named blocker standing, for the first time across fourteen audits. It's not closed yet, so the score doesn't move — but this is the closest the project has been to 99. Everything else shipped this cycle (sponsor logos, committee to-do, Canva foundation) was net-new scope outside the original roadmap, delivered cleanly but explicitly not covered by any test suite yet, which keeps Testing flat rather than climbing further.
 
 ---
 
@@ -98,53 +99,49 @@ Since v11: full **admin fines** system shipped — log fines by date, mark payme
 
 | # | Category | Score | Δ | Rating |
 |---|----------|------:|---|--------|
-| 1 | [Code Quality & Architecture](#1-code-quality--architecture) | 92 | +1 | Good |
-| 2 | [Security](#2-security) | 69 | — | Adequate (closed squad) |
+| 1 | [Code Quality & Architecture](#1-code-quality--architecture) | 94 | +1 | Excellent |
+| 2 | [Security](#2-security) | 71 | +1 | Adequate (closed squad) |
 | 3 | [Performance](#3-performance) | 74 | — | Good |
 | 4 | [Accessibility](#4-accessibility) | 53 | — | Requires Improvement |
 | 5 | [User Experience](#5-user-experience) | 99 | — | Excellent |
-| 6 | [Data Integrity & Business Logic](#6-data-integrity--business-logic) | 88 | +2 | Good |
-| 7 | [DDSFL Integration & Data Sync](#7-ddsfl-integration--data-sync) | 80 | — | Good |
-| 8 | [Database & Supabase](#8-database--supabase) | 99 | +1 | Excellent |
-| 9 | [Testing & Reliability](#9-testing--reliability) | 78 | — | Good |
+| 6 | [Data Integrity & Business Logic](#6-data-integrity--business-logic) | 93 | +1 | Excellent |
+| 7 | [DDSFL Integration & Data Sync](#7-ddsfl-integration--data-sync) | 85 | — | Excellent |
+| 8 | [Database & Supabase](#8-database--supabase) | 99 | — | Excellent |
+| 9 | [Testing & Reliability](#9-testing--reliability) | 84 | — | Excellent |
 | 10 | [DevOps & Deployment](#10-devops--deployment) | 99 | — | Excellent |
-| 11 | [UI & Design Consistency](#11-ui--design-consistency) | 95 | +1 | Excellent |
-| 12 | [Copy & Content](#12-copy--content) | 94 | +1 | Excellent |
+| 11 | [UI & Design Consistency](#11-ui--design-consistency) | 97 | +1 | Excellent |
+| 12 | [Copy & Content](#12-copy--content) | 95 | — | Excellent |
 
 ---
 
 ## 1. Code Quality & Architecture
 
-**Score: 92 / 100** · **Good**
+**Score: 94 / 100** · **Excellent**
 
 ### Strengths
-- Layered GK resolution in `cleanSheet.ts` — single source for stats and admin audit.
-- Finance split across `financeCategories.ts`, `mockFinance.ts`, `clubApi.ts`, and dedicated UI components.
-- **Fines module** — `fineCatalog.ts`, `fineAlerts.ts`, `finePaymentGroups.ts`, `finePlayerCopy.ts`; UI in `components/fines/`; admin page lazy-loaded.
-- `playerNames.ts` — login name, display name, and username allocation mirrored in SQL and mock.
-- Team invite reuses `InviteForm` via `Join.tsx` — no duplicate onboarding UI.
-- Lazy-loaded admin routes; TypeScript strict mode; `GlobalErrorFallback` at root.
+- Sponsor logo admin visibility needed **zero new migration** — the columns were already publicly SELECT-granted in 048 for the self-service flow, so `fetchSquad()` just extended its existing join. Reuse over re-invention.
+- `committee_todo`'s `CHECK` constraint (`committee_todo_done_fields`) enforces `completed_at`/`completed_by` are set if and only if `status = 'done'` at the database level, not just in application code.
+- `canva-autofill` mirrors `send-push`'s exact session-verification shape (profile lookup + session-token match + role check) rather than inventing a new auth pattern for the third Edge Function.
+- Docs debt (README, SUPABASE-SETUP.md stale at migration 030 since v11) finally paid down — three consecutive audits had flagged this without it being fixed.
 
 ### Findings
 
 | Severity | Location | Issue |
 |----------|----------|-------|
-| Positive | `032`–`035` | Fines schema, delete, late fees, auto title RPCs. |
-| Positive | `AdminFines.tsx` | Log + payments tabs; silent refresh on save. |
-| Positive | `7265a28` | Playwright E2E + Vitest CI pipeline. |
-| Positive | `eb5d4ba` | Team invite link RPCs + admin UI. |
-| Positive | `001`–`028` | Core migration chain applied on Club Hub production. |
-| Low | Fines | No unit tests for `fineAlerts` / payment grouping yet. |
-| Low | Finance | No unit tests for overview calculations yet. |
-| Low | E2E | Team join link flow not yet covered in Playwright. |
+| Positive | `048`, `049` | Sponsor logos + committee to-do — both follow established RLS/RPC/grant conventions exactly. |
+| Positive | `AdminSquad.tsx` | Real one-click logo download (fetch → blob → forced save), not a same-tab link that just opens the image. |
+| Positive | `canva-autofill/index.ts` | Returns a clearly-labelled mock result when `CANVA_ACCESS_TOKEN` is unset rather than failing — the client flow is fully testable before the real account exists. |
+| Low | Bundle | Main chunk unchanged this cycle at ~691 kB / ~192 kB gzip — same "chunk >500 kB" warning, still unaddressed, now three cycles running. |
+| Low | Testing | Zero unit/E2E coverage for audit log routing, sponsor logos, committee to-do, or Canva — first cycle where shipped features got no dedicated tests (contrast with v13's substitute-credit work, which did). |
+| Low | Fines | Still no unit tests for `fineAlerts` / payment grouping (carried over from v11 through v14). |
 
 ---
 
 ## 2. Security
 
-**Score: 69 / 100** · **Adequate for closed-squad use** *(~46 public-launch equivalent)*
+**Score: 71 / 100** · **Adequate for closed-squad use** *(~48 public-launch equivalent)*
 
-RPC-gated writes, bcrypt passcodes, RLS, committee vs admin split. Team invite still requires admin approval. Finance uses `assert_finance_user` — admin **or** committee; `logged_by` / `edited_by` set server-side from session, never client-supplied.
+Sponsor logo RPCs are the first self-service (non-admin-initiated) Storage upload path in the app — worth calling out because it's a new attack surface shape. `prepare_sponsor_logo_upload` / `confirm_sponsor_logo_upload` authenticate via `assert_approved_player(p_user_id, p_session_token)`, which only ever resolves to the calling player's own row — there is no player-id parameter a client could tamper with to write another player's sponsor data. Time-limited grant table (10 min expiry) matches the player-photos pattern exactly. `committee_todo` RLS blocks all direct table access; every mutation is RPC-gated with `assert_committee_user` (admin or committee only).
 
 ---
 
@@ -152,7 +149,7 @@ RPC-gated writes, bcrypt passcodes, RLS, committee vs admin split. Team invite s
 
 **Score: 74 / 100** · **Good for team scale**
 
-Main chunk ~661 kB / ~185 kB gzip. Admin routes lazy-loaded. Landing canvas animation pauses when hero is off-screen via `IntersectionObserver`.
+No change this cycle — three new admin pages are lazy-loaded, so the main chunk didn't grow. Same bundle-size watch item as v13.
 
 ---
 
@@ -160,7 +157,7 @@ Main chunk ~661 kB / ~185 kB gzip. Admin routes lazy-loaded. Landing canvas anim
 
 **Score: 53 / 100** · **Requires Improvement**
 
-Invite first/last name fields and change-passcode labels in place. Finance forms use standard labels. Broader pass deferred — ROADMAP-99 Phase 9.
+No accessibility-focused work this cycle — unchanged since v10.
 
 ---
 
@@ -168,32 +165,28 @@ Invite first/last name fields and change-passcode labels in place. Finance forms
 
 **Score: 99 / 100** · **Excellent**
 
-Invite onboarding (one-time + reusable team link), login/display name split, passcode self-service, live matchday, photos, events, fundraisers, Finance dashboard, **admin fines** (log by date, mark paid, grouped payments), PWA install prompt, push with install guidance — all live on Supabase. Player `/fines` page built but not routed yet.
+Admin can finally see who did what (`/admin/audit`) after three audit cycles of it being built-but-unreachable. Players get a genuinely new self-service surface (sponsor logo/name) in the natural place for it — their own profile, not buried on the dashboard, after a placement correction mid-cycle. Committee gets a shared task list. All three read as native extensions of the existing glass-card admin design rather than bolted-on features.
 
 | Severity | Issue |
 |----------|-------|
-| Low | Empty squad on prod → stats show “No stats yet”; profiles need squad row. |
-| Low | Player fines hidden — squad cannot self-serve owed list until Phase 6g release. |
+| Low | Canva template list is placeholder IDs (`TEMPLATE_ID_MATCHDAY_LINEUP` etc.) until real brand template IDs are supplied — expected, paused by request. |
+| Low | No admin-side way to bulk-review which players have/haven't set a sponsor — only visible per-row on the Squad list. |
 
 ---
 
 ## 6. Data Integrity & Business Logic
 
-**Score: 88 / 100** · **Good**
+**Score: 93 / 100** · **Excellent**
 
-Unique `(first_name, last_name)`. Login name `ChrisL`, display name `Chris L`, collision suffixes on both. Live drafts separate from `match_events`. Team invite duplicate-name handling in `complete_team_invite`.
-
-**GK clean sheets:** resolved per fixture via live matchday log (including keeper subs), saved lineup GK slot, or optional manual override on Admin → Results.
-
-**Fines:** `fine_sessions` + `fine_entries` with RPC-gated admin writes. Results sync skips fixtures where admin has entered match events. **Late fees:** £2 per player per billing month after last-Sunday deadline; idempotent via `fine_late_fee_runs` + daily GitHub Action. Payment mark-all-paid respects grouped entries; scrape sync does not overwrite admin-entered results.
+`committee_todo`'s done/undo cycle is fully server-authoritative: `admin_set_todo_status` sets or clears `completed_by`/`completed_at` atomically in the same statement as the status flip, so there's no window where a task reads as "done" without a completer, or vice versa — reinforced by the table's own `CHECK` constraint as a second line of defence. Sponsor logo uploads follow the same "grant, then confirm, then expire" integrity pattern that's protected player photos since migration 016, now proven out for a second, player-initiated use case.
 
 ---
 
 ## 7. DDSFL Integration & Data Sync
 
-**Score: 80 / 100** · **Good**
+**Score: 85 / 100** · **Excellent**
 
-2026/27 Second Division configured. Daily GitHub Action sync (20:00 UTC) — **currently failing** until `VITE_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set as repo secrets. Operator can run `npm run sync:ddsfl` locally. Migration 026 adds admin fixture purge before a cutoff date. Pre-season: 0 BMFC fixtures on DDSFL for season 8; league table sync still works.
+Unchanged this cycle — no DDSFL-related work.
 
 ---
 
@@ -203,32 +196,23 @@ Unique `(first_name, last_name)`. Login name `ChrisL`, display name `Chris L`, c
 
 | Item | Status |
 |------|--------|
-| Migrations **001–028** | ✅ Applied on Club Hub |
-| **Fines — core schema + RPCs (032)** | ✅ Shipped |
-| **Fines — session delete (033)** | ✅ Shipped |
-| **Fines — late fees + runs table (034)** | ✅ Shipped |
-| **Fines — auto title from date (035)** | ⚠️ Apply on Club Hub if not done |
-| Calendar archive + fundraiser delete (023) | ✅ |
-| GK clean sheets — `goalkeeper_player_id`, `live_log_entries` (024) | ✅ |
-| Login name vs display name (025) | ✅ |
-| Fixture purge RPC (026) | ✅ |
-| Em-dash RPC copy (027) | ✅ |
-| Team invite link table + RPCs (028) | ✅ |
-| Finance sponsorships + expenses (022) | ✅ |
+| Migrations **001–049** | ✅ **All confirmed applied on Club Hub this cycle** — first time the deployment table has had zero outstanding "confirm applied" flags |
+| **Sponsor logos (048)** | ✅ Applied |
+| **Committee to-do (049)** | ✅ Applied |
+| `fines-scheduler` edge function | ⚠️ Confirm deployed |
+| `canva-autofill` edge function | ⚠️ Registered in config; deploy only once Canva is linked |
 | `send-push` | ✅ Deployed |
-| `apply-fine-late-fees` edge fn + Action | ✅ Shipped |
+| Admin audit log schema + RPCs (029) | ✅ Shipped and now reachable (see UX) |
 
 ---
 
 ## 9. Testing & Reliability
 
-**Score: 78 / 100** · **Good**
+**Score: 84 / 100** · **Excellent**
 
-**Unit tests (23):** `playerNames`, `playerStats`, `cleanSheet`, `liveMatchEvents`, `ddsflScraper`. **No fines tests yet.**
+**Unit tests: 38, E2E tests: 26 — both unchanged since v13.** This is a genuine flag, not a non-event: four features shipped this cycle (audit log routing, sponsor logos, committee to-do, Canva foundation) and none of them have a single automated test. Verification this cycle was manual/visual (Playwright scripts run ad hoc against the dev server, screenshotted, then deleted) rather than added to the permanent suite. That's an acceptable one-cycle trade-off for a closed-squad tool, but if it repeats next cycle it should be treated as accumulating debt rather than a one-off.
 
-**E2E tests (17):** landing, login, dashboard nav, 404, admin hub/finance/squad, player route guard, stats/profile/calendar/availability, full invite → approve → login flow. **Admin fines not in E2E yet.**
-
-CI: lint → build → Vitest (verify job) + Playwright E2E (separate job, mock mode + `VITE_E2E=true` build). Local Vitest on OneDrive is flaky — use `npm run test:ci` / `npm run test:docker` or rely on GitHub Actions.
+CI unchanged in shape: lint → build → Vitest (verify job) + Playwright E2E (separate job).
 
 ---
 
@@ -236,23 +220,23 @@ CI: lint → build → Vitest (verify job) + Playwright E2E (separate job, mock 
 
 **Score: 99 / 100** · **Excellent**
 
-Vercel + GitHub CI (unit + E2E), PWA crest icons, **two scheduled Actions** (DDSFL sync 20:00 UTC, fine late fees 00:05 UTC), full migration chain through **035**, `VITE_VAPID_PUBLIC_KEY` on Vercel. **GitHub Actions secrets** required for both sync jobs. No Sentry yet.
+`canva-autofill` registered in `supabase/config.toml` alongside `send-push` and `fines-scheduler`, ready to deploy the moment it's needed — no rush while it's paused. No Sentry yet.
 
 ---
 
 ## 11. UI & Design Consistency
 
-**Score: 95 / 100** · **Excellent**
+**Score: 97 / 100** · **Excellent**
 
-Official crest, glass-card admin UI, photo avatars, Finance overview with horizontal bar breakdowns, calendar result colour coding, team invite controls on Admin → Squad members. **Admin fines** — date list, squad grid with owed totals, bottom-sheet picker modal, grouped payment cards with mark-paid pulse.
+All four new surfaces (audit log filter/list, sponsor upload card, Canva template picker, to-do add/list) visually verified against the live dev build this cycle — same glass-card, same button/pill conventions, same toast patterns as every existing admin page. Nothing reads as a bolted-on feature.
 
 ---
 
 ## 12. Copy & Content
 
-**Score: 94 / 100** · **Excellent**
+**Score: 95 / 100** · **Excellent**
 
-Login placeholder `ChrisL`. UK English. Em dashes removed from UI and RPC errors (027). Fines use **event/date** wording (not “sessions”); player copy in `finePlayerCopy.ts` (committee voice, no “pay up”). Placeholder inventory in `docs/INPUT-PLACEHOLDERS.md`. Aligned with `docs/COPY-RULES.md`. Default home venue **Bishop Middleham Park**.
+No copy changes of note this cycle beyond two Canva template label tweaks (cosmetic, requested directly).
 
 ---
 
@@ -271,12 +255,16 @@ Login placeholder `ChrisL`. UK English. Em dashes removed from UI and RPC errors
 | 9 | ~~Low~~ | Migration 019 GRANT ambiguous | ✅ |
 | 10 | ~~High~~ | Dashboard/calendar 400 — match_events embed | ✅ `7189fcc` |
 | 11 | ~~Medium~~ | Stats 400 — `photo_url` not granted | ✅ 021 |
-| 12 | ~~Low~~ | AdminLineup “Invalid Date” | ✅ `7265a28` |
+| 12 | ~~Low~~ | AdminLineup "Invalid Date" | ✅ `7265a28` |
 | 13 | ~~Medium~~ | No E2E tests | ✅ `7265a28` |
-| 14 | Low | Empty production squad → no stats/profiles | ⚠️ Ops — add via Admin |
+| 14 | ~~Low~~ | Empty production squad → no stats/profiles | ✅ Migration 036 |
 | 15 | ~~Low~~ | Migrations 023–028 not yet on prod | ✅ Operator |
-| 16 | Low | GitHub Actions secrets missing → DDSFL sync fails nightly | ⚠️ Operator |
-| 17 | Low | Player `/fines` built but route hidden | ⚠️ Phase 6g release |
+| 16 | Low | GitHub Actions secrets missing → DDSFL sync fails nightly | ⚠️ Operator — also blocks fines automation |
+| 17 | ~~Low~~ | Player `/fines` built but route hidden | ✅ `72fb7e0` |
+| 18 | ~~High~~ | DDSFL sync fixture-merge cascaded away player votes, false whole-squad no-vote fines | ✅ `cc52303` — **operator should still review fines applied 14 Jul – 13 Aug** |
+| 19 | ~~Low~~ | Admin audit log built but not routed | ✅ **Fixed this cycle** — `/admin/audit` |
+| 20 | Low | Mock "Created by Unknown" on committee to-do (dev-bypass session user not seeded into mock profiles list) | ✅ Caught and fixed same session, before ever shipping |
+| 21 | Low | Sponsor logo card initially placed on Dashboard instead of player profile | ✅ Corrected same session per operator feedback |
 
 ---
 
@@ -285,20 +273,16 @@ Login placeholder `ChrisL`. UK English. Em dashes removed from UI and RPC errors
 | Feature | Mock | Live Supabase |
 |---------|------|---------------|
 | Login (login name + passcode) | Dev bypass / ✅ | ✅ |
-| One-time invite (`/invite/:token`) | ✅ | ✅ |
-| Team invite link (`/join/:token`) | ✅ | ✅ |
-| Change own passcode | ✅ | ✅ |
-| Dashboard / calendar | ✅ | ✅ |
-| Squad stats (GK clean sheets) | ✅ | ✅ (needs squad rows) |
-| Player profile | ✅ | ✅ (needs squad row) |
-| Admin live matchday | ✅ | ✅ |
-| Admin finance (sponsorships + expenses) | ✅ | ✅ |
-| **Admin fines** (log + mark paid) | ✅ | ✅ (migrations **032+**) |
-| **Player fines** (`/fines` owed list) | ✅ | ⚠️ Built; route hidden |
-| **Late fee automation** (£2/month) | — | ✅ (**034** + daily Action) |
-| Admin → Results manual GK | ✅ | ✅ |
-| Calendar archive (events/fundraisers) | ✅ | ✅ |
-| Push notifications | ✅ | ✅ |
+| One-time invite / team invite link / quick admin add | ✅ | ✅ |
+| Player fines (`/fines`), admin fines, fines-only role | ✅ | ✅ |
+| Weekly late-fee automation, no-vote automation, player pause | — | ✅ |
+| Substitutes bench → appearance credit | ✅ | ✅ |
+| **Admin audit log** (`/admin/audit`) | ✅ | ✅ **Now reachable** |
+| **Player-managed sponsor logo + name** (own profile) | ✅ | ✅ |
+| **Admin sponsor visibility + download** (Squad list) | ✅ | ✅ |
+| **Committee to-do** (`/admin/todo`) | ✅ | ✅ |
+| **Canva template graphics** (`/admin/canva`) | ✅ mock result | ⚠️ Mock result until `CANVA_ACCESS_TOKEN` is set |
+| Push notifications (incl. new-fine push) | ✅ | ✅ |
 | PWA install prompt | ✅ | ✅ |
 
 ---
@@ -309,12 +293,11 @@ Login placeholder `ChrisL`. UK English. Em dashes removed from UI and RPC errors
 
 | # | Task | Status |
 |---|------|--------|
-| 1 | Apply migrations **001–028** on Club Hub | ✅ |
-| 2 | Apply migrations **032–035** (fines) on Club Hub | ⚠️ Operator |
-| 3 | Generate team invite link (Admin → Squad members) | ⚠️ Operator |
-| 4 | Add squad members (Admin → Squad) — including admins who need profiles | ⚠️ Operator |
-| 5 | Brief squad: sign in as **ChrisL**-style login name | ⚠️ Operator |
-| 6 | GitHub Actions secrets for DDSFL + late-fee workflows | ⚠️ Operator |
+| 1 | Apply migrations **001–049** on Club Hub | ✅ Operator confirmed |
+| 2 | Generate team invite link (Admin → Squad members) | ⚠️ Operator |
+| 3 | Brief squad: sign in as **ChrisL**-style login name | ⚠️ Operator |
+| 4 | GitHub Actions secrets for **both** DDSFL and fines-automation workflows | ⚠️ Operator |
+| 5 | Review fines applied 14 Jul – 13 Aug for wrongful `no_vote` charges (Bug #18) | ⚠️ Operator |
 
 ### P1 — Path to 99
 
@@ -322,29 +305,21 @@ See [ROADMAP-99.md](ROADMAP-99.md).
 
 | # | Task | Status |
 |---|------|--------|
-| 1 | Onboarding + prod bug fixes | ✅ |
-| 2 | Finance admin | ✅ |
-| 3 | GK clean-sheet fix | ✅ |
-| 4 | Calendar archive + result colours | ✅ |
-| 5 | E2E tests in CI | ✅ |
-| 6 | Team invite link | ✅ |
-| 7 | Vercel VAPID on production | ✅ |
-| 8 | Push smoke test (Admin → Notifications) | ⚠️ Optional |
-| 9 | **Admin fines** (log + payments + late fees) | ✅ |
-| 10 | **Player `/fines` release** + auto push when fined | Open |
-| 11 | DDSFL sync 2026/27 + GitHub secrets | ⚠️ Operator |
-| 12 | Sentry + admin audit log | Open |
+| 1–12 | Everything through v13's list | ✅ Closed |
+| 13 | **Route the admin audit log** | ✅ Closed this cycle |
+| 14 | DDSFL sync secrets + fines-automation secrets | ⚠️ Operator |
+| 15 | **Sentry** | Open — **only remaining named blocker to 99** |
 
 ---
 
 ## Summary
 
-**98 / 100** — Admin fines shipped (migrations **032–035**, late-fee automation, redesigned admin UX). Player `/fines` built but hidden. E2E in CI, team invite link, and migrations **001–028** remain applied on Club Hub.
+**98 / 100** — Admin audit log finally routed, closing a gap that had sat open (built, unreachable) across three audit cycles. Three new features shipped outside the original roadmap: player-managed sponsor logos (self-service, with admin-side visibility and one-click download), a committee to-do list, and a Canva graphics foundation deliberately paused pending account access. Docs debt paid down — README and SUPABASE-SETUP.md now cover all 49 migrations instead of stalling at 30. Two small bugs caught and fixed within the same session they were introduced.
 
-**Operator:** apply **032–035** if not done, set GitHub Actions secrets, generate team join link, populate squad, brief players on **ChrisL** login.
+**Operator:** GitHub Actions secrets for both workflows, review the fines from the vote-loss bug window, generate the team join link, brief players on **ChrisL** login. Migrations are done — you confirmed 001–049 applied this cycle.
 
-**Path to 99:** player fines release, auto push on new fines, ops closure (DDSFL secrets + sync), Sentry, admin audit log — see [ROADMAP-99.md](ROADMAP-99.md).
+**Path to 99:** one item. Sentry. Everything else named across fourteen audits is closed.
 
 ---
 
-*End of Club Hub audit v12. App baseline `317875d`; docs updated 21 June 2026.*
+*End of Club Hub audit v14. App baseline `062ed1c`; docs updated 14 August 2026.*

@@ -15,7 +15,52 @@ import {
 import { SQUAD_POSITIONS } from '../lib/squadPositions'
 import { pageContainerClass } from '../lib/layout'
 import { PLAYER_PHOTO_ACCEPT } from '../lib/playerPhotos'
+import { resolveSponsorLogoUrl } from '../lib/sponsorLogoUrl'
 import type { AdminUserRow, SquadMember, SquadPosition } from '../types'
+
+async function downloadSponsorLogo(url: string, playerName: string) {
+  try {
+    const res = await fetch(url)
+    const blob = await res.blob()
+    const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg'
+    const objectUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = objectUrl
+    a.download = `${playerName.replace(/\s+/g, '-').toLowerCase()}-sponsor-logo.${ext}`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(objectUrl)
+  } catch {
+    toast.error("Couldn't download logo")
+  }
+}
+
+function SquadSponsorInfo({ member }: { member: SquadMember }) {
+  const resolvedLogo = resolveSponsorLogoUrl(member.sponsor_logo_url)
+  if (!member.sponsor_name && !resolvedLogo) return null
+
+  return (
+    <div className="flex items-center gap-3 rounded-card border border-brand-blue/10 bg-brand-light/30 px-3 py-2 mt-2 sm:mt-0">
+      {resolvedLogo && (
+        <img src={resolvedLogo} alt="" className="w-8 h-8 object-contain rounded shrink-0" />
+      )}
+      <div className="min-w-0">
+        <p className="text-xs text-gray-500">Sponsor</p>
+        <p className="text-sm font-medium text-brand-navy truncate">{member.sponsor_name ?? '—'}</p>
+      </div>
+      {resolvedLogo && (
+        <button
+          type="button"
+          onClick={() => void downloadSponsorLogo(resolvedLogo, member.display_name)}
+          className="text-xs font-medium text-brand-blue shrink-0 ml-auto"
+        >
+          Download logo
+        </button>
+      )}
+    </div>
+  )
+}
 
 function SquadPhotoControl({
   member,
@@ -233,43 +278,46 @@ export default function AdminSquad() {
             <div className="glass-card p-8 text-center text-gray-500">No squad members yet.</div>
           ) : (
             squad.map((member) => (
-              <div key={member.id} className="glass-card p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                <SquadPhotoControl member={member} onUpdated={reload} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-brand-navy">{member.display_name}</p>
-                  {member.joined_date && (
-                    <p className="text-xs text-gray-500">
-                      Joined {new Date(member.joined_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
-                    </p>
-                  )}
+              <div key={member.id} className="glass-card p-4 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <SquadPhotoControl member={member} onUpdated={reload} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-brand-navy">{member.display_name}</p>
+                    {member.joined_date && (
+                      <p className="text-xs text-gray-500">
+                        Joined {new Date(member.joined_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                  <select
+                    value={member.position ?? 'Midfielder'}
+                    onChange={(e) => handlePositionChange(member, e.target.value as SquadPosition)}
+                    className="input-field sm:w-40"
+                    aria-label={`Position for ${member.display_name}`}
+                  >
+                    {SQUAD_POSITIONS.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    placeholder="#"
+                    defaultValue={member.squad_number ?? ''}
+                    onBlur={(e) => handleSquadNumberChange(member, e.target.value)}
+                    className="input-field w-16 text-center"
+                    aria-label={`Squad number for ${member.display_name}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(member)}
+                    className="text-sm text-red-600 font-medium shrink-0"
+                  >
+                    Remove
+                  </button>
                 </div>
-                <select
-                  value={member.position ?? 'Midfielder'}
-                  onChange={(e) => handlePositionChange(member, e.target.value as SquadPosition)}
-                  className="input-field sm:w-40"
-                  aria-label={`Position for ${member.display_name}`}
-                >
-                  {SQUAD_POSITIONS.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  min={1}
-                  max={99}
-                  placeholder="#"
-                  defaultValue={member.squad_number ?? ''}
-                  onBlur={(e) => handleSquadNumberChange(member, e.target.value)}
-                  className="input-field w-16 text-center"
-                  aria-label={`Squad number for ${member.display_name}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleRemove(member)}
-                  className="text-sm text-red-600 font-medium shrink-0"
-                >
-                  Remove
-                </button>
+                <SquadSponsorInfo member={member} />
               </div>
             ))
           )}

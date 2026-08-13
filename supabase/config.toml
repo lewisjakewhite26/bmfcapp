@@ -10,3 +10,7 @@ entrypoint = "../supabase-club/functions/send-push/index.ts"
 [functions.fines-scheduler]
 verify_jwt = false
 entrypoint = "../supabase-club/functions/fines-scheduler/index.ts"
+
+[functions.canva-autofill]
+verify_jwt = false
+entrypoint = "../supabase-club/functions/canva-autofill/index.ts"

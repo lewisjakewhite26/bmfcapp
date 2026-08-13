@@ -206,6 +206,8 @@ let adminUsers: MockAdminUser[] = [...MOCK_ADMIN_USERS, ...E2E_SEED_USERS]
 let squad = [...MOCK_SQUAD]
 const mockPasscodes = new Map<string, string>([[PREVIEW_PLAYER_ID, '1234']])
 const mockPlayerPhotoUrls = new Map<string, string>()
+const mockSponsorLogoUrls = new Map<string, string>()
+const mockSponsorNames = new Map<string, string>()
 const mockLiveDrafts = new Map<string, LiveMatchDraft>()
 
 function seedMockFundraiserParticipation() {
@@ -335,6 +337,8 @@ export function getMockSquad(): SquadMember[] {
     .map((s) => ({
       ...s,
       photo_url: mockPlayerPhotoUrls.get(s.player_id) ?? null,
+      sponsor_name: mockSponsorNames.get(s.player_id) ?? null,
+      sponsor_logo_url: mockSponsorLogoUrls.get(s.player_id) ?? null,
     }))
 }
 
@@ -354,6 +358,41 @@ export function deleteMockPlayerPhoto(playerId: string): void {
     URL.revokeObjectURL(existing)
   }
   mockPlayerPhotoUrls.delete(playerId)
+}
+
+export function getMockSponsor(playerId: string): { sponsor_name: string | null; sponsor_logo_url: string | null } {
+  return {
+    sponsor_name: mockSponsorNames.get(playerId) ?? null,
+    sponsor_logo_url: mockSponsorLogoUrls.get(playerId) ?? null,
+  }
+}
+
+export function uploadMockSponsorLogo(playerId: string, file: File): string {
+  const existing = mockSponsorLogoUrls.get(playerId)
+  if (existing?.startsWith('blob:')) {
+    URL.revokeObjectURL(existing)
+  }
+  const url = URL.createObjectURL(file)
+  mockSponsorLogoUrls.set(playerId, url)
+  return url
+}
+
+export function deleteMockSponsorLogo(playerId: string): void {
+  const existing = mockSponsorLogoUrls.get(playerId)
+  if (existing?.startsWith('blob:')) {
+    URL.revokeObjectURL(existing)
+  }
+  mockSponsorLogoUrls.delete(playerId)
+}
+
+export function saveMockSponsorName(playerId: string, name: string): string | null {
+  const trimmed = name.trim()
+  if (trimmed === '') {
+    mockSponsorNames.delete(playerId)
+    return null
+  }
+  mockSponsorNames.set(playerId, trimmed)
+  return trimmed
 }
 
 export function getMockPlayerStats(): PlayerStats[] {

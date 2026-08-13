@@ -36,6 +36,9 @@ const AdminFundraisers = lazy(() => import('./pages/AdminFundraisers'))
 const AdminFinance = lazy(() => import('./pages/AdminFinance'))
 const AdminFines = lazy(() => import('./pages/AdminFines'))
 const AdminLive = lazy(() => import('./pages/AdminLive'))
+const AdminAuditLog = lazy(() => import('./pages/AdminAuditLog'))
+const AdminCanva = lazy(() => import('./pages/AdminCanva'))
+const AdminTodo = lazy(() => import('./pages/AdminTodo'))
 const Fines = lazy(() => import('./pages/Fines'))
 
 const wantsSupabase = import.meta.env.VITE_CLUB_DATA_SOURCE === 'supabase'
@@ -300,6 +303,30 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly finesAdminOk>
             <AdminFines />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/audit"
+        element={
+          <ProtectedRoute adminOnly requireAdmin>
+            <AdminAuditLog />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/canva"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminCanva />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/todo"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminTodo />
           </ProtectedRoute>
         }
       />

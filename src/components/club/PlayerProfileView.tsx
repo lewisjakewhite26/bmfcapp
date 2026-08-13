@@ -14,6 +14,7 @@ import {
 import { CalendarList } from './CalendarList'
 import { PlayerPerformanceChart, PlayerFormTimeline } from './PlayerPerformanceChart'
 import { PlayerRadarChart } from './PlayerRadarChart'
+import { SponsorLogoCard } from './SponsorLogoCard'
 import type { CalendarItem } from '../../types'
 import type { Availability } from '../../types'
 
@@ -273,6 +274,8 @@ export function PlayerProfileView({
           )}
         </section>
       )}
+
+      {isOwnProfile && <SponsorLogoCard playerId={profile.player_id} />}
     </div>
   )
 }

@@ -173,6 +173,8 @@ export interface SquadMember {
   joined_date: string | null
   active: boolean
   photo_url?: string | null
+  sponsor_name?: string | null
+  sponsor_logo_url?: string | null
 }
 
 export interface PlayerStats {
@@ -235,6 +237,21 @@ export interface Lineup {
   subs_confirmed_none: boolean
   created_at: string
   updated_at: string
+}
+
+export interface CommitteeTodo {
+  id: string
+  title: string
+  description: string | null
+  assigned_to: string | null
+  assigned_name: string | null
+  status: 'pending' | 'done'
+  created_by: string
+  created_name: string
+  completed_by: string | null
+  completed_name: string | null
+  created_at: string
+  completed_at: string | null
 }
 
 export interface AvailablePlayer {

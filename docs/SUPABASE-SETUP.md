@@ -52,6 +52,27 @@ Apply migrations **in order** via the Supabase SQL Editor (Dashboard → SQL →
 | `supabase-club/migrations/028_team_invite_link.sql` | Reusable team invite link (`/join/:token`) |
 | `supabase-club/migrations/029_admin_audit_log.sql` | Central admin audit log table + list/record RPCs |
 | `supabase-club/migrations/030_signing_on_fees.sql` | Signing-on fee checklist per season (Finance admin) |
+| `supabase-club/migrations/031_formation_4213.sql` | Allow 4-2-1-3 formation in saved lineups |
+| `supabase-club/migrations/032_fines.sql` | Match-day fines — sessions, per-player entries, payment tracking |
+| `supabase-club/migrations/033_fine_session_delete.sql` | Delete fines sessions (committee/admin) |
+| `supabase-club/migrations/034_fine_late_fees.sql` | Monthly late fees (superseded by 038 — weekly model) |
+| `supabase-club/migrations/035_fine_session_auto_title.sql` | Auto-generate fines session title from date |
+| `supabase-club/migrations/036_auto_squad_on_approval.sql` | Auto-include every approved player in the squad |
+| `supabase-club/migrations/037_fine_due_dates.sql` | Per-fine due dates with penultimate-Sunday grace window |
+| `supabase-club/migrations/038_fine_weekly_late_fees.sql` | Weekly £2 late fees (replaces monthly model in 034) |
+| `supabase-club/migrations/039_squad_pause.sql` | Player pause — freezes no-vote fines, reminders, late fees |
+| `supabase-club/migrations/040_fine_no_vote_and_reminders.sql` | Automated no-vote fines + vote reminder tracking |
+| `supabase-club/migrations/041_fine_rpc_updates.sql` | Fines RPC updates — due_date on reads, lateness exclusivity |
+| `supabase-club/migrations/042_fines_scheduler_cron.sql` | Historical pg_cron placeholder — superseded by 043 |
+| `supabase-club/migrations/043_unschedule_legacy_cron.sql` | Unschedule legacy pg_cron; exclude TBC fixtures from automation |
+| `supabase-club/migrations/044_fines_admin_role.sql` | Fines-only admin role (`is_fines_admin`) |
+| `supabase-club/migrations/045_admin_create_player.sql` | Admin creates an approved player without the invite flow |
+| `supabase-club/migrations/046_lineup_substitutes.sql` | Substitutes bench on saved lineups |
+| `supabase-club/migrations/047_lineup_subs_confirmed_none.sql` | "No subs came on" confirmation on lineups |
+| `supabase-club/migrations/048_sponsor_logos.sql` | Player-managed sponsor name + logo (self-service Storage upload) |
+| `supabase-club/migrations/049_committee_todo.sql` | Committee to-do list — RLS-gated task tracker |
+
+**No pg_cron fines jobs should exist in production** — the canonical scheduler is GitHub Actions (`fines-automation.yml`, every 5 minutes). Migration 042 is a historical placeholder only; 043 unschedules any legacy pg_cron jobs.
 
 **Supabase CLI example** (if `supabase` is installed and linked):
 
@@ -104,12 +125,15 @@ A workflow (`.github/workflows/sync-ddsfl.yml`) runs **`npm run sync:ddsfl` dail
 
 There is **no sync button in the app admin panel** — manual options are GitHub Actions (above) or `npm run sync:ddsfl` on your machine with `.env.local` set.
 
+**Same two secrets also gate `.github/workflows/fines-automation.yml`** (runs every 5 minutes — no-vote fines, vote reminders, weekly late fees). Set them once; both workflows read the same values.
+
 Add these **repository secrets** (Settings → Secrets and variables → Actions):
 
 | Secret | Value |
 |--------|--------|
 | `VITE_SUPABASE_URL` | Club Hub project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | `service_role` key (not anon) |
+| `FINES_SCHEDULER_SECRET` | Optional — only if set on the `fines-scheduler` Edge Function |
 
 The app reads cached data from Supabase — it does not scrape on each page load. After the workflow runs, players see the updated table on next visit (timestamp shown on `/table`).
 
@@ -142,6 +166,22 @@ supabase functions deploy send-push
 ```
 
 Push only works over **HTTPS** (production or tunneled preview). In mock mode, Admin → Send notification shows an error toast.
+
+### Other Edge Functions
+
+Two more functions live under `supabase-club/functions/`, registered in `supabase/config.toml`:
+
+| Function | Purpose | Secrets |
+|----------|---------|---------|
+| `fines-scheduler` | Runs no-vote fines, vote reminders, weekly late fees — invoked every 5 min by `fines-automation.yml` | Uses `SUPABASE_SERVICE_ROLE_KEY`; optional `FINES_SCHEDULER_SECRET` if you want to lock it down further |
+| `canva-autofill` | Triggers a Canva Connect API design from player name/photo/sponsor logo (Admin → Canva templates) | `CANVA_ACCESS_TOKEN` — **not set yet**; the function returns a clearly-labelled mock result until a Canva account is linked and this secret is set |
+
+Deploy either the same way as `send-push`:
+
+```bash
+supabase functions deploy fines-scheduler
+supabase functions deploy canva-autofill
+```
 
 ---
 
@@ -179,17 +219,21 @@ Ensure HTTPS is enabled for PWA install and push notifications.
 - New players receive an **invite link** (`/invite/:token`) from an admin.
 - Accounts require **committee approval** before accessing squad features (`/pending` screen).
 - Sessions are stored in `localStorage` and verified via RPC on each write.
+- A fourth role, **Fines Helper** (`is_fines_admin`, migration 044), grants access to `/admin/fines` only — nothing else in the admin hub. Mutually exclusive with Committee; set from Admin → Squad members.
 
 ### Role permissions
 
-| Action | Admin | Committee | Player |
-|--------|-------|-----------|--------|
-| View fixtures, stats, calendar | ✅ | ✅ | ✅ (when approved) |
-| Mark availability | ✅ | ✅ | ✅ |
-| Add manual fixtures / results / training | ✅ | ✅ | ❌ |
-| View availability overview | ✅ | ✅ | ❌ |
-| Send push notification | ✅ | ✅ | ❌ |
-| Create invites, approve users, reset passcodes | ✅ | ❌ | ❌ |
+| Action | Admin | Committee | Fines Helper | Player |
+|--------|-------|-----------|---------------|--------|
+| View fixtures, stats, calendar | ✅ | ✅ | ❌ | ✅ (when approved) |
+| Mark availability | ✅ | ✅ | ❌ | ✅ |
+| Add manual fixtures / results / training | ✅ | ✅ | ❌ | ❌ |
+| View availability overview | ✅ | ✅ | ❌ | ❌ |
+| Send push notification | ✅ | ✅ | ❌ | ❌ |
+| Log fines, mark payments (`/admin/fines`) | ✅ | ✅ | ✅ | ❌ |
+| View audit log (`/admin/audit`) | ✅ | ❌ | ❌ | ❌ |
+| Create invites, approve users, reset passcodes | ✅ | ❌ | ❌ | ❌ |
+| Manage own sponsor name + logo | — | — | — | ✅ (own profile only) |
 
 ---
 
@@ -204,6 +248,9 @@ Checklist after deploy:
 - [ ] Manual friendly can be added via Admin → Add match
 - [ ] Result can be entered via Admin → Enter results
 - [ ] Failed network requests show a red error banner with "Try again"
+- [ ] Admin can view **Audit log** (`/admin/audit`) and see recent actions
+- [ ] Player can upload a sponsor logo + name on their own profile page, admin sees it (with download) on Admin → Squad list
+- [ ] Committee to-do (`/admin/todo`) — add a task, assign it, mark done/undo
 
 ---
 

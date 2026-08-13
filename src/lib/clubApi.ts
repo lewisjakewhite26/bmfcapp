@@ -60,6 +60,10 @@ import {
   getMockFundraiserParticipationSummary,
   uploadMockPlayerPhoto,
   deleteMockPlayerPhoto,
+  getMockSponsor,
+  uploadMockSponsorLogo,
+  deleteMockSponsorLogo,
+  saveMockSponsorName,
   startMockLiveMatch,
   getMockLiveMatchDraft,
   saveMockLiveMatchDraft,
@@ -93,6 +97,8 @@ import { parseLiveDraftEntries } from './liveMatchDraftStorage'
 import { recordAdminAudit } from './adminAudit'
 import type { LiveMatchDraft } from './liveMatchEvents'
 import { playerPhotoFileExt, validatePlayerPhotoFile } from './playerPhotos'
+import { sponsorLogoFileExt, validateSponsorLogoFile } from './sponsorLogo'
+import { addMockTodo, getMockTodos, setMockTodoStatus } from './mockCommitteeTodo'
 import type {
   AdminUserRow,
   Availability,
@@ -132,6 +138,7 @@ import type {
   FinesOverview,
   PlayerFinesSummaryRow,
   TeamInviteSettings,
+  CommitteeTodo,
 } from '../types'
 
 export {
@@ -263,21 +270,28 @@ export async function fetchSquad(): Promise<SquadMember[]> {
 
   const { data, error } = await supabase
     .from('squad')
-    .select('*, profiles(display_name, photo_url)')
+    .select('*, profiles(display_name, photo_url, sponsor_name, sponsor_logo_url)')
     .eq('active', true)
 
   if (error) throw error
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    player_id: row.player_id,
-    display_name: (row as { profiles: { display_name: string } }).profiles.display_name,
-    squad_number: row.squad_number,
-    position: row.position,
-    joined_date: row.joined_date,
-    active: row.active,
-    photo_url: (row as { profiles: { photo_url: string | null } }).profiles.photo_url ?? null,
-  }))
+  return (data ?? []).map((row) => {
+    const profile = (row as {
+      profiles: { display_name: string; photo_url: string | null; sponsor_name: string | null; sponsor_logo_url: string | null }
+    }).profiles
+    return {
+      id: row.id,
+      player_id: row.player_id,
+      display_name: profile.display_name,
+      squad_number: row.squad_number,
+      position: row.position,
+      joined_date: row.joined_date,
+      active: row.active,
+      photo_url: profile.photo_url ?? null,
+      sponsor_name: profile.sponsor_name ?? null,
+      sponsor_logo_url: profile.sponsor_logo_url ?? null,
+    }
+  })
 }
 
 export async function fetchLineupsByFixtureId(): Promise<Map<string, Lineup | null>> {
@@ -1727,6 +1741,168 @@ export async function deletePlayerPhoto(playerId: string): Promise<void> {
   })
   if (error) throw error
   void recordAdminAudit('photo_deleted', { entityType: 'profile', entityId: playerId })
+}
+
+export interface MySponsor {
+  sponsor_name: string | null
+  sponsor_logo_url: string | null
+}
+
+/** Self-service — the signed-in player's own sponsor name + logo. */
+export async function fetchMySponsor(playerId: string): Promise<MySponsor> {
+  if (isMockDataMode()) {
+    await delay(40)
+    return getMockSponsor(playerId)
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('sponsor_name, sponsor_logo_url')
+    .eq('id', playerId)
+    .single()
+  if (error) throw error
+  return data as MySponsor
+}
+
+/** Self-service — player uploads their own sponsor logo. */
+export async function uploadSponsorLogo(file: File): Promise<string> {
+  validateSponsorLogoFile(file)
+
+  if (isMockDataMode()) {
+    await delay()
+    const session = getClubSession()
+    if (!session) throw new Error('Not signed in')
+    return uploadMockSponsorLogo(session.userId, file)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const ext = sponsorLogoFileExt(file)
+
+  const { data: prep, error: prepErr } = await supabase.rpc('prepare_sponsor_logo_upload', {
+    p_user_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_file_ext: ext,
+  })
+  if (prepErr) throw prepErr
+
+  const path = (prep as { path: string }).path
+
+  const { error: uploadErr } = await supabase.storage
+    .from('sponsor-logos')
+    .upload(path, file, { upsert: true, contentType: file.type })
+  if (uploadErr) throw uploadErr
+
+  const { data: confirmed, error: confirmErr } = await supabase.rpc('confirm_sponsor_logo_upload', {
+    p_user_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_storage_path: path,
+  })
+  if (confirmErr) throw confirmErr
+
+  return (confirmed as { sponsor_logo_url: string }).sponsor_logo_url
+}
+
+/** Self-service — player removes their own sponsor logo. */
+export async function deleteSponsorLogo(): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    const session = getClubSession()
+    if (!session) throw new Error('Not signed in')
+    deleteMockSponsorLogo(session.userId)
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('delete_sponsor_logo', {
+    p_user_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+}
+
+/** Self-service — player sets/clears their own sponsor name. */
+export async function saveSponsorName(name: string): Promise<string | null> {
+  if (isMockDataMode()) {
+    await delay()
+    const session = getClubSession()
+    if (!session) throw new Error('Not signed in')
+    return saveMockSponsorName(session.userId, name)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('save_sponsor_name', {
+    p_user_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_sponsor_name: name,
+  })
+  if (error) throw error
+  return (data as { sponsor_name: string | null }).sponsor_name
+}
+
+export async function fetchTodos(): Promise<CommitteeTodo[]> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockTodos()
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_list_todos', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  return (data ?? []) as CommitteeTodo[]
+}
+
+export async function createTodo(
+  title: string,
+  description: string | null,
+  assignedTo: string | null,
+): Promise<CommitteeTodo> {
+  if (isMockDataMode()) {
+    await delay()
+    return addMockTodo(title, description, assignedTo)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_create_todo', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_title: title,
+    p_description: description,
+    p_assigned_to: assignedTo,
+  })
+  if (error) throw error
+  return data as CommitteeTodo
+}
+
+export async function setTodoStatus(todoId: string, done: boolean): Promise<CommitteeTodo> {
+  if (isMockDataMode()) {
+    await delay()
+    return setMockTodoStatus(todoId, done)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_set_todo_status', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_todo_id: todoId,
+    p_done: done,
+  })
+  if (error) throw error
+  return data as CommitteeTodo
 }
 
 function num(value: unknown): number {

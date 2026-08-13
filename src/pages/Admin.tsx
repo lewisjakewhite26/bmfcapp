@@ -18,7 +18,10 @@ const LINKS = [
   { to: '/admin/fundraisers', title: 'Fundraisers', desc: 'Track squad participation in fundraising events' },
   { to: '/admin/fines', title: 'Fines', desc: 'Log squad fines and track payments', finesOk: true },
   { to: '/admin/finance', title: 'Finance', desc: 'Sponsorships, expenses and club balance' },
+  { to: '/admin/canva', title: 'Canva templates', desc: 'Generate player graphics from templates' },
+  { to: '/admin/todo', title: 'Committee to-do', desc: 'Shared task list for committee and admin' },
   { to: '/admin/users', title: 'Squad members', desc: 'Add players, invite links & passcodes', adminOnly: true },
+  { to: '/admin/audit', title: 'Audit log', desc: 'Recent admin and committee actions', adminOnly: true },
 ]
 
 export default function Admin() {
