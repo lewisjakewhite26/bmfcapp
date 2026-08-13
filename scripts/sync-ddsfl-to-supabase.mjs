@@ -154,7 +154,39 @@ async function main() {
     let fixture
 
     if (existingById && manualMatch && existingById.id !== manualMatch.id) {
-      // Keep the admin-created row (availability etc.), drop the scrape duplicate.
+      // Keep the admin-created row, drop the scrape duplicate — but migrate any
+      // availability votes cast against the scrape row first. Players vote on
+      // whichever row the app shows them (usually the scraped one, since the
+      // daily sync beats manual entry); deleting it outright cascades away
+      // their votes and falsely trips the no-vote fine automation.
+      const { data: orphanVotes, error: voteFetchErr } = await supabase
+        .from('availability')
+        .select('player_id, status, message, created_at')
+        .eq('fixture_id', existingById.id)
+      if (voteFetchErr) {
+        throw new Error(
+          `Could not read votes on duplicate ${existingById.id}: ${voteFetchErr.message}`,
+        )
+      }
+
+      if (orphanVotes && orphanVotes.length > 0) {
+        const { error: migrateErr } = await supabase.from('availability').upsert(
+          orphanVotes.map((v) => ({
+            player_id: v.player_id,
+            fixture_id: manualMatch.id,
+            status: v.status,
+            message: v.message,
+            created_at: v.created_at,
+          })),
+          { onConflict: 'player_id,fixture_id', ignoreDuplicates: true },
+        )
+        if (migrateErr) {
+          throw new Error(
+            `Could not migrate votes from duplicate ${existingById.id}: ${migrateErr.message}`,
+          )
+        }
+      }
+
       // Clear DDSFL id first so the unique constraint allows linking the manual row.
       const { error: clearErr } = await supabase
         .from('fixtures')
