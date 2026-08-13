@@ -1140,9 +1140,18 @@ export function saveMockLineup(
     formation,
     slots: [...slots],
     substitutes: [...substitutes],
+    subs_confirmed_none: false,
     created_at: existing?.created_at ?? now,
     updated_at: now,
   }
+  mockLineups.set(fixtureId, row)
+  return row
+}
+
+export function setMockLineupSubsConfirmedNone(fixtureId: string, confirmed: boolean): Lineup {
+  const existing = mockLineups.get(fixtureId)
+  if (!existing) throw new Error('Lineup not found')
+  const row: Lineup = { ...existing, subs_confirmed_none: confirmed, updated_at: new Date().toISOString() }
   mockLineups.set(fixtureId, row)
   return row
 }

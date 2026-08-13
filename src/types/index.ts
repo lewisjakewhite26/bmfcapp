@@ -232,6 +232,7 @@ export interface Lineup {
   formation: FormationId
   slots: LineupSlotAssignment[]
   substitutes: string[]
+  subs_confirmed_none: boolean
   created_at: string
   updated_at: string
 }

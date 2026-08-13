@@ -45,6 +45,7 @@ import {
   removeMockSquad,
   resetMockPasscode,
   saveMockLineup,
+  setMockLineupSubsConfirmedNone,
   setMockUserApproved,
   setMockUserCommittee,
   setMockUserFinesAdmin,
@@ -1454,6 +1455,25 @@ export async function saveLineup(
   })
   if (error) throw error
   void recordAdminAudit('lineup_saved', { entityType: 'fixture', entityId: fixtureId, details: { formation } })
+  return data as Lineup
+}
+
+export async function setLineupSubsConfirmedNone(fixtureId: string, confirmed: boolean): Promise<Lineup> {
+  if (isMockDataMode()) {
+    await delay(60)
+    return setMockLineupSubsConfirmedNone(fixtureId, confirmed)
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_set_lineup_subs_confirmed_none', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_fixture_id: fixtureId,
+    p_confirmed: confirmed,
+  })
+  if (error) throw error
   return data as Lineup
 }
 

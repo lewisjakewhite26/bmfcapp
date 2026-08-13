@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { submitMatchResult } from '../../lib/clubApi'
-import type { FixtureWithResult, MatchEventType, SquadMember } from '../../types'
+import { fetchLineup, setLineupSubsConfirmedNone, submitMatchResult } from '../../lib/clubApi'
+import type { FixtureWithResult, Lineup, MatchEventType, SquadMember } from '../../types'
 
 interface ResultEntryFormProps {
   fixture: FixtureWithResult
@@ -16,6 +16,13 @@ type EventRow = {
   related_player_id?: string
 }
 
+/** A bench-toggle credit is stored as a self-referential substitution row
+ * (player_id === related_player_id) so it can be told apart from a manually
+ * logged real off/on pair without a schema change. */
+function isBenchToggleEvent(e: { event_type: MatchEventType; player_id: string; related_player_id?: string | null }) {
+  return e.event_type === 'substitution' && e.related_player_id === e.player_id
+}
+
 export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProps) {
   const [goalsFor, setGoalsFor] = useState(fixture.result?.goals_for?.toString() ?? '')
   const [goalsAgainst, setGoalsAgainst] = useState(fixture.result?.goals_against?.toString() ?? '')
@@ -24,14 +31,26 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
     fixture.result?.goalkeeper_player_id ?? '',
   )
   const [events, setEvents] = useState<EventRow[]>(
-    (fixture.events ?? []).map((e) => ({
-      player_id: e.player_id,
-      event_type: e.event_type,
-      minute: e.minute?.toString() ?? '',
-      related_player_id: e.related_player_id ?? undefined,
-    }))
+    (fixture.events ?? [])
+      .filter((e) => !isBenchToggleEvent(e))
+      .map((e) => ({
+        player_id: e.player_id,
+        event_type: e.event_type,
+        minute: e.minute?.toString() ?? '',
+        related_player_id: e.related_player_id ?? undefined,
+      }))
   )
+  const [subsOn, setSubsOn] = useState<Set<string>>(
+    () =>
+      new Set(
+        (fixture.events ?? [])
+          .filter(isBenchToggleEvent)
+          .map((e) => e.related_player_id!)
+      ),
+  )
+  const [lineup, setLineup] = useState<Lineup | null>(null)
   const [saving, setSaving] = useState(false)
+  const [confirmingNoSubs, setConfirmingNoSubs] = useState(false)
 
   const goalkeepers = squad.filter((s) => s.position === 'Goalkeeper')
   const goalsAgainstNum = parseInt(goalsAgainst, 10)
@@ -43,14 +62,77 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
     setNotes(fixture.result?.notes ?? '')
     setGoalkeeperPlayerId(fixture.result?.goalkeeper_player_id ?? '')
     setEvents(
-      (fixture.events ?? []).map((e) => ({
-        player_id: e.player_id,
-        event_type: e.event_type,
-        minute: e.minute?.toString() ?? '',
-        related_player_id: e.related_player_id ?? undefined,
-      })),
+      (fixture.events ?? [])
+        .filter((e) => !isBenchToggleEvent(e))
+        .map((e) => ({
+          player_id: e.player_id,
+          event_type: e.event_type,
+          minute: e.minute?.toString() ?? '',
+          related_player_id: e.related_player_id ?? undefined,
+        })),
+    )
+    setSubsOn(
+      new Set(
+        (fixture.events ?? [])
+          .filter(isBenchToggleEvent)
+          .map((e) => e.related_player_id!)
+      ),
     )
   }, [fixture.id, fixture.result, fixture.events])
+
+  useEffect(() => {
+    let cancelled = false
+    setLineup(null)
+    fetchLineup(fixture.id)
+      .then((l) => { if (!cancelled) setLineup(l) })
+      .catch(() => { if (!cancelled) setLineup(null) })
+    return () => { cancelled = true }
+  }, [fixture.id])
+
+  const startingXIIds = useMemo(() => new Set(lineup?.slots.map((s) => s.player_id) ?? []), [lineup])
+  const benchIds = useMemo(() => new Set(lineup?.substitutes ?? []), [lineup])
+  const startingXIPlayers = useMemo(
+    () => (startingXIIds.size > 0 ? squad.filter((s) => startingXIIds.has(s.player_id)) : squad),
+    [squad, startingXIIds],
+  )
+  const benchPlayers = useMemo(
+    () => (benchIds.size > 0 ? squad.filter((s) => benchIds.has(s.player_id)) : squad),
+    [squad, benchIds],
+  )
+
+  const manualBenchCreditIds = useMemo(
+    () =>
+      new Set(
+        events
+          .filter((e) => e.event_type === 'substitution' && e.related_player_id && benchIds.has(e.related_player_id))
+          .map((e) => e.related_player_id!),
+      ),
+    [events, benchIds],
+  )
+  const noSubsCredited = subsOn.size === 0 && manualBenchCreditIds.size === 0
+  const confirmedNoSubs = noSubsCredited && lineup?.subs_confirmed_none === true
+  const showMissingCreditNudge = benchIds.size > 0 && noSubsCredited && !confirmedNoSubs
+
+  const toggleSubOn = (playerId: string) => {
+    setSubsOn((prev) => {
+      const next = new Set(prev)
+      if (next.has(playerId)) next.delete(playerId)
+      else next.add(playerId)
+      return next
+    })
+  }
+
+  const setConfirmedNoSubs = async (confirmed: boolean) => {
+    setConfirmingNoSubs(true)
+    try {
+      const updated = await setLineupSubsConfirmedNone(fixture.id, confirmed)
+      setLineup(updated)
+    } catch {
+      toast.error("Couldn't update")
+    } finally {
+      setConfirmingNoSubs(false)
+    }
+  }
 
   const addEvent = () => {
     setEvents((prev) => [...prev, { player_id: squad[0]?.player_id ?? '', event_type: 'goal', minute: '' }])
@@ -64,6 +146,16 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
       return
     }
 
+    const benchToggleEvents = Array.from(subsOn)
+      .filter((playerId) => !manualBenchCreditIds.has(playerId))
+      .map((playerId) => ({
+        fixture_id: fixture.id,
+        player_id: playerId,
+        event_type: 'substitution' as MatchEventType,
+        minute: null,
+        related_player_id: playerId,
+      }))
+
     setSaving(true)
     try {
       await submitMatchResult(
@@ -71,15 +163,18 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
         gf,
         ga,
         notes || null,
-        events
-          .filter((e) => e.player_id)
-          .map((e) => ({
-            fixture_id: fixture.id,
-            player_id: e.player_id,
-            event_type: e.event_type,
-            minute: e.minute ? parseInt(e.minute, 10) : null,
-            ...(e.related_player_id ? { related_player_id: e.related_player_id } : {}),
-          })),
+        [
+          ...events
+            .filter((e) => e.player_id)
+            .map((e) => ({
+              fixture_id: fixture.id,
+              player_id: e.player_id,
+              event_type: e.event_type,
+              minute: e.minute ? parseInt(e.minute, 10) : null,
+              ...(e.related_player_id ? { related_player_id: e.related_player_id } : {}),
+            })),
+          ...benchToggleEvents,
+        ],
         goalkeeperPlayerId || null,
       )
       toast.success('Result saved')
@@ -134,6 +229,62 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
         </p>
       </div>
 
+      {benchIds.size > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-brand-navy">
+            Substitutes · who came on?
+          </p>
+          {showMissingCreditNudge && (
+            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-card px-3 py-2 space-y-1.5">
+              <p>{benchPlayers.length} on the bench, none marked as coming on yet — tap anyone who played.</p>
+              <button
+                type="button"
+                onClick={() => setConfirmedNoSubs(true)}
+                disabled={confirmingNoSubs}
+                className="font-semibold underline underline-offset-2"
+              >
+                No subs came on
+              </button>
+            </div>
+          )}
+          {confirmedNoSubs && (
+            <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-card px-3 py-2 flex items-center justify-between gap-2">
+              <span>No subs came on this game — confirmed.</span>
+              <button
+                type="button"
+                onClick={() => setConfirmedNoSubs(false)}
+                disabled={confirmingNoSubs}
+                className="font-semibold underline underline-offset-2 shrink-0"
+              >
+                Undo
+              </button>
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {benchPlayers.map((player) => {
+              const isOn = subsOn.has(player.player_id)
+              return (
+                <button
+                  key={player.player_id}
+                  type="button"
+                  onClick={() => toggleSubOn(player.player_id)}
+                  className={`min-h-[40px] px-4 rounded-pill text-sm font-semibold border transition-colors ${
+                    isOn
+                      ? 'bg-brand-gold text-brand-navy border-brand-gold'
+                      : 'bg-white/80 text-gray-600 border-brand-blue/15'
+                  }`}
+                >
+                  {player.display_name}
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-xs text-gray-500">
+            Untapped bench players stay uncredited. Already logged via Match events below? They won't be double-counted.
+          </p>
+        </div>
+      )}
+
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold text-brand-navy">Match events</p>
@@ -157,7 +308,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
                 className="input-field text-sm flex-1 min-w-0"
                 aria-label="Player"
               >
-                {squad.map((s) => (
+                {(ev.event_type === 'substitution' ? startingXIPlayers : squad).map((s) => (
                   <option key={s.player_id} value={s.player_id}>
                     {s.display_name}
                   </option>
@@ -223,7 +374,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
                 aria-label="Player coming on"
               >
                 <option value="">Player on…</option>
-                {squad.map((s) => (
+                {benchPlayers.map((s) => (
                   <option key={s.player_id} value={s.player_id}>
                     {s.display_name}
                   </option>

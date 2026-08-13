@@ -121,6 +121,7 @@ describe('aggregatePlayerStats', () => {
           formation: '4-4-2',
           slots: [{ position: 'GK', player_id: 'gk1' }],
           substitutes: [],
+          subs_confirmed_none: false,
           created_at: '2025-09-01T12:00:00.000Z',
           updated_at: '2025-09-01T12:00:00.000Z',
         },
@@ -161,6 +162,7 @@ describe('aggregatePlayerStats', () => {
             { position: 'ST1', player_id: 'fwd1' },
           ],
           substitutes: [],
+          subs_confirmed_none: false,
           created_at: '2025-09-15T12:00:00.000Z',
           updated_at: '2025-09-15T12:00:00.000Z',
         },
@@ -248,6 +250,7 @@ describe('aggregatePlayerStats substitutions', () => {
           formation: '4-4-2',
           slots: [{ position: 'GK', player_id: 'gk1' }],
           substitutes: ['sub2'],
+          subs_confirmed_none: false,
           created_at: '2025-09-22T12:00:00.000Z',
           updated_at: '2025-09-22T12:00:00.000Z',
         },
@@ -257,5 +260,29 @@ describe('aggregatePlayerStats substitutions', () => {
     const benchOnly = stats.find((s) => s.player_id === 'sub2')
     expect(benchOnly?.appearances).toBe(0)
     expect(benchOnly?.sub_appearances).toBe(0)
+  })
+
+  it('credits exactly one appearance and sub_appearance for a self-referential bench-toggle event', () => {
+    // ResultEntryForm's tap-to-credit bench toggle logs player_id === related_player_id
+    // (no specific "who went off" is known), rather than a real off/on pair.
+    const toggleFixture: FixtureWithResult = {
+      ...subFixture,
+      id: 'f-toggle',
+      events: [
+        {
+          id: 'e-toggle',
+          fixture_id: 'f-toggle',
+          player_id: 'sub2',
+          related_player_id: 'sub2',
+          event_type: 'substitution',
+          minute: null,
+          created_at: '2025-09-22T12:00:00.000Z',
+        },
+      ],
+    }
+    const { stats } = aggregatePlayerStats(squadWithSubs, [toggleFixture])
+    const toggled = stats.find((s) => s.player_id === 'sub2')
+    expect(toggled?.appearances).toBe(1)
+    expect(toggled?.sub_appearances).toBe(1)
   })
 })
