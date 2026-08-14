@@ -261,7 +261,7 @@ No copy changes of note this cycle beyond two Canva template label tweaks (cosme
 | 15 | ~~Low~~ | Migrations 023–028 not yet on prod | ✅ Operator |
 | 16 | Low | GitHub Actions secrets missing → DDSFL sync fails nightly | ⚠️ Operator — also blocks fines automation |
 | 17 | ~~Low~~ | Player `/fines` built but route hidden | ✅ `72fb7e0` |
-| 18 | ~~High~~ | DDSFL sync fixture-merge cascaded away player votes, false whole-squad no-vote fines | ✅ `cc52303` — **operator should still review fines applied 14 Jul – 13 Aug** |
+| 18 | ~~High~~ | DDSFL sync fixture-merge cascaded away player votes, false whole-squad no-vote fines | ✅ `cc52303` — **fines from 14 Jul – 13 Aug reviewed and sorted manually, operator confirmed** |
 | 19 | ~~Low~~ | Admin audit log built but not routed | ✅ **Fixed this cycle** — `/admin/audit` |
 | 20 | Low | Mock "Created by Unknown" on committee to-do (dev-bypass session user not seeded into mock profiles list) | ✅ Caught and fixed same session, before ever shipping |
 | 21 | Low | Sponsor logo card initially placed on Dashboard instead of player profile | ✅ Corrected same session per operator feedback |
@@ -294,10 +294,11 @@ No copy changes of note this cycle beyond two Canva template label tweaks (cosme
 | # | Task | Status |
 |---|------|--------|
 | 1 | Apply migrations **001–049** on Club Hub | ✅ Operator confirmed |
-| 2 | Generate team invite link (Admin → Squad members) | ⚠️ Operator |
-| 3 | Brief squad: sign in as **ChrisL**-style login name | ⚠️ Operator |
-| 4 | GitHub Actions secrets for **both** DDSFL and fines-automation workflows | ⚠️ Operator |
-| 5 | Review fines applied 14 Jul – 13 Aug for wrongful `no_vote` charges (Bug #18) | ⚠️ Operator |
+| 2 | Review fines applied 14 Jul – 13 Aug for wrongful `no_vote` charges (Bug #18) | ✅ Operator confirmed — sorted manually |
+| 3 | Generate team invite link (Admin → Squad members) | ⚠️ Operator |
+| 4 | Brief squad: sign in as **ChrisL**-style login name | ⚠️ Operator |
+| 5 | GitHub Actions secrets for **both** DDSFL and fines-automation workflows | ⚠️ Operator |
+| 6 | Link a Canva account + set `CANVA_ACCESS_TOKEN` (blocks further Canva work) | ⚠️ Operator |
 
 ### P1 — Path to 99
 
@@ -316,9 +317,9 @@ See [ROADMAP-99.md](ROADMAP-99.md).
 
 **98 / 100** — Admin audit log finally routed, closing a gap that had sat open (built, unreachable) across three audit cycles. Three new features shipped outside the original roadmap: player-managed sponsor logos (self-service, with admin-side visibility and one-click download), a committee to-do list, and a Canva graphics foundation deliberately paused pending account access. Docs debt paid down — README and SUPABASE-SETUP.md now cover all 49 migrations instead of stalling at 30. Two small bugs caught and fixed within the same session they were introduced.
 
-**Operator:** GitHub Actions secrets for both workflows, review the fines from the vote-loss bug window, generate the team join link, brief players on **ChrisL** login. Migrations are done — you confirmed 001–049 applied this cycle.
+**Operator:** GitHub Actions secrets for both workflows, generate the team join link, brief players on **ChrisL** login, link a Canva account when ready. Migrations are done — you confirmed 001–049 applied this cycle. Fines review from the vote-loss bug window is done too — confirmed sorted manually.
 
-**Path to 99:** one item. Sentry. Everything else named across fourteen audits is closed.
+**Path to 99 (score checklist specifically):** one item. Sentry. Note this is narrower than the full to-do list — see [ROADMAP-99.md](ROADMAP-99.md#your-actual-to-do-list) for Canva completion, ops tasks, and test coverage that don't move the score but are still real open work.
 
 ---
 

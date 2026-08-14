@@ -2,7 +2,37 @@
 
 **Baseline:** [AUDIT.md](AUDIT.md) v14 — **98 / 100** (14 August 2026)  
 **Target:** **99 / 100** — polished private squad app with ops closure and observability  
-**Status:** **One item left.** Admin audit log routed this cycle. Sentry is the only named blocker remaining across fourteen audits.
+**Status:** **One item left on the 99-score checklist.** Admin audit log routed this cycle. Sentry is the only named blocker remaining across fourteen audits. **That checklist is not the same as the full to-do list below** — Canva, ops tasks, and test coverage are real open work that don't move the score but do need doing.
+
+---
+
+## Your actual to-do list
+
+Two different lists get conflated in this doc — the narrow "99-score" checklist (just Sentry) and everything actually left to do. This is the second one.
+
+### Operator — only you can do these
+
+| # | Task | Notes |
+|---|------|-------|
+| 1 | GitHub Actions secrets — `VITE_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` | Gates **two** workflows: `sync-ddsfl.yml` (daily) and `fines-automation.yml` (every 5 min). Repo → Settings → Secrets and variables → Actions. |
+| 2 | Generate the team invite link | Admin → Squad members → team invite link. Share in squad WhatsApp. |
+| 3 | Brief the squad on **ChrisL**-style login | Login name has no space; display name (`Chris L`) is what shows elsewhere in the app. |
+| 4 | Deploy `fines-scheduler` Edge Function, if not already live | `supabase functions deploy fines-scheduler` |
+| 5 | Link a Canva account when ready | Get a Canva Connect API OAuth token, set it as the `CANVA_ACCESS_TOKEN` secret on the Supabase project, supply real brand template IDs to swap into `lib/canva.ts`. Nothing on the engineering side can happen without this — the whole feature is blocked on you doing this step. |
+| ~~6~~ | ~~Review fines applied 14 Jul – 13 Aug for the vote-loss bug~~ | ✅ **Done — confirmed sorted manually.** |
+
+### Engineering — ask when you want these picked up
+
+| # | Task | Notes |
+|---|------|-------|
+| 1 | **Sentry** | The only item on the formal 99-score checklist. Five audit cycles with zero progress. |
+| 2 | **Wire up the real Canva API path** | Code is written (`canva-autofill` Edge Function) but has never run against a real account — blocked on operator task #5 above. Once unblocked: test the asset-upload step (image fields aren't wired yet, only text), verify job polling, confirm real template field names match what's sent. |
+| 3 | **Test coverage for what shipped this cycle** | Zero unit/E2E tests for admin audit log, sponsor logos, committee to-do, or Canva. Verification so far has been manual Playwright scripts run once and discarded — nothing regression-proof. |
+| 4 | Playwright E2E: team join link (`/join/:token`) | Never got E2E coverage even before this cycle. |
+| 5 | Playwright E2E: fines automation (no-vote, late fees, reminders) | Only SQL-side idempotency tables guard this currently. |
+| 6 | Unit tests: `fineAlerts`, `lineupFormations.ts`, `getAuthErrorMessage` | Carried over from several audits back. |
+| 7 | Accessibility — passcode fieldset, modal focus trap, contrast pass | Optional for a closed 25-player squad, but open since v10. |
+| 8 | Bundle size — main chunk sitting at ~691 kB / ~192 kB gzip | Not urgent, flagged three cycles running. Worth a `manualChunks` pass if it keeps growing. |
 
 ---
 
@@ -27,11 +57,11 @@ Remaining lift to **99**:
 
 | Priority | Area | Notes |
 |----------|------|-------|
-| 1 | **Observability** | Sentry — zero progress across five audit cycles. The only thing standing between this project and 99/100. |
-| 2 | **Ops** | GitHub Actions secrets gate two workflows (DDSFL sync + fines-automation) — confirm both. Review fines applied 14 Jul–13 Aug for the vote-loss bug window (AUDIT.md Bug #18). |
+| 1 | **Observability** | Sentry — zero progress across five audit cycles. The only thing standing between this project and 99/100 specifically. |
+| 2 | **Ops** | GitHub Actions secrets gate two workflows (DDSFL sync + fines-automation) — confirm both. |
 | 3 | **Testing** | Zero test coverage for four things shipped this cycle: audit log routing, sponsor logos, committee to-do, Canva foundation. Not urgent for a closed-squad tool, but flagged — don't let it compound next cycle. |
 | 4 | **A11y** | Fieldset, focus trap, contrast — unchanged since v10, optional for closed squad. |
-| 5 | **Canva** | Foundation built and paused by request. Resume when a Canva account is linked — set `CANVA_ACCESS_TOKEN`, deploy `canva-autofill`, supply real brand template IDs. |
+| 5 | **Canva** | Foundation built and paused by request. Blocked on the operator linking a real account — see "Your actual to-do list" above. Real API path (image asset upload, job polling) still needs verifying once unblocked. |
 
 ---
 
@@ -67,13 +97,15 @@ gantt
     Docs brought current (README, SUPABASE-SETUP)   :done, v14e, 2026-08-14, 1d
     section Ops — confirm
     Apply migrations 001–049 on Supabase     :done, ops1, 2026-08-14, 1d
+    Review fines during vote-loss bug window :done, ops3, 2026-08-14, 1d
     GitHub secrets — DDSFL + fines-automation:active, ops2, 2026-08-14, 1d
-    Review fines during vote-loss bug window :active, ops3, 2026-08-14, 1d
     section Final lift — to 99
     Sentry                                   :crit, o1, 2026-08-20, 2d
+    section Blocked on operator
+    Canva account link + CANVA_ACCESS_TOKEN  :b1, TBD, 1d
+    Wire real Canva API path                 :b2, after b1, 2d
     section Optional polish
     Test coverage for v14 features           :t1, 2026-09-01, 2d
-    Canva real account link                  :t2, TBD, 1d
     Passcode fieldset + focus trap           :a1, 2026-09-01, 1d
 ```
 
@@ -147,7 +179,7 @@ Unchanged since v13/v14 — full detail in AUDIT.md v13 history. All migrations 
 
 ## Phase 12 — Data integrity: DDSFL vote-loss bug ✅
 
-Unchanged since v13. **Operator: still review fines applied 14 Jul – 13 Aug for wrongful `no_vote` charges** (AUDIT.md Bug #18) — this doesn't close itself.
+Fix unchanged since v13. **Operator confirmed the fines review is done** — charges from the 14 Jul – 13 Aug window were checked and sorted manually. Fully closed.
 
 ---
 
@@ -168,11 +200,12 @@ Onboarding, prod hotfixes, finance admin, calendar/PWA polish, GK clean sheets, 
 | Task | Status | Notes |
 |------|--------|-------|
 | Apply **001–049** on Club Hub | ✅ | **Operator confirmed this cycle — first time zero outstanding migration flags** |
+| **Review fines applied 14 Jul – 13 Aug for the vote-loss bug window** | ✅ | **Operator confirmed — sorted manually** |
 | Generate team invite link (Admin → Squad members) | ⚠️ | Share in squad WhatsApp |
 | Brief squad on **ChrisL** login format | ⚠️ | Display name shown as **Chris L** in app |
 | GitHub Actions secrets — **both** `sync-ddsfl.yml` and `fines-automation.yml` | ⚠️ | `VITE_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`; optional `FINES_SCHEDULER_SECRET` |
 | Deploy `fines-scheduler` Edge Function | ⚠️ | `supabase functions deploy fines-scheduler` |
-| **Review fines applied 14 Jul – 13 Aug for the vote-loss bug window** | ⚠️ | AUDIT.md Bug #18 |
+| Link Canva account, set `CANVA_ACCESS_TOKEN` | ⚠️ | Blocks all further Canva engineering work |
 
 ---
 
@@ -222,11 +255,11 @@ Optional for ~25-player closed squad. Unchanged since v10.
 
 ## Recommended next 3 actions
 
-1. **Sentry.** The only named blocker to 99, five audit cycles running.
-2. **GitHub Actions secrets** for both `sync-ddsfl.yml` and `fines-automation.yml`.
-3. **Review fines applied 14 Jul – 13 Aug** for wrongful `no_vote` charges (AUDIT.md Bug #18) — refund manually where needed.
+See "Your actual to-do list" at the top for the full picture — these three are just the highest-priority items across both lists:
 
-Everything else named across the last five audits is closed.
+1. **GitHub Actions secrets** for both `sync-ddsfl.yml` and `fines-automation.yml` — quick, unblocks two automated workflows.
+2. **Sentry.** The only named blocker to the 99 score, five audit cycles running.
+3. **Link a Canva account** when ready — this single step is what's blocking all further Canva engineering work.
 
 ---
 
@@ -248,4 +281,4 @@ Everything else named across the last five audits is closed.
 
 ---
 
-*Roadmap updated 14 August 2026. Baseline: AUDIT.md v14 (app at `062ed1c`). **98/100 held; Sentry is the only thing separating this from 99.*
+*Roadmap updated 14 August 2026. Baseline: AUDIT.md v14 (app at `0304556`). **98/100 held on the score checklist (Sentry only); see "Your actual to-do list" for what's really outstanding — Canva completion, ops secrets, test coverage.*
