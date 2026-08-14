@@ -11,25 +11,24 @@ export interface CanvaTemplate {
 }
 
 /**
- * Placeholder template list — swap in real Canva brand template IDs once
- * available. `listCanvaTemplates` is async so a later version can fetch
- * this from Canva's API instead without changing callers.
+ * One real Canva brand template covers all three post types (matchday,
+ * MOTM, goalscorer) — same design, different fields filled per use case.
  */
 const CANVA_TEMPLATES: CanvaTemplate[] = [
   {
-    id: 'TEMPLATE_ID_MATCHDAY_LINEUP',
+    id: 'DAHSRkWrIb0',
     name: 'Matchday Graphic',
     description: 'Player name + photo + sponsor logo, matchday social post',
     thumbnailUrl: null,
   },
   {
-    id: 'TEMPLATE_ID_MOTM',
+    id: 'DAHSRkWrIb0',
     name: 'Man of the match',
     description: 'Player name + photo, MOTM announcement post',
     thumbnailUrl: null,
   },
   {
-    id: 'TEMPLATE_ID_SPONSOR_SHOUTOUT',
+    id: 'DAHSRkWrIb0',
     name: 'Goalscorer',
     description: 'Player name + sponsor name + sponsor logo',
     thumbnailUrl: null,
