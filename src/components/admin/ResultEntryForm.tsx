@@ -29,8 +29,8 @@ const SCORING_TYPES: MatchEventType[] = ['goal', 'assist', 'motm', 'yellow_card'
  * rows, plus anyone with a goal/assist/motm/card (they obviously played),
  * minus anyone already credited as a sub — fully editable afterwards, this
  * is just a starting point so old fixtures aren't blank. */
-function seedStartedOn(fixture: FixtureWithResult): Set<string> {
-  const events = fixture.events ?? []
+function seedStartedOn(fixtureEvents: FixtureWithResult['events']): Set<string> {
+  const events = fixtureEvents ?? []
   const subIds = new Set(events.filter(isBenchToggleEvent).map((e) => e.related_player_id!))
   const started = new Set<string>()
   for (const e of events) {
@@ -70,7 +70,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
   const [lineup, setLineup] = useState<Lineup | null>(null)
   const [saving, setSaving] = useState(false)
   const [confirmingNoSubs, setConfirmingNoSubs] = useState(false)
-  const [startedOn, setStartedOn] = useState<Set<string>>(() => seedStartedOn(fixture))
+  const [startedOn, setStartedOn] = useState<Set<string>>(() => seedStartedOn(fixture.events))
   const [unusedSubsOn, setUnusedSubsOn] = useState<Set<string>>(
     () => new Set((fixture.events ?? []).filter((e) => e.event_type === 'unused_sub').map((e) => e.player_id)),
   )
@@ -109,7 +109,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
           .map((e) => e.related_player_id!)
       ),
     )
-    setStartedOn(seedStartedOn(fixture))
+    setStartedOn(seedStartedOn(fixture.events))
     setUnusedSubsOn(
       new Set((fixture.events ?? []).filter((e) => e.event_type === 'unused_sub').map((e) => e.player_id)),
     )
