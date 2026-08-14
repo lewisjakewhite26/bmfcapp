@@ -286,3 +286,137 @@ describe('aggregatePlayerStats substitutions', () => {
     expect(toggled?.sub_appearances).toBe(1)
   })
 })
+
+describe('aggregatePlayerStats appearance-points event types', () => {
+  const squadWithSubs: SquadMember[] = [
+    ...squad,
+    {
+      id: 's3',
+      player_id: 'sub1',
+      display_name: 'Ollie Sub',
+      squad_number: null,
+      position: 'Midfielder',
+      joined_date: '2023-08-01',
+      active: true,
+    },
+    {
+      id: 's4',
+      player_id: 'def1',
+      display_name: 'Deep Defender',
+      squad_number: null,
+      position: 'Defender',
+      joined_date: '2023-08-01',
+      active: true,
+    },
+  ]
+
+  function fixtureWithEvents(events: FixtureWithResult['events']): FixtureWithResult {
+    return {
+      id: 'f-pts',
+      match_date: '2025-09-29T12:00:00.000Z',
+      opponent: 'Points FC',
+      home_away: 'home',
+      competition: 'League',
+      venue: null,
+      kickoff_time: '10:30:00',
+      ddsfl_fixture_id: '103',
+      status: 'completed',
+      created_at: '2025-09-29T12:00:00.000Z',
+      result: {
+        id: 'r-pts',
+        fixture_id: 'f-pts',
+        goals_for: 1,
+        goals_against: 0,
+        notes: null,
+        created_at: '2025-09-29T12:00:00.000Z',
+      },
+      events,
+    }
+  }
+
+  it('credits an appearance for a plain "appearance" event (started, no other event)', () => {
+    const fixture = fixtureWithEvents([
+      {
+        id: 'e-app',
+        fixture_id: 'f-pts',
+        player_id: 'sub1',
+        event_type: 'appearance',
+        minute: null,
+        created_at: '2025-09-29T12:00:00.000Z',
+      },
+    ])
+    const { stats } = aggregatePlayerStats(squadWithSubs, [fixture])
+    const player = stats.find((s) => s.player_id === 'sub1')
+    expect(player?.appearances).toBe(1)
+    expect(player?.sub_appearances).toBe(0)
+  })
+
+  it('does NOT credit an appearance for an "unused_sub" event — they did not play', () => {
+    const fixture = fixtureWithEvents([
+      {
+        id: 'e-unused',
+        fixture_id: 'f-pts',
+        player_id: 'sub1',
+        event_type: 'unused_sub',
+        minute: null,
+        created_at: '2025-09-29T12:00:00.000Z',
+      },
+    ])
+    const { stats } = aggregatePlayerStats(squadWithSubs, [fixture])
+    const player = stats.find((s) => s.player_id === 'sub1')
+    expect(player?.appearances).toBe(0)
+    expect(player?.sub_appearances).toBe(0)
+  })
+
+  it('credits an appearance for clean_sheet_gk and clean_sheet_def events without crediting sub_appearances', () => {
+    const fixture = fixtureWithEvents([
+      {
+        id: 'e-gk',
+        fixture_id: 'f-pts',
+        player_id: 'gk1',
+        event_type: 'clean_sheet_gk',
+        minute: null,
+        created_at: '2025-09-29T12:00:00.000Z',
+      },
+      {
+        id: 'e-def',
+        fixture_id: 'f-pts',
+        player_id: 'def1',
+        event_type: 'clean_sheet_def',
+        minute: null,
+        created_at: '2025-09-29T12:00:00.000Z',
+      },
+    ])
+    const { stats } = aggregatePlayerStats(squadWithSubs, [fixture])
+    const gk = stats.find((s) => s.player_id === 'gk1')
+    const def = stats.find((s) => s.player_id === 'def1')
+    expect(gk?.appearances).toBe(1)
+    expect(gk?.sub_appearances).toBe(0)
+    expect(def?.appearances).toBe(1)
+    expect(def?.sub_appearances).toBe(0)
+  })
+
+  it('does not double-count appearances when a player has both an appearance row and a clean_sheet_def row', () => {
+    const fixture = fixtureWithEvents([
+      {
+        id: 'e-app2',
+        fixture_id: 'f-pts',
+        player_id: 'def1',
+        event_type: 'appearance',
+        minute: null,
+        created_at: '2025-09-29T12:00:00.000Z',
+      },
+      {
+        id: 'e-def2',
+        fixture_id: 'f-pts',
+        player_id: 'def1',
+        event_type: 'clean_sheet_def',
+        minute: null,
+        created_at: '2025-09-29T12:00:00.000Z',
+      },
+    ])
+    const { stats } = aggregatePlayerStats(squadWithSubs, [fixture])
+    const def = stats.find((s) => s.player_id === 'def1')
+    expect(def?.appearances).toBe(1)
+  })
+})
