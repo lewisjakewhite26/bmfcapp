@@ -71,6 +71,7 @@ Apply migrations **in order** via the Supabase SQL Editor (Dashboard → SQL →
 | `supabase-club/migrations/047_lineup_subs_confirmed_none.sql` | "No subs came on" confirmation on lineups |
 | `supabase-club/migrations/048_sponsor_logos.sql` | Player-managed sponsor name + logo (self-service Storage upload) |
 | `supabase-club/migrations/049_committee_todo.sql` | Committee to-do list — RLS-gated task tracker |
+| `supabase-club/migrations/050_no_vote_fine_event_label.sql` | No-vote fine label includes the fixture/training it's for |
 
 **No pg_cron fines jobs should exist in production** — the canonical scheduler is GitHub Actions (`fines-automation.yml`, every 5 minutes). Migration 042 is a historical placeholder only; 043 unschedules any legacy pg_cron jobs.
 

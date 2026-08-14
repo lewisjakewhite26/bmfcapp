@@ -82,7 +82,8 @@ Manual admin fines still work. Toggle in Admin Fines squad list. RPC: `admin_set
 
 **Rule:** After event start, each active non-paused squad member with **no** `availability` row for that fixture/training gets £1 `no_vote`, with a push.
 
-- Function: `apply_no_vote_fines()` (migrations **040**, **041**, **043**).
+- Function: `apply_no_vote_fines()` (migrations **040**, **041**, **043**, **050**).
+- Entry label includes the fixture/training it's for, e.g. "No vote (vs Shildon AFC)" or "No vote (Training)" — added migration **050** so players don't have to cross-reference the session date to know which event it was.
 - Idempotency: `fine_no_vote_runs (event_type, event_id)` — per event, not per player. Admin removal is final.
 - Fixture start: `fixture_start_time(match_date, kickoff_time)` — combines London calendar date + `kickoff_time`.
 - **TBC fixtures** (`kickoff_time IS NULL`) are **skipped** until kickoff is set (migration **043**).
@@ -216,7 +217,7 @@ Shown on `FineAlertBanner` (dashboard), `FineYourBalanceCard`, `FineSquadOwedCar
 
 ## 12. Key files
 
-- **SQL:** `supabase-club/migrations/037`–`043`, functions `apply_no_vote_fines`, `apply_vote_reminders`, `apply_fine_late_fees`
+- **SQL:** `supabase-club/migrations/037`–`043`, `050`, functions `apply_no_vote_fines`, `apply_vote_reminders`, `apply_fine_late_fees`
 - **Edge Function:** `supabase-club/functions/fines-scheduler/index.ts`
 - **Automation:** `.github/workflows/fines-automation.yml`, `scripts/apply-fine-late-fees.mjs`
 - **Frontend:** `src/lib/fineCatalog.ts`, `fineAlerts.ts`, `finePlayerCopy.ts`, `src/pages/AdminFines.tsx`, `src/components/fines/*`
