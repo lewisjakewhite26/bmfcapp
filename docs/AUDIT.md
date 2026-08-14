@@ -1,13 +1,13 @@
 # BMFC Club Hub — Pre-Launch Audit
 
 > **Current audit (v16)** — see [ROADMAP-99.md](ROADMAP-99.md).  
-> **Last updated:** 14 August 2026 · **Commit:** `accddb0` on `main`
+> **Last updated:** 14 August 2026 · **Commit:** `5133594` on `main`
 
 **Scope:** Full codebase + local build verification  
 **Operator context:** Closed BMFC squad app — not a public internet product; ~30 players, all close friends, invite-only sign-up  
 **Build verified:** `npm run build` succeeds — ~704 kB JS (~195 kB gzip main chunk), admin routes lazy-loaded — up from ~691/192 kB in v15, see Performance  
 **Lint verified:** `npm run lint` — **0 errors, 0 warnings** (this cycle's work briefly introduced one `exhaustive-deps` warning — caught and fixed before merge, see Bug register #25)  
-**Tests verified:** **38** unit tests (Vitest, 8 files) + **26** E2E tests (Playwright, 6 spec files across chromium + 2 iOS device projects) — **unchanged since v13**, now three audit cycles running with zero new tests despite two more non-trivial features shipping this cycle. See Testing section — this is no longer a one-off.
+**Tests verified:** **52** unit tests (Vitest, 10 files, up from 38/8 — added same session once the coverage gap was raised) + **26** E2E tests (Playwright, 6 spec files across chromium + 2 iOS device projects, unchanged). See Testing section for exactly what's covered and what's genuinely still open.
 
 **Supabase:** Club Hub project confirmed (`kqxsbb…` — EvidInsight); separate from WC predictor (`owkql…`). Migrations through **052** applied, operator confirmed same day.
 
@@ -78,7 +78,7 @@ Same-day, one continuous session. Started as a Canva API integration task, ended
 | **Appearance & clean-sheet points rework** (migration 052) — new match-event types (`appearance`, `unused_sub`, `clean_sheet_gk`, `clean_sheet_def`) feed the existing points system with almost no changes to the aggregation code, which already generalised over event type. New points table: goal +10, assist +6, motm +12 (was +15), appearance +4, substitution +2 (was 0), clean_sheet_gk +6, clean_sheet_def +4, unused_sub +1, yellow −3, red −10. Clean-sheet keeper/defender credit auto-infers from Starting XI/Subs + stored squad position, live-synced until an admin makes a manual edit — deliberately designed so it doesn't ask the same question twice. | ✅ |
 | **Canva integration progressed, then parked by operator decision** — real Brand Template ID found and wired in; discovered and resolved a Canva-account/Team mismatch that had been silently causing "not found" errors; obtained a working OAuth token; deployed `canva-autofill` live for the first time. Hit a Canva-side 503 mid-retry; operator chose to pause rather than push through, weighing the live-API path against switching to Canva Bulk Create (static, pre-generated images, no token) for later. | ⚠️ Parked mid-attempt, by request |
 | **A genuine pre-existing data-quality defect surfaced (not caused) this cycle** — at least one fixture's `opponent` value has a double space (`"Durham  Rangers Fc"`), which broke naive `ilike` string-matching during the investigation above. Not user-visible (HTML collapses the whitespace in rendered UI), so not a functional bug, but worth a data-hygiene pass on `fixtures.opponent` at some point. Not fixed this cycle — flagged only. | ⚠️ Flagged, not fixed |
-| Test coverage for what shipped this cycle (delete-player, appearance-points rework) | ❌ None — third cycle running, see Testing section |
+| Test coverage for what shipped this cycle (delete-player, appearance-points rework) | ✅ **Added same session** — 14 new unit tests (38→52) once the gap was raised; RPC-level and E2E coverage still open, see Testing section |
 | GitHub Actions secrets, `fines-scheduler` deployment confirmation | ⚠️ Still operator, unchanged since v13 |
 
 ---
@@ -126,7 +126,7 @@ The topline holds at 99 because nothing on the original checklist reopened — b
 
 **The good:** a genuine, previously-invisible data-integrity gap got found and fixed. An operator report about a duplicate player account led to discovering that appearance credit for plain starters (no goal, card, or MOTM) depended entirely on an *optional* saved formation lineup — most fixtures don't have one, so those appearances were silently never counted, with no error or indication anything was missing. That's now fixed with a mandatory Starting XI checklist at the point of entering a result, and clean-sheet credit for keeper/defenders is now auto-inferred from that checklist instead of a separate manual question. Real bug, found through real investigation, root-caused rather than patched around.
 
-**The concern:** this cycle shipped two more non-trivial features — admin player deletion (a genuinely destructive capability) and the appearance-points rework (meaningfully intricate logic: mutual-exclusion between Starting XI/Subs/Unused-subs, save-time dedup so scorers don't get double-credited, a live-syncing auto-inference effect with a manual-override escape hatch) — with **zero new tests**, same as v14's four features. v15 explicitly flagged that if this repeated it should be "treated as accumulating debt rather than a one-off." It has repeated, on logic more intricate than before, touching a destructive action and a scoring system players will directly notice. See Testing — this is the most important open item in this audit, checklist or not.
+**The concern, caught and largely addressed same session:** this cycle initially shipped two more non-trivial features — admin player deletion (a genuinely destructive capability) and the appearance-points rework (meaningfully intricate logic: mutual-exclusion between Starting XI/Subs/Unused-subs, save-time dedup so scorers don't get double-credited, a live-syncing auto-inference effect with a manual-override escape hatch) — with zero new tests, same as v14's four features. v15 explicitly flagged that if this repeated it should be "treated as accumulating debt rather than a one-off." It did repeat, briefly — then 14 new unit tests went in before this audit closed, covering the pure logic behind both features plus a previously-100%-untested file (`playerProfileStats.ts`) that predates this cycle entirely. What's left open (server-side RPC guards, E2E, component-level UI logic) is now a smaller, more specific gap than a blanket "nothing was tested" — see Testing for the honest breakdown of what's covered and what isn't.
 
 ---
 
@@ -142,7 +142,7 @@ The topline holds at 99 because nothing on the original checklist reopened — b
 | 6 | [Data Integrity & Business Logic](#6-data-integrity--business-logic) | 95 | +2 | Excellent |
 | 7 | [DDSFL Integration & Data Sync](#7-ddsfl-integration--data-sync) | 85 | — | Excellent |
 | 8 | [Database & Supabase](#8-database--supabase) | 99 | — | Excellent |
-| 9 | [Testing & Reliability](#9-testing--reliability) | 76 | −8 | Requires Improvement |
+| 9 | [Testing & Reliability](#9-testing--reliability) | 87 | −7 | Good, recovering |
 | 10 | [DevOps & Deployment](#10-devops--deployment) | 99 | — | Excellent |
 | 11 | [UI & Design Consistency](#11-ui--design-consistency) | 97 | — | Excellent |
 | 12 | [Copy & Content](#12-copy--content) | 95 | — | Excellent |
@@ -166,7 +166,7 @@ The topline holds at 99 because nothing on the original checklist reopened — b
 | Positive | `051_admin_delete_player.sql` | Friendly `foreign_key_violation` handling instead of a leaked Postgres error. |
 | Positive | `playerStats.ts` | New event types required a single-line change to the aggregation loop — architecture already generalised over event type. |
 | Positive | `ResultEntryForm.tsx` | Clean-sheet credit auto-syncs from Starting XI/position with a manual-override escape hatch, not a second blank-by-default question. |
-| Medium | Testing | Zero unit/E2E coverage for admin player deletion or the appearance-points rework — **third straight cycle** shipping features with no dedicated tests (v14: four features, this cycle: two more, one of them a destructive action). See Testing section — this is now scored as compounding debt, not a one-off. |
+| Low | Testing | Admin player deletion and the appearance-points rework initially shipped with zero tests — third cycle running of that pattern. Caught and largely addressed same session (14 new unit tests). Server-side RPC guards and E2E for both features remain untested — see Testing section. |
 | Low | `ResultEntryForm.tsx` | Briefly introduced an `exhaustive-deps` lint warning (helper took the whole `fixture` object but the effect's deps array only listed three of its fields) — caught and fixed same session before merge, matching the project's established "catch it before it ships" precedent (see Bug register #20/#21 from v14). |
 | Low | Bundle | Main chunk grew ~691 kB → ~704 kB / ~192 kB → ~195 kB gzip this cycle — see Performance. |
 | Low | `docs/SUPABASE-SETUP.md` | Migration table still stops at 050 — migrations 051–052 not yet documented there. |
@@ -249,16 +249,21 @@ Unchanged this cycle — no DDSFL-related work.
 
 ## 9. Testing & Reliability
 
-**Score: 76 / 100** *(−8)* · **Requires Improvement**
+**Score: 87 / 100** *(+11 from 76 same-day; still −7 net vs. v15's 84)* · **Good, recovering**
 
-**Unit tests: 38, E2E tests: 26 — unchanged since v13, for the third audit cycle running.** v15 explicitly flagged that a repeat of v14's untested-feature pattern "should be treated as accumulating debt rather than a one-off." It has repeated — admin player deletion and the appearance-points rework both shipped with zero automated coverage — and this time the logic is meaningfully sharper-edged than v14's four features were:
+Caught mid-cycle and substantially addressed before this audit closed. **Unit tests: 38 → 52** (E2E unchanged at 26). New coverage, added same session:
 
-- `admin_delete_player` is a destructive, irreversible action. There is no test proving the FK-violation guard actually blocks deletion of a player with fine/audit history, or that the self-delete/admin-delete guards hold.
-- The appearance-points rework has real branching logic worth locking down: Starting XI / Subs / Unused-subs are meant to be mutually exclusive by construction (each list excludes the others' members) but nothing tests that the exclusion holds; the save-time dedup that stops a goalscorer also getting a redundant flat appearance row is untested; the clean-sheet auto-sync effect's "touched" escape hatch (stop auto-filling once an admin manually edits) is exactly the kind of stateful UI logic that silently breaks on a refactor with no test to catch it.
+- `playerStats.test.ts` — the four new event types (`appearance`, `unused_sub`, `clean_sheet_gk`, `clean_sheet_def`) are now directly tested, including the one behaviour most worth protecting: `unused_sub` correctly does **not** count as an appearance, and appearance/clean-sheet rows for the same player don't double-count.
+- `playerProfileStats.test.ts` — new file, **zero coverage existed for this file before today**, not just for this cycle's changes. Full points table now locked in (`eventImpact`), plus `matchImpactPoints` and `getSeasonImpactTotal`.
+- `mockData.test.ts` — new file, covers `removeMockUser` (the mock-mode counterpart to `admin_delete_player`): removes from both the admin list and squad, throws cleanly on an unknown or already-removed id.
 
-This was manually verified end-to-end this cycle (the Denholm/Durham Rangers case, live in production, via direct SQL inspection) rather than through the permanent test suite — real verification happened, but it doesn't protect the *next* change to this code the way a test would. Scored down, not just flagged, because the gap is now compounding on progressively higher-stakes logic rather than staying flat.
+**What's still genuinely untested, and why it's not scored as a full recovery to v15's 84:**
 
-CI unchanged in shape: lint → build → Vitest (verify job) + Playwright E2E (separate job) — the pipeline itself is fine; it's what isn't going into it that's the issue.
+- **Server-side RPC guards.** `admin_delete_player`'s `is_admin`-only check, the block on deleting an admin or yourself, and the friendly `foreign_key_violation` message are all SQL, not TypeScript — and this project has no database test harness for *any* RPC, so this isn't a new gap introduced this cycle, but it is a real one that remains open.
+- **E2E, unchanged at 26.** Neither admin player deletion nor the new Results-entry sections have integration-level coverage — the unit tests prove the pure logic is correct in isolation, not that the full click-through flow works.
+- **`ResultEntryForm.tsx`'s own UI-embedded logic** (the mutual-exclusion between Starting XI/Subs/Unused-subs tap-lists, the clean-sheet auto-sync "touched" escape hatch) has no component-level test — consistent with the rest of this codebase, which has never had a component-testing convention (no React Testing Library in the project), so closing this would be a new investment, not catching up to an existing standard.
+
+CI unchanged in shape: lint → build → Vitest (verify job) + Playwright E2E (separate job).
 
 ---
 
@@ -360,7 +365,7 @@ See [ROADMAP-99.md](ROADMAP-99.md) — now maintained as the real ongoing to-do 
 |---|------|--------|
 | 1–14 | Everything through v15's list | ✅ Closed |
 | 15 | **Sentry** | ✅ **Descoped — operator decision.** Not pursued: closed ~30-friend deployment, WhatsApp is the incident channel, not worth the setup/maintenance overhead for this risk profile. |
-| 16 | **Test coverage for admin player deletion + appearance-points rework** | ❌ **Not done — the standing item to actually prioritise next.** Third cycle of shipping without tests; this cycle's logic is meaningfully higher-stakes than v14's. See Testing section. |
+| 16 | **Test coverage for admin player deletion + appearance-points rework** | ✅ **Unit coverage added same session** (38→52 tests). Still open: server-side RPC guards (no DB test harness exists in this project for any RPC) and E2E for both new flows (still 26, unchanged). See Testing section. |
 
 ---
 
@@ -368,12 +373,12 @@ See [ROADMAP-99.md](ROADMAP-99.md) — now maintained as the real ongoing to-do 
 
 **99 / 100** — still reached, nothing on the formal checklist reopened. The real content of this cycle: a genuine, previously-invisible data-integrity gap (appearance credit silently depending on an optional saved lineup) was found through live investigation of an operator-reported issue and fixed at the root, not patched around. Admin player deletion shipped, properly guarded. Canva integration got substantially further — real template ID, a working token, the Edge Function actually deployed for the first time — then was deliberately parked by operator decision after a Canva-side outage, rather than pushed through under pressure.
 
-The one thing this audit wants to be unambiguous about: **testing debt is no longer a footnote.** It was flagged as a watch-item in v14, held flat through v15 (a thin cycle), and has now compounded for a third cycle on logic that's genuinely higher-stakes than before — a destructive delete action and a scoring system players will directly notice. That doesn't move today's topline number, because the topline has always tracked the named checklist rather than a strict weighted average (same logic that let Sentry's descope move it in v15). But it's the clearest actual risk in the app right now, checklist or not.
+Testing debt briefly repeated for a third cycle — flagged as a watch-item in v14, held flat through v15, then two more untested features shipped here too. Unlike the previous two cycles, it didn't stay that way: 14 new unit tests went in same session once the gap was raised, taking the suite from 38 to 52 and closing out both the new logic *and* a pre-existing blind spot (`playerProfileStats.ts` had zero coverage before today, unrelated to this cycle specifically). What's still open — server-side RPC guards, E2E for the two new flows — is real but smaller and more specific than "nothing was tested," and doesn't require a database test harness this project has never had, just deliberate follow-up. See Testing section for the honest line between what's covered and what isn't.
 
 **Operator:** GitHub Actions secrets for both workflows, confirm `fines-scheduler` is deployed (can't check this remotely), decide Canva's path forward when ready. Migrations through 052 confirmed applied.
 
-**Engineering, when picked up:** test coverage for the delete-player and appearance-points work is the standing recommendation — see Testing section and [ROADMAP-99.md](ROADMAP-99.md) for the full to-do list.
+**Engineering, when picked up:** E2E coverage for admin player deletion and the Results-entry rework is the standing recommendation — see Testing section and [ROADMAP-99.md](ROADMAP-99.md) for the full to-do list.
 
 ---
 
-*End of Club Hub audit v16. App baseline `accddb0`; docs updated 14 August 2026.*
+*End of Club Hub audit v16. App baseline `5133594`; docs updated 14 August 2026.*

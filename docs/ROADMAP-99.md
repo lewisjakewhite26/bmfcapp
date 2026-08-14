@@ -27,7 +27,7 @@ The "99-score checklist" is closed — there's nothing left on it. That's a diff
 
 | # | Task | Notes |
 |---|------|-------|
-| 1 | **Test coverage for admin player deletion + appearance-points rework — now the top priority here** | Zero automated coverage for either, shipped this cycle. Third cycle running of shipping without tests (v14 had four untested features too) — this time it's a destructive delete action and genuinely branchy stats logic (Starting XI/Subs/Unused-subs mutual exclusion, save-time appearance dedup, the clean-sheet auto-sync "touched" escape hatch). See AUDIT.md v16 Testing section — this dropped that category from 84 to 76. |
+| 1 | **E2E coverage for admin player deletion + the new Results-entry flow** | Unit tests now cover the pure logic behind both (38→52, added same session) — what's left is integration-level: does the full click-through actually work end to end. Also still open: server-side RPC guards for `admin_delete_player` (`is_admin` check, self/admin-target blocks, the FK-violation friendly message) — no DB test harness exists in this project for any RPC, so this isn't unique to this feature, but it is still untested. |
 | 2 | Finish the Canva integration, or pivot to Bulk Create | See operator task #3 above — needs an operator decision first on which path, then this becomes an engineering task either way. |
 | 3 | `docs/SUPABASE-SETUP.md` migration table | Stops at 050 — add 051 (admin player deletion) and 052 (appearance points event types). |
 | 4 | Playwright E2E: team join link (`/join/:token`) | Never got E2E coverage even before v14. |
@@ -87,8 +87,10 @@ gantt
     Confirm fines-scheduler deployed          :active, ops3, 2026-08-14, 1d
     section Blocked on operator
     Decide Canva path - finish or Bulk Create :b1, TBD, 1d
+    section v16 DONE — same day, continued
+    Unit tests for delete-player + points     :done, v16e, 2026-08-14, 1d
     section Top priority next
-    Tests for delete-player + points rework   :t1, TBD, 2d
+    E2E for delete-player + Results rework    :t1, TBD, 2d
     section Optional polish
     Test coverage for v14 features            :t2, 2026-09-01, 2d
     Passcode fieldset + focus trap            :a1, 2026-09-01, 1d
@@ -118,6 +120,8 @@ Revoke only ever un-approved a player and left the row behind. Departed/duplicat
 | Blocks (with a clear message, not a raw Postgres error) if the player has finance or audit-log history that would be silently erased | ✅ | `051` — catches `foreign_key_violation` |
 | Delete button on both the Pending-approval cards and the All-members table | ✅ | `AdminUsers.tsx` |
 | In-app `ConfirmDialog` for the confirmation, not the browser's native `confirm()` | ✅ | Matches the pattern already used in `AdminFines.tsx` |
+| Unit test for the mock-mode delete path (`removeMockUser`) | ✅ Added same session | `mockData.test.ts` |
+| Test for the live RPC's own guards (`is_admin`, self/admin-target blocks, FK-violation message) | ❌ Open | No DB test harness in this project for any RPC |
 
 ---
 
@@ -135,7 +139,8 @@ Started as an operator report of a duplicate player account. Turned into finding
 | New points table: goal +10, assist +6, motm +12, appearance +4, substitution +2, clean_sheet_gk +6, clean_sheet_def +4, unused_sub +1, yellow −3, red −10 | ✅ | `playerProfileStats.ts` |
 | New `match_events` types (`appearance`, `unused_sub`, `clean_sheet_gk`, `clean_sheet_def`) | ✅ | `052` |
 | Real missing appearance backfilled for the specific case that surfaced the bug | ✅ | Direct SQL, once root cause understood |
-| Automated tests for any of the above | ❌ | **Top engineering priority — see to-do list at top of this doc** |
+| Unit tests for the new event types + points table | ✅ Added same session | 14 new tests, `playerStats.test.ts` + new `playerProfileStats.test.ts` (which had zero coverage before, unrelated to this cycle) |
+| E2E / RPC-level coverage | ❌ Still open | See engineering to-do list at top of this doc |
 
 ---
 
@@ -254,15 +259,18 @@ Onboarding, prod hotfixes, finance admin, calendar/PWA polish, GK clean sheets, 
 
 ---
 
-## Phase 2 — Testing depth (dropped to 76 this cycle — no longer just a flag)
+## Phase 2 — Testing depth (87, recovering — see AUDIT.md v16)
 
 | Task | Status |
 |------|--------|
 | Core suite (playerNames, liveMatchEvents, cleanSheet, bench-toggle credit) | ✅ |
 | iOS device E2E, admin fines E2E | ✅ |
 | Coverage for audit log, sponsor logos, committee to-do, Canva (v14) | ❌ Still none |
-| **Coverage for admin player deletion (v16)** | ❌ None — a destructive action with an untested FK-violation guard |
-| **Coverage for appearance-points rework (v16)** | ❌ None — Starting XI/Subs/Unused-subs exclusion logic, save-time dedup, and the clean-sheet auto-sync escape hatch are all untested |
+| **Unit coverage for appearance/unused_sub/clean_sheet event types (v16)** | ✅ Added same session — `playerStats.test.ts` |
+| **Unit coverage for the points table (v16)** | ✅ Added same session — new `playerProfileStats.test.ts`, which had zero coverage before this cycle at all |
+| **Unit coverage for admin player deletion's mock-mode path (v16)** | ✅ Added same session — new `mockData.test.ts` |
+| **E2E for admin player deletion + Results-entry rework** | ❌ Open — unit tests prove the logic, not the full click-through |
+| **Server-side RPC guard tests** (`admin_delete_player`'s `is_admin`/self checks, FK-violation message) | ❌ Open — no DB test harness exists in this project for any RPC |
 | Playwright E2E: team join link (`/join/:token`) | Open |
 | Playwright E2E: fines automation (no-vote, late fees, reminders) | Open |
 | Unit tests: `lineupFormations.ts`, `getAuthErrorMessage`, `fineAlerts` | Open |
@@ -295,7 +303,7 @@ Optional for a closed ~30-player squad. Unchanged since v10.
 | Data Integrity | 93 | 95 | **+2 — a genuine, previously-invisible appearance-tracking gap found and fixed at the root** |
 | DDSFL Integration | 85 | 85 | Unchanged |
 | Database & Supabase | 99 | 99 | Unchanged — migrations 051–052 applied cleanly |
-| Testing | 84 | 76 | **−8 — third straight cycle of shipping without tests, now on higher-stakes logic. See Phase 2.** |
+| Testing | 84 | 87 | +3 net — briefly dropped to 76 mid-cycle (third straight cycle shipping untested), then 14 new unit tests went in same session (38→52). Still open: E2E and server-side RPC guards. See Phase 2. |
 | DevOps | 99 | 99 | Unchanged — `canva-autofill` finally deployed live, closing a longstanding gap |
 | UI & Design | 97 | 97 | Unchanged — `ConfirmDialog` adopted in one more place, still inconsistent elsewhere |
 | Copy & Content | 95 | 95 | Unchanged |
@@ -308,7 +316,7 @@ Testing is now the category furthest from ceiling that's actually moving in the 
 
 See "Your actual to-do list" at the top for the full picture — these are just the highest-priority real items:
 
-1. **Test coverage for admin player deletion and the appearance-points rework** — the clearest actual risk in the app right now, not a formal blocker but worth prioritising before more logic gets built on top of it untested.
+1. **E2E coverage for admin player deletion and the Results-entry rework** — unit tests landed same session (38→52); the remaining gap is integration-level (full click-through) and the server-side RPC guards, not the underlying logic anymore.
 2. **GitHub Actions secrets** for both `sync-ddsfl.yml` and `fines-automation.yml` — quick, unblocks two automated workflows.
 3. **Decide Canva's path forward** when ready — finish the live API (needs a fresh token + data-field tagging in Canva) or switch to Bulk Create (static images, no token). Either is fine; leaving it parked is fine too.
 
@@ -334,4 +342,4 @@ This doc no longer has a score to chase. Keep it updated as a to-do list:
 
 ---
 
-*Roadmap updated 14 August 2026. Baseline: AUDIT.md v16 (app at `accddb0`). **99/100 — target reached in v15, held in v16. Sentry descoped by operator decision, not shipped. Testing debt is the real open risk now — see the to-do list at the top. This doc continues as the real to-do list.*
+*Roadmap updated 14 August 2026. Baseline: AUDIT.md v16 (app at `5133594`). **99/100 — target reached in v15, held in v16. Sentry descoped by operator decision, not shipped. Testing gap from earlier this cycle mostly closed same session (38→52 unit tests) — E2E and RPC-level coverage remain the real open item. This doc continues as the real to-do list.*
