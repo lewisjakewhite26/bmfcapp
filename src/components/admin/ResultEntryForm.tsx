@@ -77,6 +77,11 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
   const [defendersForCleanSheet, setDefendersForCleanSheet] = useState<Set<string>>(
     () => new Set((fixture.events ?? []).filter((e) => e.event_type === 'clean_sheet_def').map((e) => e.player_id)),
   )
+  // Once true, stop auto-filling defenders/keeper from Starting XI — admin
+  // has made a deliberate edit (or a previous save already has real data).
+  const [cleanSheetCreditTouched, setCleanSheetCreditTouched] = useState(
+    () => (fixture.events ?? []).some((e) => e.event_type === 'clean_sheet_def' || e.event_type === 'clean_sheet_gk'),
+  )
 
   const goalkeepers = squad.filter((s) => s.position === 'Goalkeeper')
   const goalsAgainstNum = parseInt(goalsAgainst, 10)
@@ -110,6 +115,9 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
     )
     setDefendersForCleanSheet(
       new Set((fixture.events ?? []).filter((e) => e.event_type === 'clean_sheet_def').map((e) => e.player_id)),
+    )
+    setCleanSheetCreditTouched(
+      (fixture.events ?? []).some((e) => e.event_type === 'clean_sheet_def' || e.event_type === 'clean_sheet_gk'),
     )
   }, [fixture.id, fixture.result, fixture.events])
 
@@ -165,7 +173,19 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
   }
   const toggleStarted = toggleInSet(setStartedOn)
   const toggleUnusedSub = toggleInSet(setUnusedSubsOn)
-  const toggleDefenderCleanSheet = toggleInSet(setDefendersForCleanSheet)
+  const toggleDefenderCleanSheet = (playerId: string) => {
+    setCleanSheetCreditTouched(true)
+    toggleInSet(setDefendersForCleanSheet)(playerId)
+  }
+  const handleGoalkeeperChange = (playerId: string) => {
+    setCleanSheetCreditTouched(true)
+    setGoalkeeperPlayerId(playerId)
+  }
+  const resetCleanSheetCreditToAuto = () => {
+    setCleanSheetCreditTouched(false)
+    setDefendersForCleanSheet(new Set(autoDefenderIds))
+    setGoalkeeperPlayerId(autoKeeperId)
+  }
 
   // Subs section shouldn't offer anyone already ticked as a starter; unused
   // subs shouldn't offer anyone already a starter OR already came on.
@@ -174,10 +194,24 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
     () => squad.filter((s) => !startedOn.has(s.player_id) && !subsOn.has(s.player_id)),
     [squad, startedOn, subsOn],
   )
-  const suggestedDefenders = useMemo(
-    () => new Set(squad.filter((s) => s.position === 'Defender' && startedOn.has(s.player_id)).map((s) => s.player_id)),
-    [squad, startedOn],
+  // Clean-sheet credit is inferred straight from Starting XI/Subs + each
+  // player's stored position — no separate "who was in defense" question.
+  // Stays live-synced until the admin makes a manual edit (touched flag).
+  const startedOrSubbed = useMemo(() => new Set([...startedOn, ...subsOn]), [startedOn, subsOn])
+  const autoDefenderIds = useMemo(
+    () => new Set(squad.filter((s) => s.position === 'Defender' && startedOrSubbed.has(s.player_id)).map((s) => s.player_id)),
+    [squad, startedOrSubbed],
   )
+  const autoKeeperId = useMemo(() => {
+    const onPitchKeepers = squad.filter((s) => s.position === 'Goalkeeper' && startedOrSubbed.has(s.player_id))
+    return onPitchKeepers.length === 1 ? onPitchKeepers[0].player_id : ''
+  }, [squad, startedOrSubbed])
+
+  useEffect(() => {
+    if (cleanSheetCreditTouched) return
+    setDefendersForCleanSheet(new Set(autoDefenderIds))
+    if (autoKeeperId) setGoalkeeperPlayerId(autoKeeperId)
+  }, [autoDefenderIds, autoKeeperId, cleanSheetCreditTouched])
 
   const setConfirmedNoSubs = async (confirmed: boolean) => {
     setConfirmingNoSubs(true)
@@ -305,10 +339,10 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
         <label className="text-xs text-gray-500">Goalkeeper (optional)</label>
         <select
           value={goalkeeperPlayerId}
-          onChange={(e) => setGoalkeeperPlayerId(e.target.value)}
+          onChange={(e) => handleGoalkeeperChange(e.target.value)}
           className="input-field mt-1 w-full"
         >
-          <option value="">Not set (use live log or saved lineup if available)</option>
+          <option value="">Not set</option>
           {goalkeepers.map((g) => (
             <option key={g.player_id} value={g.player_id}>
               {g.display_name}
@@ -316,9 +350,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
           ))}
         </select>
         <p className="text-xs text-gray-500 mt-1">
-          {isShutout
-            ? 'Clean-sheet credit uses live matchday log first, then saved lineup, then this field.'
-            : 'Only needed for clean-sheet stats when the match was not logged live and no lineup was saved.'}
+          Auto-fills once you tick a goalkeeper in Starting XI below (only pick manually if two keepers played, or nobody's ticked yet). Also used as a fallback for clean-sheet stats when the match wasn't logged live and no lineup was saved.
         </p>
       </div>
 
@@ -430,13 +462,13 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-semibold text-brand-navy">Defenders · clean sheet credit</p>
-            {suggestedDefenders.size > 0 && (
+            {cleanSheetCreditTouched && (
               <button
                 type="button"
-                onClick={() => setDefendersForCleanSheet(new Set(suggestedDefenders))}
+                onClick={resetCleanSheetCreditToAuto}
                 className="text-xs text-brand-blue font-medium"
               >
-                Use Starting XI defenders
+                Reset to Starting XI
               </button>
             )}
           </div>
@@ -460,7 +492,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
             })}
           </div>
           <p className="text-xs text-gray-500">
-            Manual override — defaults to nobody. Goalkeeper clean-sheet credit uses the dropdown above.
+            Auto-filled from anyone in Starting XI/Subs marked "Defender" — edit here only if someone played out of position.
           </p>
         </div>
       )}
