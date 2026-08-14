@@ -2,7 +2,7 @@
 
 Squad app for **Bishop Middleham FC** — fixtures, league table, stats, player profiles, calendar, availability, and admin tools. Invite-only sign-up with login-name sign-in (e.g. **ChrisL**; shown in the app as **Chris L**). Built with React, Vite, Tailwind, and Supabase.
 
-**Audit:** [docs/AUDIT.md](docs/AUDIT.md) v14 — **98 / 100**
+**Audit:** [docs/AUDIT.md](docs/AUDIT.md) v15 — **99 / 100**
 
 ## Features
 

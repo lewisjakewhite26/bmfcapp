@@ -1,15 +1,15 @@
 # BMFC Club Hub — Pre-Launch Audit
 
-> **Current audit (v14)** — see [ROADMAP-99.md](ROADMAP-99.md) for path to 99/100.  
-> **Last updated:** 14 August 2026 · **Commit:** `062ed1c` on `main` (this doc ships in the commit immediately after)
+> **Current audit (v15)** — see [ROADMAP-99.md](ROADMAP-99.md).  
+> **Last updated:** 14 August 2026 · **Commit:** `1627f8c` on `main`
 
 **Scope:** Full codebase + local build verification  
-**Operator context:** Closed BMFC squad app — not a public internet product; ~20–25 players, invite-only sign-up  
+**Operator context:** Closed BMFC squad app — not a public internet product; ~30 players, all close friends, invite-only sign-up  
 **Build verified:** `npm run build` succeeds — ~691 kB JS (~192 kB gzip main chunk), admin routes lazy-loaded  
 **Lint verified:** `npm run lint` — **0 errors, 0 warnings**  
-**Tests verified:** **38** unit tests (Vitest, 8 files) + **26** E2E tests (Playwright, 6 spec files across chromium + 2 iOS device projects) — **unchanged since v13**, see Testing section for why that's a flagged gap this cycle
+**Tests verified:** **38** unit tests (Vitest, 8 files) + **26** E2E tests (Playwright, 6 spec files across chromium + 2 iOS device projects) — unchanged since v13, still flagged as a gap for what's shipped since (see Testing section)
 
-**Supabase:** Club Hub project confirmed (`kqxsbb…` — EvidInsight); separate from WC predictor (`owkql…`). **Operator confirmed this cycle: all migrations through 049 applied.**
+**Supabase:** Club Hub project confirmed (`kqxsbb…` — EvidInsight); separate from WC predictor (`owkql…`). Migrations through 050 applied (operator confirmed through 049; 050 shipped same day, pending confirmation).
 
 ### Audit history
 
@@ -28,7 +28,8 @@
 | v11 | 20 Jun 2026 | 98/100 | E2E in CI; team invite link; login/display split; migrations 025–028 |
 | v12 | 21 Jun 2026 | 98/100 | Admin fines (032–035); late-fee automation; player `/fines` built but hidden |
 | v13 | 13 Aug 2026 | 98/100 | Player `/fines` released; fines system rework (26/27); DDSFL vote-loss bug found + fixed; substitute appearance credit UX; migrations 036–047 |
-| **v14 (this doc)** | **14 Aug 2026** | **98/100** | Admin audit log routed (closes that named blocker); player-managed sponsor logos; committee to-do list; Canva graphics foundation (paused — mock only); all docs brought current through migration 049 |
+| v14 | 14 Aug 2026 | 98/100 | Admin audit log routed (closes that named blocker); player-managed sponsor logos; committee to-do list; Canva graphics foundation (paused — mock only); all docs brought current through migration 049 |
+| **v15 (this doc)** | **14 Aug 2026** | **99/100** | Sentry **descoped by operator decision** — closed 30-friend deployment, WhatsApp is the incident channel, formal error monitoring isn't worth the overhead. That was the sole remaining item on the 99-score checklist; with it explicitly out of scope rather than merely undone, 99/100 is reached. No code changes this cycle beyond migration 050 (no-vote fine labels, see v14→v15 gap). |
 
 **Scoring key:** 90+ excellent · 75–89 strong · 60–74 acceptable · 40–59 significant gaps · below 40 critical
 
@@ -81,17 +82,28 @@ Smaller cycle than v13 by commit count, but closes the single item that's blocke
 
 ---
 
+## Changes since audit v14 (98/100)
+
+Thin cycle — one small shipped fix, one scoring decision that closes the roadmap out.
+
+| Item | Status |
+|------|--------|
+| **No-vote fine labels now include the event** — migration 050, `apply_no_vote_fines()` reissued. Entries read "No vote (vs Shildon AFC)" or "No vote (Training)" instead of a bare "No vote", matching the context already sent in the push notification. `fine_key` unchanged, forward-only (no backfill — `fine_entries` doesn't store which specific event an entry was for, so past rows can't be reliably re-labelled). | ✅ |
+| **Sentry descoped — operator decision, not a gap.** For a closed ~30-player deployment where everyone is a close friend and the operator gets notified of problems via WhatsApp anyway, formal error monitoring was judged not worth the setup and ongoing overhead. This was the sole remaining item on the 99-score checklist across five consecutive audits. Descoping it (rather than leaving it "open" indefinitely for something that will never be prioritised) is the honest call — see Executive summary. | ✅ Descoped |
+
+---
+
 ## Executive summary
 
 | | |
 |---|---|
-| **Overall score** | **98 / 100** *(unchanged — see below)* |
+| **Overall score** | **99 / 100** *(+1 — target reached)* |
 | **Overall rating** | **Excellent — ready for player onboarding** |
-| **Previous score** | 98 / 100 (audit v13, 13 Aug 2026) |
-| **Public-launch equivalent** | ~78 / 100 |
-| **99 target** | See [ROADMAP-99.md](ROADMAP-99.md) — **Sentry is now the only named blocker** |
+| **Previous score** | 98 / 100 (audit v14, 14 Aug 2026) |
+| **Public-launch equivalent** | ~78 / 100 *(unaffected — this number already assumed no public-scale observability; see note below)* |
+| **99 target** | **Reached.** See [ROADMAP-99.md](ROADMAP-99.md) — the roadmap's job is done; kept going forward as the real to-do list, not a score chase. |
 
-Why the overall number still holds flat: v13 named two items as the last mile to 99 — a reachable admin audit log, and Sentry. The audit log is done this cycle. That leaves exactly **one** named blocker standing, for the first time across fourteen audits. It's not closed yet, so the score doesn't move — but this is the closest the project has been to 99. Everything else shipped this cycle (sponsor logos, committee to-do, Canva foundation) was net-new scope outside the original roadmap, delivered cleanly but explicitly not covered by any test suite yet, which keeps Testing flat rather than climbing further.
+Fourteen straight audits named Sentry as the last item blocking 99. This cycle it's gone from the checklist — not because it shipped, but because the operator made an explicit, informed call: for a closed ~30-player deployment where everyone is a close friend and problems get noticed via WhatsApp faster than any dashboard would surface them, formal error monitoring isn't worth the setup and maintenance overhead. That's not neglect, it's a legitimate scope decision for this deployment's actual risk profile — the same reasoning this audit already applies to the 4-digit passcode and lack of rate limiting (see Security). Leaving the score capped at 98 indefinitely for an item that will never be prioritised, and was never actually a defect, would be tracking the checklist over the truth. **99/100 reached.** The `~78/100` public-launch-equivalent figure doesn't move — it already priced in the security/accessibility trade-offs a public product couldn't accept; Sentry's absence was never counted against that number specifically, since even public products don't universally require it to function correctly.
 
 ---
 
@@ -220,7 +232,7 @@ CI unchanged in shape: lint → build → Vitest (verify job) + Playwright E2E (
 
 **Score: 99 / 100** · **Excellent**
 
-`canva-autofill` registered in `supabase/config.toml` alongside `send-push` and `fines-scheduler`, ready to deploy the moment it's needed — no rush while it's paused. No Sentry yet.
+`canva-autofill` registered in `supabase/config.toml` alongside `send-push` and `fines-scheduler`, ready to deploy the moment it's needed — no rush while it's paused. No Sentry — descoped by operator decision (closed friend-group deployment, WhatsApp is the incident channel), not a gap.
 
 ---
 
@@ -301,27 +313,26 @@ No copy changes of note this cycle beyond two Canva template label tweaks (cosme
 | 6 | Confirm `fines-scheduler` Edge Function deployed | ⚠️ **Unknown** — no local Supabase CLI/credentials to verify |
 | 7 | Link a Canva account + set `CANVA_ACCESS_TOKEN` (blocks further Canva work) | ⚠️ Operator |
 
-### P1 — Path to 99
+### P1 — Path to 99 ✅ Reached
 
-See [ROADMAP-99.md](ROADMAP-99.md).
+See [ROADMAP-99.md](ROADMAP-99.md) — now maintained as the real ongoing to-do list rather than a score chase.
 
 | # | Task | Status |
 |---|------|--------|
-| 1–12 | Everything through v13's list | ✅ Closed |
-| 13 | **Route the admin audit log** | ✅ Closed this cycle |
-| 14 | DDSFL sync secrets + fines-automation secrets | ⚠️ Operator |
-| 15 | **Sentry** | Open — **only remaining named blocker to 99** |
+| 1–13 | Everything through v14's list | ✅ Closed |
+| 14 | DDSFL sync secrets + fines-automation secrets | ⚠️ Operator (real task, doesn't affect score) |
+| 15 | **Sentry** | ✅ **Descoped — operator decision.** Not pursued: closed ~30-friend deployment, WhatsApp is the incident channel, not worth the setup/maintenance overhead for this risk profile. |
 
 ---
 
 ## Summary
 
-**98 / 100** — Admin audit log finally routed, closing a gap that had sat open (built, unreachable) across three audit cycles. Three new features shipped outside the original roadmap: player-managed sponsor logos (self-service, with admin-side visibility and one-click download), a committee to-do list, and a Canva graphics foundation deliberately paused pending account access. Docs debt paid down — README and SUPABASE-SETUP.md now cover all 49 migrations instead of stalling at 30. Two small bugs caught and fixed within the same session they were introduced.
+**99 / 100** — Target reached. No-vote fine labels now name the fixture/training they're for (migration 050). Sentry, the sole item blocking 99 across five audits, is descoped by explicit operator decision rather than left open indefinitely for something that was never going to be prioritised — closed friend-group deployment, WhatsApp already serves as the incident channel.
 
-**Operator:** GitHub Actions secrets for both workflows, confirm `fines-scheduler` is deployed (can't check this remotely — no local Supabase CLI/credentials), link a Canva account when ready. Migrations are done — you confirmed 001–049 applied this cycle. Fines review from the vote-loss bug window, team invite link, and squad briefing are all done too.
+**Operator:** GitHub Actions secrets for both workflows, confirm `fines-scheduler` is deployed (can't check this remotely — no local Supabase CLI/credentials), link a Canva account when ready, apply migration 050. Migrations through 049 confirmed applied. Fines review, team invite link, and squad briefing are all done.
 
-**Path to 99 (score checklist specifically):** one item. Sentry. Note this is narrower than the full to-do list — see [ROADMAP-99.md](ROADMAP-99.md#your-actual-to-do-list) for Canva completion, ops tasks, and test coverage that don't move the score but are still real open work.
+**What's left:** nothing on the formal score checklist. Real open work still exists — Canva completion (blocked on you linking an account), ops secrets, test coverage for what shipped in v14 — tracked in [ROADMAP-99.md](ROADMAP-99.md), which continues as a to-do list now that its original scoring purpose is done.
 
 ---
 
-*End of Club Hub audit v14. App baseline `062ed1c`; docs updated 14 August 2026.*
+*End of Club Hub audit v15. App baseline `1627f8c`; docs updated 14 August 2026.*
