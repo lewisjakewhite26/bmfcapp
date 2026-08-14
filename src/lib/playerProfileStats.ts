@@ -3,10 +3,14 @@ import type { MatchEvent, PlayerMatchRecord, PlayerStats } from '../types'
 const IMPACT: Record<MatchEvent['event_type'], number> = {
   goal: 10,
   assist: 6,
-  motm: 15,
+  motm: 12,
   yellow_card: -3,
   red_card: -10,
-  substitution: 0,
+  substitution: 2,
+  appearance: 4,
+  unused_sub: 1,
+  clean_sheet_gk: 6,
+  clean_sheet_def: 4,
 }
 
 export function eventImpact(event: MatchEvent): number {

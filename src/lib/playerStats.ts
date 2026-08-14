@@ -44,10 +44,15 @@ export function aggregatePlayerStats(
     for (const event of fixture.events ?? []) {
       const player = stats.get(event.player_id)
       if (player) {
-        if (!appearanceFixtures.has(event.player_id)) {
-          appearanceFixtures.set(event.player_id, new Set())
+        // unused_sub means they did NOT play — everything else on this
+        // player_id (goal/assist/motm/card/appearance/substitution/clean
+        // sheet) means they were on the pitch.
+        if (event.event_type !== 'unused_sub') {
+          if (!appearanceFixtures.has(event.player_id)) {
+            appearanceFixtures.set(event.player_id, new Set())
+          }
+          appearanceFixtures.get(event.player_id)!.add(fixture.id)
         }
-        appearanceFixtures.get(event.player_id)!.add(fixture.id)
 
         if (event.event_type === 'goal') player.goals++
         if (event.event_type === 'assist') player.assists++

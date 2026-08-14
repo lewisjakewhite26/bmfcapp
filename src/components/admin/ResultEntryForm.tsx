@@ -23,6 +23,25 @@ function isBenchToggleEvent(e: { event_type: MatchEventType; player_id: string; 
   return e.event_type === 'substitution' && e.related_player_id === e.player_id
 }
 
+const SCORING_TYPES: MatchEventType[] = ['goal', 'assist', 'motm', 'yellow_card', 'red_card']
+
+/** Prefill "Starting XI" from whatever's already saved: explicit appearance
+ * rows, plus anyone with a goal/assist/motm/card (they obviously played),
+ * minus anyone already credited as a sub — fully editable afterwards, this
+ * is just a starting point so old fixtures aren't blank. */
+function seedStartedOn(fixture: FixtureWithResult): Set<string> {
+  const events = fixture.events ?? []
+  const subIds = new Set(events.filter(isBenchToggleEvent).map((e) => e.related_player_id!))
+  const started = new Set<string>()
+  for (const e of events) {
+    if (subIds.has(e.player_id)) continue
+    if (e.event_type === 'appearance' || SCORING_TYPES.includes(e.event_type)) {
+      started.add(e.player_id)
+    }
+  }
+  return started
+}
+
 export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProps) {
   const [goalsFor, setGoalsFor] = useState(fixture.result?.goals_for?.toString() ?? '')
   const [goalsAgainst, setGoalsAgainst] = useState(fixture.result?.goals_against?.toString() ?? '')
@@ -51,6 +70,13 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
   const [lineup, setLineup] = useState<Lineup | null>(null)
   const [saving, setSaving] = useState(false)
   const [confirmingNoSubs, setConfirmingNoSubs] = useState(false)
+  const [startedOn, setStartedOn] = useState<Set<string>>(() => seedStartedOn(fixture))
+  const [unusedSubsOn, setUnusedSubsOn] = useState<Set<string>>(
+    () => new Set((fixture.events ?? []).filter((e) => e.event_type === 'unused_sub').map((e) => e.player_id)),
+  )
+  const [defendersForCleanSheet, setDefendersForCleanSheet] = useState<Set<string>>(
+    () => new Set((fixture.events ?? []).filter((e) => e.event_type === 'clean_sheet_def').map((e) => e.player_id)),
+  )
 
   const goalkeepers = squad.filter((s) => s.position === 'Goalkeeper')
   const goalsAgainstNum = parseInt(goalsAgainst, 10)
@@ -77,6 +103,13 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
           .filter(isBenchToggleEvent)
           .map((e) => e.related_player_id!)
       ),
+    )
+    setStartedOn(seedStartedOn(fixture))
+    setUnusedSubsOn(
+      new Set((fixture.events ?? []).filter((e) => e.event_type === 'unused_sub').map((e) => e.player_id)),
+    )
+    setDefendersForCleanSheet(
+      new Set((fixture.events ?? []).filter((e) => e.event_type === 'clean_sheet_def').map((e) => e.player_id)),
     )
   }, [fixture.id, fixture.result, fixture.events])
 
@@ -111,7 +144,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
   )
   const noSubsCredited = subsOn.size === 0 && manualBenchCreditIds.size === 0
   const confirmedNoSubs = noSubsCredited && lineup?.subs_confirmed_none === true
-  const showMissingCreditNudge = benchIds.size > 0 && noSubsCredited && !confirmedNoSubs
+  const showMissingCreditNudge = squad.length > 0 && noSubsCredited && !confirmedNoSubs
 
   const toggleSubOn = (playerId: string) => {
     setSubsOn((prev) => {
@@ -121,6 +154,30 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
       return next
     })
   }
+
+  const toggleInSet = (setter: (updater: (prev: Set<string>) => Set<string>) => void) => (playerId: string) => {
+    setter((prev) => {
+      const next = new Set(prev)
+      if (next.has(playerId)) next.delete(playerId)
+      else next.add(playerId)
+      return next
+    })
+  }
+  const toggleStarted = toggleInSet(setStartedOn)
+  const toggleUnusedSub = toggleInSet(setUnusedSubsOn)
+  const toggleDefenderCleanSheet = toggleInSet(setDefendersForCleanSheet)
+
+  // Subs section shouldn't offer anyone already ticked as a starter; unused
+  // subs shouldn't offer anyone already a starter OR already came on.
+  const subCandidates = useMemo(() => squad.filter((s) => !startedOn.has(s.player_id)), [squad, startedOn])
+  const unusedSubCandidates = useMemo(
+    () => squad.filter((s) => !startedOn.has(s.player_id) && !subsOn.has(s.player_id)),
+    [squad, startedOn, subsOn],
+  )
+  const suggestedDefenders = useMemo(
+    () => new Set(squad.filter((s) => s.position === 'Defender' && startedOn.has(s.player_id)).map((s) => s.player_id)),
+    [squad, startedOn],
+  )
 
   const setConfirmedNoSubs = async (confirmed: boolean) => {
     setConfirmingNoSubs(true)
@@ -156,6 +213,39 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
         related_player_id: playerId,
       }))
 
+    // Anyone with a real goal/assist/motm/card already implies they played —
+    // no need for a separate flat appearance credit on top.
+    const scoredPlayerIds = new Set(
+      events.filter((e) => e.player_id && SCORING_TYPES.includes(e.event_type)).map((e) => e.player_id),
+    )
+    const appearanceEvents = Array.from(startedOn)
+      .filter((playerId) => !scoredPlayerIds.has(playerId))
+      .map((playerId) => ({
+        fixture_id: fixture.id,
+        player_id: playerId,
+        event_type: 'appearance' as MatchEventType,
+        minute: null,
+      }))
+    const unusedSubEvents = Array.from(unusedSubsOn).map((playerId) => ({
+      fixture_id: fixture.id,
+      player_id: playerId,
+      event_type: 'unused_sub' as MatchEventType,
+      minute: null,
+    }))
+    const cleanSheetEvents = isShutout
+      ? [
+          ...(goalkeeperPlayerId
+            ? [{ fixture_id: fixture.id, player_id: goalkeeperPlayerId, event_type: 'clean_sheet_gk' as MatchEventType, minute: null }]
+            : []),
+          ...Array.from(defendersForCleanSheet).map((playerId) => ({
+            fixture_id: fixture.id,
+            player_id: playerId,
+            event_type: 'clean_sheet_def' as MatchEventType,
+            minute: null,
+          })),
+        ]
+      : []
+
     setSaving(true)
     try {
       await submitMatchResult(
@@ -174,6 +264,9 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
               ...(e.related_player_id ? { related_player_id: e.related_player_id } : {}),
             })),
           ...benchToggleEvents,
+          ...appearanceEvents,
+          ...unusedSubEvents,
+          ...cleanSheetEvents,
         ],
         goalkeeperPlayerId || null,
       )
@@ -229,45 +322,132 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
         </p>
       </div>
 
-      {benchIds.size > 0 && (
-        <div className="space-y-2">
-          <p className="text-sm font-semibold text-brand-navy">
-            Substitutes · who came on?
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-brand-navy">Starting XI · who started?</p>
+        <div className="flex flex-wrap gap-2">
+          {squad.map((player) => {
+            const isOn = startedOn.has(player.player_id)
+            return (
+              <button
+                key={player.player_id}
+                type="button"
+                onClick={() => toggleStarted(player.player_id)}
+                className={`min-h-[40px] px-4 rounded-pill text-sm font-semibold border transition-colors ${
+                  isOn
+                    ? 'bg-brand-gold text-brand-navy border-brand-gold'
+                    : 'bg-white/80 text-gray-600 border-brand-blue/15'
+                }`}
+              >
+                {player.display_name}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-xs text-gray-500">
+          Required for accurate appearance points — tap everyone who started, whether or not they scored.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-brand-navy">
+          Substitutes · who came on?
+        </p>
+        {showMissingCreditNudge && (
+          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-card px-3 py-2 space-y-1.5">
+            <p>None marked as coming on yet — tap anyone who came off the bench.</p>
+            <button
+              type="button"
+              onClick={() => setConfirmedNoSubs(true)}
+              disabled={confirmingNoSubs}
+              className="font-semibold underline underline-offset-2"
+            >
+              No subs came on
+            </button>
+          </div>
+        )}
+        {confirmedNoSubs && (
+          <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-card px-3 py-2 flex items-center justify-between gap-2">
+            <span>No subs came on this game — confirmed.</span>
+            <button
+              type="button"
+              onClick={() => setConfirmedNoSubs(false)}
+              disabled={confirmingNoSubs}
+              className="font-semibold underline underline-offset-2 shrink-0"
+            >
+              Undo
+            </button>
           </p>
-          {showMissingCreditNudge && (
-            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-card px-3 py-2 space-y-1.5">
-              <p>{benchPlayers.length} on the bench, none marked as coming on yet — tap anyone who played.</p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {subCandidates.map((player) => {
+            const isOn = subsOn.has(player.player_id)
+            return (
+              <button
+                key={player.player_id}
+                type="button"
+                onClick={() => toggleSubOn(player.player_id)}
+                className={`min-h-[40px] px-4 rounded-pill text-sm font-semibold border transition-colors ${
+                  isOn
+                    ? 'bg-brand-gold text-brand-navy border-brand-gold'
+                    : 'bg-white/80 text-gray-600 border-brand-blue/15'
+                }`}
+              >
+                {player.display_name}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-xs text-gray-500">
+          Untapped players stay uncredited. Already logged via Match events below? They won't be double-counted.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-brand-navy">Unused substitutes · on the bench, didn't play</p>
+        <div className="flex flex-wrap gap-2">
+          {unusedSubCandidates.map((player) => {
+            const isOn = unusedSubsOn.has(player.player_id)
+            return (
+              <button
+                key={player.player_id}
+                type="button"
+                onClick={() => toggleUnusedSub(player.player_id)}
+                className={`min-h-[40px] px-4 rounded-pill text-sm font-semibold border transition-colors ${
+                  isOn
+                    ? 'bg-brand-gold text-brand-navy border-brand-gold'
+                    : 'bg-white/80 text-gray-600 border-brand-blue/15'
+                }`}
+              >
+                {player.display_name}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-xs text-gray-500">Named on the bench but didn't come on — still gets a small credit for being there.</p>
+      </div>
+
+      {isShutout && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-brand-navy">Defenders · clean sheet credit</p>
+            {suggestedDefenders.size > 0 && (
               <button
                 type="button"
-                onClick={() => setConfirmedNoSubs(true)}
-                disabled={confirmingNoSubs}
-                className="font-semibold underline underline-offset-2"
+                onClick={() => setDefendersForCleanSheet(new Set(suggestedDefenders))}
+                className="text-xs text-brand-blue font-medium"
               >
-                No subs came on
+                Use Starting XI defenders
               </button>
-            </div>
-          )}
-          {confirmedNoSubs && (
-            <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-card px-3 py-2 flex items-center justify-between gap-2">
-              <span>No subs came on this game — confirmed.</span>
-              <button
-                type="button"
-                onClick={() => setConfirmedNoSubs(false)}
-                disabled={confirmingNoSubs}
-                className="font-semibold underline underline-offset-2 shrink-0"
-              >
-                Undo
-              </button>
-            </p>
-          )}
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
-            {benchPlayers.map((player) => {
-              const isOn = subsOn.has(player.player_id)
+            {squad.map((player) => {
+              const isOn = defendersForCleanSheet.has(player.player_id)
               return (
                 <button
                   key={player.player_id}
                   type="button"
-                  onClick={() => toggleSubOn(player.player_id)}
+                  onClick={() => toggleDefenderCleanSheet(player.player_id)}
                   className={`min-h-[40px] px-4 rounded-pill text-sm font-semibold border transition-colors ${
                     isOn
                       ? 'bg-brand-gold text-brand-navy border-brand-gold'
@@ -280,7 +460,7 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
             })}
           </div>
           <p className="text-xs text-gray-500">
-            Untapped bench players stay uncredited. Already logged via Match events below? They won't be double-counted.
+            Manual override — defaults to nobody. Goalkeeper clean-sheet credit uses the dropdown above.
           </p>
         </div>
       )}

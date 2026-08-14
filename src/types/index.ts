@@ -74,7 +74,17 @@ export interface CreatePlayerResult {
 export type FixtureStatus = 'scheduled' | 'in_progress' | 'completed' | 'postponed' | 'cancelled'
 export type HomeAway = 'home' | 'away'
 export type AvailabilityStatus = 'yes' | 'no' | 'maybe'
-export type MatchEventType = 'goal' | 'assist' | 'motm' | 'yellow_card' | 'red_card' | 'substitution'
+export type MatchEventType =
+  | 'goal'
+  | 'assist'
+  | 'motm'
+  | 'yellow_card'
+  | 'red_card'
+  | 'substitution'
+  | 'appearance'
+  | 'unused_sub'
+  | 'clean_sheet_gk'
+  | 'clean_sheet_def'
 
 export interface Fixture {
   id: string
