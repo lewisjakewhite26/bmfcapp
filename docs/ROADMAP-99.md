@@ -15,9 +15,9 @@ Two different lists get conflated in this doc — the narrow "99-score" checklis
 | # | Task | Notes |
 |---|------|-------|
 | 1 | GitHub Actions secrets — `VITE_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` | Gates **two** workflows: `sync-ddsfl.yml` (daily) and `fines-automation.yml` (every 5 min). Repo → Settings → Secrets and variables → Actions. |
-| 2 | Generate the team invite link | Admin → Squad members → team invite link. Share in squad WhatsApp. |
-| 3 | Brief the squad on **ChrisL**-style login | Login name has no space; display name (`Chris L`) is what shows elsewhere in the app. |
-| 4 | Deploy `fines-scheduler` Edge Function, if not already live | `supabase functions deploy fines-scheduler` |
+| ~~2~~ | ~~Generate the team invite link~~ | ✅ **Done.** |
+| ~~3~~ | ~~Brief the squad on **ChrisL**-style login~~ | ✅ **Done.** |
+| 4 | Confirm `fines-scheduler` Edge Function is deployed; deploy if not | `supabase functions deploy fines-scheduler` — **status unknown**, no Supabase CLI or project credentials available locally to check this from the dev machine. Check Supabase Dashboard → Edge Functions, or `supabase functions list`. |
 | 5 | Link a Canva account when ready | Get a Canva Connect API OAuth token, set it as the `CANVA_ACCESS_TOKEN` secret on the Supabase project, supply real brand template IDs to swap into `lib/canva.ts`. Nothing on the engineering side can happen without this — the whole feature is blocked on you doing this step. |
 | ~~6~~ | ~~Review fines applied 14 Jul – 13 Aug for the vote-loss bug~~ | ✅ **Done — confirmed sorted manually.** |
 
@@ -201,10 +201,10 @@ Onboarding, prod hotfixes, finance admin, calendar/PWA polish, GK clean sheets, 
 |------|--------|-------|
 | Apply **001–049** on Club Hub | ✅ | **Operator confirmed this cycle — first time zero outstanding migration flags** |
 | **Review fines applied 14 Jul – 13 Aug for the vote-loss bug window** | ✅ | **Operator confirmed — sorted manually** |
-| Generate team invite link (Admin → Squad members) | ⚠️ | Share in squad WhatsApp |
-| Brief squad on **ChrisL** login format | ⚠️ | Display name shown as **Chris L** in app |
+| Generate team invite link (Admin → Squad members) | ✅ | Operator confirmed |
+| Brief squad on **ChrisL** login format | ✅ | Operator confirmed |
 | GitHub Actions secrets — **both** `sync-ddsfl.yml` and `fines-automation.yml` | ⚠️ | `VITE_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`; optional `FINES_SCHEDULER_SECRET` |
-| Deploy `fines-scheduler` Edge Function | ⚠️ | `supabase functions deploy fines-scheduler` |
+| Deploy `fines-scheduler` Edge Function | ⚠️ **Unknown** | No local Supabase CLI/credentials to check — verify via Dashboard → Edge Functions |
 | Link Canva account, set `CANVA_ACCESS_TOKEN` | ⚠️ | Blocks all further Canva engineering work |
 
 ---
