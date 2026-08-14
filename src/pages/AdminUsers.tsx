@@ -8,6 +8,7 @@ import {
   approveUser,
   createApprovedPlayer,
   createInvite,
+  deletePlayer,
   disableTeamInvite,
   enableTeamInvite,
   fetchAdminUsers,
@@ -235,6 +236,17 @@ export default function AdminUsers() {
       reload()
     } catch {
       toast.error("Couldn't approve")
+    }
+  }
+
+  const handleDelete = async (userId: string, displayName: string) => {
+    if (!window.confirm(`Permanently delete ${displayName}? This removes their account, login, and squad history. This cannot be undone.`)) return
+    try {
+      await deletePlayer(userId, displayName)
+      toast.success(`${displayName} deleted`)
+      reload()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't delete player")
     }
   }
 
@@ -514,13 +526,22 @@ export default function AdminUsers() {
                     {u.squad_position ? ` · ${u.squad_position}` : ''}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleApprove(u.id, u.display_name)}
-                  className="btn-primary text-sm py-2 px-4"
-                >
-                  Approve
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleApprove(u.id, u.display_name)}
+                    className="btn-primary text-sm py-2 px-4"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(u.id, u.display_name)}
+                    className="text-sm text-red-600 font-medium px-3 py-2"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </section>
@@ -641,6 +662,13 @@ export default function AdminUsers() {
                                   Approve
                                 </button>
                               )}
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(u.id, u.display_name)}
+                                className="text-xs text-red-600 font-semibold"
+                              >
+                                Delete
+                              </button>
                             </>
                           )}
                         </div>

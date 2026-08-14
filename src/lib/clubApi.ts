@@ -46,6 +46,7 @@ import {
   resetMockPasscode,
   saveMockLineup,
   setMockLineupSubsConfirmedNone,
+  removeMockUser,
   setMockUserApproved,
   setMockUserCommittee,
   setMockUserFinesAdmin,
@@ -1021,6 +1022,40 @@ export async function approveUser(userId: string, approved: boolean): Promise<vo
   void recordAdminAudit(approved ? 'user_approved' : 'user_unapproved', {
     entityType: 'profile',
     entityId: userId,
+  })
+}
+
+/**
+ * Permanently deletes a player account — distinct from revoking (which just
+ * un-approves and leaves the row). Blocked server-side if the player has
+ * finance/audit history logged against them, or if they're an admin.
+ */
+export async function deletePlayer(userId: string, displayName: string): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    removeMockUser(userId)
+    void recordAdminAudit('player_deleted', {
+      entityType: 'profile',
+      entityId: userId,
+      details: { display_name: displayName },
+    })
+    return
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { error } = await supabase.rpc('admin_delete_player', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_target_id: userId,
+  })
+  if (error) throw error
+
+  void recordAdminAudit('player_deleted', {
+    entityType: 'profile',
+    entityId: userId,
+    details: { display_name: displayName },
   })
 }
 

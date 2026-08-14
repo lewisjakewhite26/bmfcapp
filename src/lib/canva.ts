@@ -16,19 +16,19 @@ export interface CanvaTemplate {
  */
 const CANVA_TEMPLATES: CanvaTemplate[] = [
   {
-    id: 'DAHSRkWrIb0',
+    id: 'DAHSSLFK7vs',
     name: 'Matchday Graphic',
     description: 'Player name + photo + sponsor logo, matchday social post',
     thumbnailUrl: null,
   },
   {
-    id: 'DAHSRkWrIb0',
+    id: 'DAHSSLFK7vs',
     name: 'Man of the match',
     description: 'Player name + photo, MOTM announcement post',
     thumbnailUrl: null,
   },
   {
-    id: 'DAHSRkWrIb0',
+    id: 'DAHSSLFK7vs',
     name: 'Goalscorer',
     description: 'Player name + sponsor name + sponsor logo',
     thumbnailUrl: null,

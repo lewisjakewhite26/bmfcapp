@@ -933,6 +933,16 @@ export function setMockUserApproved(userId: string, approved: boolean) {
   persistE2eMockSnapshot()
 }
 
+export function removeMockUser(userId: string): void {
+  const index = adminUsers.findIndex((u) => u.id === userId)
+  if (index === -1) throw new Error('Player not found')
+  if (adminUsers[index].is_admin) throw new Error('Cannot delete an admin account')
+  adminUsers.splice(index, 1)
+  const squadIndex = squad.findIndex((s) => s.player_id === userId)
+  if (squadIndex !== -1) squad.splice(squadIndex, 1)
+  persistE2eMockSnapshot()
+}
+
 export function saveMockResult(
   fixtureId: string,
   goalsFor: number,
