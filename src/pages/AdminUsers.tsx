@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { inviteUrl, teamInviteUrl } from '../lib/clubAuth'
@@ -59,6 +60,8 @@ export default function AdminUsers() {
   const [teamInvite, setTeamInvite] = useState<TeamInviteSettings | null>(null)
   const [teamInviteLoading, setTeamInviteLoading] = useState(true)
   const [teamInviteBusy, setTeamInviteBusy] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<AdminUserRow | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const reload = async () => {
     setLoading(true)
@@ -239,14 +242,18 @@ export default function AdminUsers() {
     }
   }
 
-  const handleDelete = async (userId: string, displayName: string) => {
-    if (!window.confirm(`Permanently delete ${displayName}? This removes their account, login, and squad history. This cannot be undone.`)) return
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
     try {
-      await deletePlayer(userId, displayName)
-      toast.success(`${displayName} deleted`)
+      await deletePlayer(deleteTarget.id, deleteTarget.display_name)
+      toast.success(`${deleteTarget.display_name} deleted`)
+      setDeleteTarget(null)
       reload()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't delete player")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -536,7 +543,7 @@ export default function AdminUsers() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDelete(u.id, u.display_name)}
+                    onClick={() => setDeleteTarget(u)}
                     className="text-sm text-red-600 font-medium px-3 py-2"
                   >
                     Delete
@@ -664,7 +671,7 @@ export default function AdminUsers() {
                               )}
                               <button
                                 type="button"
-                                onClick={() => handleDelete(u.id, u.display_name)}
+                                onClick={() => setDeleteTarget(u)}
                                 className="text-xs text-red-600 font-semibold"
                               >
                                 Delete
@@ -681,6 +688,22 @@ export default function AdminUsers() {
           )}
         </section>
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete player?"
+        message={
+          deleteTarget
+            ? `Permanently delete ${deleteTarget.display_name}? This removes their account, login, and squad history. This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete player"
+        cancelLabel="Cancel"
+        destructive
+        busy={deleting}
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </PageShell>
   )
 }
