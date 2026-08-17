@@ -369,6 +369,28 @@ export async function fetchPlayerProfile(playerId: string, scope: StatsScope): P
     }
   }
 
+  // A saved Starting XI also counts as an appearance (see aggregatePlayerStats)
+  // even with no match_event row — mirror that here so a match isn't silently
+  // missing from Performance/Match record just because nothing else happened.
+  for (const fixture of scopedFixtures) {
+    if (byFixture.has(fixture.id)) continue
+    const lineup = lineupsByFixtureId.get(fixture.id)
+    if (!lineup?.slots.some((s) => s.player_id === playerId)) continue
+    byFixture.set(fixture.id, {
+      fixture,
+      events: [
+        {
+          id: `lineup-appearance:${fixture.id}`,
+          fixture_id: fixture.id,
+          player_id: playerId,
+          event_type: 'appearance',
+          minute: null,
+          created_at: fixture.match_date,
+        },
+      ],
+    })
+  }
+
   const matchHistory = Array.from(byFixture.values()).sort(
     (a, b) => new Date(b.fixture.match_date).getTime() - new Date(a.fixture.match_date).getTime()
   )

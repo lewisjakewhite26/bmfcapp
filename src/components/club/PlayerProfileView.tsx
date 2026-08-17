@@ -25,6 +25,10 @@ const EVENT_LABELS: Record<string, string> = {
   yellow_card: '🟨 Yellow',
   red_card: '🟥 Red',
   substitution: '🔄 Sub off',
+  appearance: '👟 Started',
+  unused_sub: '🪑 Unused sub',
+  clean_sheet_gk: '🧤 Clean sheet',
+  clean_sheet_def: '🛡️ Clean sheet',
 }
 
 interface PlayerProfileViewProps {
