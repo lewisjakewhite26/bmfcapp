@@ -187,6 +187,85 @@ async function main() {
         }
       }
 
+      // Migrate the saved result and match events (scorers, assists, cards,
+      // MOTM, appearance/clean-sheet credit) before dropping the scrape row.
+      // Unlike votes, there's no automatic recovery for these: DDSFL's site
+      // only ever has the final score, never individual scorer/appearance
+      // detail, so losing this cascade means losing it for good.
+      const { data: orphanResult, error: resultFetchErr } = await supabase
+        .from('results')
+        .select('goals_for, goals_against, notes')
+        .eq('fixture_id', existingById.id)
+        .maybeSingle()
+      if (resultFetchErr) {
+        throw new Error(
+          `Could not read result on duplicate ${existingById.id}: ${resultFetchErr.message}`,
+        )
+      }
+
+      const { data: orphanEvents, error: eventsFetchErr } = await supabase
+        .from('match_events')
+        .select('player_id, event_type, minute')
+        .eq('fixture_id', existingById.id)
+      if (eventsFetchErr) {
+        throw new Error(
+          `Could not read match events on duplicate ${existingById.id}: ${eventsFetchErr.message}`,
+        )
+      }
+
+      if (orphanResult || (orphanEvents && orphanEvents.length > 0)) {
+        const { data: targetResult, error: targetResultErr } = await supabase
+          .from('results')
+          .select('fixture_id')
+          .eq('fixture_id', manualMatch.id)
+          .maybeSingle()
+        if (targetResultErr) {
+          throw new Error(
+            `Could not check existing result on ${manualMatch.id}: ${targetResultErr.message}`,
+          )
+        }
+        if (targetResult) {
+          throw new Error(
+            `Both fixture ${existingById.id} and ${manualMatch.id} have saved results — ` +
+              `refusing to auto-merge, needs manual review in Supabase`,
+          )
+        }
+
+        if (orphanResult) {
+          const { error: migrateResultErr } = await supabase.from('results').insert({
+            fixture_id: manualMatch.id,
+            goals_for: orphanResult.goals_for,
+            goals_against: orphanResult.goals_against,
+            notes: orphanResult.notes,
+          })
+          if (migrateResultErr) {
+            throw new Error(
+              `Could not migrate result from duplicate ${existingById.id}: ${migrateResultErr.message}`,
+            )
+          }
+        }
+
+        if (orphanEvents && orphanEvents.length > 0) {
+          const { error: migrateEventsErr } = await supabase.from('match_events').insert(
+            orphanEvents.map((e) => ({
+              fixture_id: manualMatch.id,
+              player_id: e.player_id,
+              event_type: e.event_type,
+              minute: e.minute,
+            })),
+          )
+          if (migrateEventsErr) {
+            throw new Error(
+              `Could not migrate match events from duplicate ${existingById.id}: ${migrateEventsErr.message}`,
+            )
+          }
+        }
+
+        console.error(
+          `Migrated result/events from duplicate ${existingById.id} to kept fixture ${manualMatch.id}`,
+        )
+      }
+
       // Clear DDSFL id first so the unique constraint allows linking the manual row.
       const { error: clearErr } = await supabase
         .from('fixtures')
