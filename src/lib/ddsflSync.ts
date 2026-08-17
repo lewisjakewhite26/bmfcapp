@@ -119,6 +119,7 @@ export interface ManualFixtureCandidate {
   opponent: string
   home_away: 'home' | 'away'
   ddsfl_fixture_id?: string | null
+  status?: string
 }
 
 /** Find a manually added fixture that is the same match as a scraped DDSFL row. */

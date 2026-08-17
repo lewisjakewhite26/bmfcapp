@@ -90,6 +90,13 @@ function linkUpdateFromScraped(fixtureRow) {
   }
 }
 
+/** Never let the scrape revert a fixture an admin already completed with a
+ * real result — DDSFL's own site can lag a day or more behind the app, and
+ * blindly copying its status silently un-completes an already-scored match. */
+function statusForUpdate(currentStatus, scrapedStatus) {
+  return currentStatus === 'completed' ? 'completed' : scrapedStatus
+}
+
 async function main() {
   const { VITE_SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: serviceKey } = resolveEnv()
 
@@ -130,11 +137,11 @@ async function main() {
 
   const { data: allFixtures, error: listErr } = await supabase
     .from('fixtures')
-    .select('id, match_date, opponent, home_away, ddsfl_fixture_id')
+    .select('id, match_date, opponent, home_away, ddsfl_fixture_id, status')
 
   if (listErr) throw new Error(`Could not load existing fixtures: ${listErr.message}`)
 
-  /** @type {Array<{id: string, match_date: string, opponent: string, home_away: 'home'|'away', ddsfl_fixture_id: string|null}>} */
+  /** @type {Array<{id: string, match_date: string, opponent: string, home_away: 'home'|'away', ddsfl_fixture_id: string|null, status: string}>} */
   let knownFixtures = allFixtures ?? []
 
   let fixturesUpserted = 0
@@ -279,7 +286,10 @@ async function main() {
 
       const { data, error: linkErr } = await supabase
         .from('fixtures')
-        .update(linkUpdateFromScraped(fixtureRow))
+        .update({
+          ...linkUpdateFromScraped(fixtureRow),
+          status: statusForUpdate(manualMatch.status, fixtureRow.status),
+        })
         .eq('id', manualMatch.id)
         .select('id, ddsfl_fixture_id')
         .single()
@@ -308,7 +318,7 @@ async function main() {
     } else if (existingById) {
       const { data, error: updateErr } = await supabase
         .from('fixtures')
-        .update(fixtureRow)
+        .update({ ...fixtureRow, status: statusForUpdate(existingById.status, fixtureRow.status) })
         .eq('id', existingById.id)
         .select('id, ddsfl_fixture_id')
         .single()
@@ -327,7 +337,10 @@ async function main() {
     } else if (manualMatch) {
       const { data, error: linkErr } = await supabase
         .from('fixtures')
-        .update(linkUpdateFromScraped(fixtureRow))
+        .update({
+          ...linkUpdateFromScraped(fixtureRow),
+          status: statusForUpdate(manualMatch.status, fixtureRow.status),
+        })
         .eq('id', manualMatch.id)
         .select('id, ddsfl_fixture_id')
         .single()
