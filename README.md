@@ -9,7 +9,7 @@ Squad app for **Bishop Middleham FC** — fixtures, league table, stats, player 
 | Area | What’s included |
 |------|-----------------|
 | **Players** | Dashboard, DDSFL fixtures & table, results, squad stats (incl. accurate GK clean sheets), player profiles, calendar (training, matches, events, fundraisers), availability, **fines** (owed list, bank details, push on new fine), personal **sponsor logo + name** on own profile, PWA “Add to home screen” prompt |
-| **Admin / committee** | Squad list, fixtures, live matchday logging, results (optional manual GK for clean sheets, tap-to-credit substitutes), training, events, fundraisers (archive vs delete), **finance** (sponsorships & expenses), **fines** (log, payments, automated no-vote fines + weekly late fees), lineup builder (with substitutes bench), Canva template graphics (foundation — mock until a Canva account is linked), **committee to-do list**, availability overview, push notifications, audit log |
+| **Admin / committee** | Squad list, fixtures, live matchday logging, results (optional manual GK for clean sheets, tap-to-credit substitutes), training, events, fundraisers (archive vs delete), **finance** (sponsorships & expenses), **fines** (log, payments, automated no-vote fines + weekly late fees), lineup builder (with substitutes bench), matchday graphics (matchday, goalscorer & MOTM posts drawn in the app — admin only), **committee to-do list**, availability overview, push notifications, audit log |
 | **Admin only** | Squad member invites (one-time + reusable team link), quick player add (no invite), passcode resets, name edits, approvals, **Fines Helper** role assignment |
 
 Finance entries show **Logged by** (and **Edited by** when changed) for transparency. All writes are RPC-gated on Supabase.
@@ -34,7 +34,7 @@ To connect a real backend:
 1. Copy `.env.example` to `.env.local`
 2. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_CLUB_DATA_SOURCE=supabase`  
    Use the **Club Hub** Supabase project (not the World Cup predictor). Keys are under **Settings → API**.
-3. Follow **[docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md)** to run migrations **001–049**, seed admins, and deploy the edge functions (`send-push`, `fines-scheduler`, `canva-autofill`)
+3. Follow **[docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md)** to run migrations **001–053**, seed admins, and deploy the edge functions (`send-push`, `fines-scheduler`)
 4. Restart `npm run dev` after changing env vars
 
 New players can join via:
@@ -100,7 +100,7 @@ Local Vitest on Windows OneDrive paths is unreliable (worker timeouts). For day-
 |------|--------|
 | **Player** | Dashboard, fixtures, table, results, stats, player profiles, calendar, availability, fines (own balance); change own passcode; manage own sponsor logo + name |
 | **Fines Helper** | `/admin/fines` only — log fines, mark payments. Nothing else in the admin hub. Mutually exclusive with Committee. |
-| **Committee** | All admin tools except squad member invites, passcode resets, and the audit log — includes finance, fines, live matchday, fundraisers, lineup, Canva templates, committee to-do, notifications |
+| **Committee** | All admin tools except squad member invites, passcode resets, and the audit log — includes finance, fines, live matchday, fundraisers, lineup, committee to-do, notifications |
 | **Admin** | Everything committee has, plus squad member invites, team invite link, approvals, passcode resets, name edits, and the audit log |
 
 ## Project structure
@@ -114,8 +114,8 @@ src/
   data/           # Committed DDSFL scrape JSON
 e2e/              # Playwright smoke, squad, admin, onboarding specs
 supabase-club/
-  migrations/     # Database schema (001–049)
-  functions/      # Edge functions (send-push, fines-scheduler, canva-autofill)
+  migrations/     # Database schema (001–053)
+  functions/      # Edge functions (send-push, fines-scheduler)
   seed.sql        # Initial admin account
 docs/
   PAGE-COPY.md    # All UI copy

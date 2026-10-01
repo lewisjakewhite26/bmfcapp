@@ -54,7 +54,7 @@
 | `/admin/notifications` | `AdminNotifications.tsx` | `adminOnly` | Admin + committee — push notifications |
 | `/admin/fines` | `AdminFines.tsx` | `adminOnly` + `finesAdminOk` | Admin + committee + **Fines Helper** — log fines, mark payments |
 | `/admin/todo` | `AdminTodo.tsx` | `adminOnly` | Admin + committee — shared task list, assign, mark done/undo |
-| `/admin/canva` | `AdminCanva.tsx` | `adminOnly` | Admin + committee — generate player graphics from Canva templates (mock until account linked) |
+| `/admin/graphics` | `AdminGraphics.tsx` | `adminOnly requireAdmin` | Admin only — matchday, goalscorer & MOTM posts drawn in the browser; player cut-out and opponent badge library. `/admin/canva` redirects here |
 | `/admin/audit` | `AdminAuditLog.tsx` | `adminOnly` + `requireAdmin` | **Admin only** — recent admin/committee actions |
 | `/admin/users` | `AdminUsers.tsx` | `adminOnly` + `requireAdmin` | **Admin only** — invites, approval, passcodes, name edits |
 
@@ -112,7 +112,7 @@ flowchart TD
     AN[Admin Notifications]
     AFI[Admin Fines - + Fines Helper]
     ATD[Admin To-do]
-    ACV[Admin Canva]
+    ACV[Admin Matchday graphics]
     AAU[Admin Audit - admin only]
   end
 
@@ -292,7 +292,7 @@ flowchart LR
   A --> AN[/admin/notifications]
   A --> AFI[/admin/fines<br/>+ Fines Helper]
   A --> ATD[/admin/todo]
-  A --> ACV[/admin/canva]
+  A --> ACV[/admin/graphics<br/>admin only]
   A --> AAU[/admin/audit<br/>admin only]
 
   AU -->|creates| INV[/invite/:token]
@@ -330,7 +330,7 @@ flowchart LR
 | **Notifications** | Push to squad (`VITE_VAPID_PUBLIC_KEY` on Vercel + `send-push` edge fn) |
 | **Fines** | Player `/fines` page — log entries, mark paid; also reachable by **Fines Helper** role |
 | **Committee to-do** | Shared task list — add, assign to any squad/committee member, mark done/undo |
-| **Canva templates** | Generate player graphics (name/photo/sponsor logo) — mock result until a Canva account is linked |
+| **Matchday graphics** | Matchday, goalscorer & MOTM posts from fixtures and results, with player cut-outs, sponsor logos and opponent badges — download or share |
 | **Audit log** | Read-only feed of admin/committee actions — **admin only** |
 
 ---
@@ -394,7 +394,7 @@ Almost every page uses:
 /admin/notifications       Push notifications
 /admin/fines               Log fines, mark payments (+ Fines Helper role)
 /admin/todo                Committee to-do list
-/admin/canva               Canva template graphics (mock until account linked)
+/admin/graphics            Matchday graphics (admin only; /admin/canva redirects)
 /admin/audit               Audit log (admin only)
 *                          404 NotFound
 

@@ -61,6 +61,12 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
+      injectManifest: {
+        // Matchday graphics' background removal (onnxruntime, ~24 MB wasm +
+        // ~1.6 MB of scripts) loads on demand on that admin page only — keep
+        // it out of the offline precache every player downloads.
+        globIgnores: ['**/node_modules/**/*', '**/ort-*.wasm', '**/ort.*.js', '**/ort.*.mjs'],
+      },
       injectRegister: false,
       devOptions: {
         enabled: !e2eMode,

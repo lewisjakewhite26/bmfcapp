@@ -72,6 +72,9 @@ Apply migrations **in order** via the Supabase SQL Editor (Dashboard → SQL →
 | `supabase-club/migrations/048_sponsor_logos.sql` | Player-managed sponsor name + logo (self-service Storage upload) |
 | `supabase-club/migrations/049_committee_todo.sql` | Committee to-do list — RLS-gated task tracker |
 | `supabase-club/migrations/050_no_vote_fine_event_label.sql` | No-vote fine label includes the fixture/training it's for |
+| `supabase-club/migrations/051_admin_delete_player.sql` | Admin-only permanent player deletion |
+| `supabase-club/migrations/052_appearance_points_events.sql` | Appearance and clean-sheet points events |
+| `supabase-club/migrations/053_matchday_graphics.sql` | Matchday graphics library — player cut-outs, opponent badges, `matchday-graphics` storage bucket (admin only) |
 
 **No pg_cron fines jobs should exist in production** — the canonical scheduler is GitHub Actions (`fines-automation.yml`, every 5 minutes). Migration 042 is a historical placeholder only; 043 unschedules any legacy pg_cron jobs.
 
@@ -170,19 +173,19 @@ Push only works over **HTTPS** (production or tunneled preview). In mock mode, A
 
 ### Other Edge Functions
 
-Two more functions live under `supabase-club/functions/`, registered in `supabase/config.toml`:
+One more function lives under `supabase-club/functions/`, registered in `supabase/config.toml`:
 
 | Function | Purpose | Secrets |
 |----------|---------|---------|
 | `fines-scheduler` | Runs no-vote fines, vote reminders, weekly late fees — invoked every 5 min by `fines-automation.yml` | Uses `SUPABASE_SERVICE_ROLE_KEY`; optional `FINES_SCHEDULER_SECRET` if you want to lock it down further |
-| `canva-autofill` | Triggers a Canva Connect API design from player name/photo/sponsor logo (Admin → Canva templates) | `CANVA_ACCESS_TOKEN` — **not set yet**; the function returns a clearly-labelled mock result until a Canva account is linked and this secret is set |
 
-Deploy either the same way as `send-push`:
+Deploy it the same way as `send-push`:
 
 ```bash
 supabase functions deploy fines-scheduler
-supabase functions deploy canva-autofill
 ```
+
+`canva-autofill` was removed when Admin → Matchday graphics replaced the Canva integration. If it's still deployed, delete it (Dashboard → Edge Functions, or `supabase functions delete canva-autofill`) and remove the `CANVA_ACCESS_TOKEN` secret if one was set.
 
 ---
 

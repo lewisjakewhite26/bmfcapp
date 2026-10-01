@@ -1226,6 +1226,45 @@ export function resetMockData() {
   seedMockFixtureAvailability()
 }
 
+/**
+ * Playwright: adds one upcoming match and one played match (3–1, two scorers,
+ * MOTM) so graphics tests don't depend on today's date.
+ */
+export function seedMockGraphicsMatchesForE2e(): { scorers: string[]; motm: string } {
+  const active = squad.filter((s) => s.active)
+  const [first, second] = active
+  const day = 24 * 60 * 60 * 1000
+  addMockFixture({
+    match_date: new Date(Date.now() + 7 * day).toISOString(),
+    opponent: 'Ferryhill Ivorson',
+    home_away: 'home',
+    competition: 'Swinburne Maddison Second Division',
+    venue: 'Bishop Middleham Park',
+    kickoff_time: '10:30:00',
+  })
+  const played = addMockFixture({
+    match_date: new Date(Date.now() - 3 * day).toISOString(),
+    opponent: 'The Drunken Duck',
+    home_away: 'away',
+    competition: 'Swinburne Maddison Second Division',
+    venue: null,
+    kickoff_time: '10:30:00',
+  })
+  const goal = (playerId: string) => ({
+    fixture_id: played.id,
+    player_id: playerId,
+    event_type: 'goal' as const,
+    minute: null,
+  })
+  saveMockResult(played.id, 3, 1, null, [
+    goal(first.player_id),
+    goal(first.player_id),
+    goal(second.player_id),
+    { fixture_id: played.id, player_id: second.player_id, event_type: 'motm', minute: null },
+  ])
+  return { scorers: [first.display_name, second.display_name], motm: second.display_name }
+}
+
 /** Playwright: reset in-memory mock state between tests (window.__BMFC_E2E_RESET__). */
 export function resetMockDataForE2e() {
   try {

@@ -51,6 +51,15 @@ export function resolveGraphicsUrl(path: string | null | undefined): string | nu
 const mockPhotos: GraphicPlayerPhoto[] = []
 const mockBadges: OpponentBadge[] = []
 
+/** Playwright: clear the in-memory library between tests. */
+export function resetMockGraphicsForE2e(): void {
+  mockPhotos.splice(0).forEach((p) => {
+    revokeIfBlob(p.cutout_path)
+    revokeIfBlob(p.original_path)
+  })
+  mockBadges.splice(0).forEach((b) => revokeIfBlob(b.badge_path))
+}
+
 function delay(ms = 120): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
