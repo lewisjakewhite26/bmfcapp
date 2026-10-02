@@ -10,10 +10,10 @@ const LATIN_EXT =
   'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF'
 
 // Static instances of Archivo (SIL OFL) cut from the variable font:
-// display = 125% width (800/900), text = normal width (600/700).
+// display = 75% width, condensed (800/900); text = normal width (600/700).
 const FONT_FILES: { family: string; weight: string; file: string }[] = [
-  { family: DISPLAY_FONT, weight: '800', file: 'archivo-display-800' },
-  { family: DISPLAY_FONT, weight: '900', file: 'archivo-display-900' },
+  { family: DISPLAY_FONT, weight: '800', file: 'archivo-condensed-800' },
+  { family: DISPLAY_FONT, weight: '900', file: 'archivo-condensed-900' },
   { family: TEXT_FONT, weight: '600', file: 'archivo-text-600' },
   { family: TEXT_FONT, weight: '700', file: 'archivo-text-700' },
 ]

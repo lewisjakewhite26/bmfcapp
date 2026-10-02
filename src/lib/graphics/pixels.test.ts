@@ -39,6 +39,14 @@ describe('logo pixels', () => {
     expect(at(data, 20, 0, 0)[3]).toBe(0)
   })
 
+  it('drops a thin line left along the edge by a loose crop', () => {
+    const data = image(40, 40, [255, 255, 255, 255], { x: 10, y: 10, size: 20, rgba: [20, 30, 40, 255] })
+    for (let x = 0; x < 40; x++) data.set([60, 60, 60, 255], x * 4) // grey strip on row 0
+    whitenLogoPixels(data, 40, 40)
+    expect(at(data, 40, 20, 0)[3]).toBe(0)
+    expect(at(data, 40, 20, 20)[3]).toBe(255)
+  })
+
   it('finds the bounds of visible pixels', () => {
     const data = image(20, 20, [0, 0, 0, 0], { x: 3, y: 4, size: 5, rgba: [1, 1, 1, 255] })
     expect(opaqueBounds(data, 20, 20)).toEqual({ x: 3, y: 4, width: 5, height: 5 })

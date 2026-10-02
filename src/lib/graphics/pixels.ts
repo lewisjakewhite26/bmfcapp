@@ -74,6 +74,47 @@ function median(values: number[]): number {
  * Mutates and returns `data`.
  */
 export function whitenLogoPixels(data: Uint8ClampedArray, width: number, height: number): Uint8ClampedArray {
+  whitenCore(data, width, height)
+  clearEdgeLines(data, width, height)
+  return data
+}
+
+/**
+ * Removes thin solid lines along the outer edges (left by a loose crop or a
+ * screenshot border): up to 2% of the size from each edge, a row or column
+ * that is almost entirely visible is cleared.
+ */
+export function clearEdgeLines(data: Uint8ClampedArray, width: number, height: number): void {
+  const alphaAt = (x: number, y: number) => (y * width + x) * 4 + 3
+  const rowShare = (y: number) => {
+    let n = 0
+    for (let x = 0; x < width; x++) if (data[alphaAt(x, y)] > 40) n++
+    return n / width
+  }
+  const colShare = (x: number) => {
+    let n = 0
+    for (let y = 0; y < height; y++) if (data[alphaAt(x, y)] > 40) n++
+    return n / height
+  }
+  const clearRow = (y: number) => {
+    for (let x = 0; x < width; x++) data[alphaAt(x, y)] = 0
+  }
+  const clearCol = (x: number) => {
+    for (let y = 0; y < height; y++) data[alphaAt(x, y)] = 0
+  }
+  const maxRows = Math.max(2, Math.round(height * 0.02))
+  const maxCols = Math.max(2, Math.round(width * 0.02))
+  for (let i = 0; i < maxRows; i++) {
+    if (rowShare(i) > 0.85) clearRow(i)
+    if (rowShare(height - 1 - i) > 0.85) clearRow(height - 1 - i)
+  }
+  for (let i = 0; i < maxCols; i++) {
+    if (colShare(i) > 0.85) clearCol(i)
+    if (colShare(width - 1 - i) > 0.85) clearCol(width - 1 - i)
+  }
+}
+
+function whitenCore(data: Uint8ClampedArray, width: number, height: number): Uint8ClampedArray {
   const corners = cornerSamples(data, width, height)
   const cornerAlpha = median(corners.map((c) => c[3]))
 
