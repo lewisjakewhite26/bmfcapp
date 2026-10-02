@@ -1,5 +1,5 @@
 import { DISPLAY_FONT, TEXT_FONT } from './text'
-import { opaqueBounds, whitenLogoPixels } from './pixels'
+import { classifyLogo, clearEdgeLines, contentBounds, opaqueBounds, removeWhiteBackground, whitenLogoPixels, type LogoKind } from './pixels'
 
 const base = import.meta.env.BASE_URL ?? '/'
 const asset = (path: string) => `${base}graphics/${path}`
@@ -110,6 +110,58 @@ export function trimCanvas(canvas: HTMLCanvasElement, padding = 0): HTMLCanvasEl
   out.width = box.width + padding * 2
   out.height = box.height + padding * 2
   out.getContext('2d')?.drawImage(canvas, box.x, box.y, box.width, box.height, padding, padding, box.width, box.height)
+  return out
+}
+
+export interface PreparedLogo {
+  image: CanvasImageSource
+  /** Drawn as a rounded tile (the logo keeps its own background colour). */
+  boxed: boolean
+  kind: LogoKind
+}
+
+/**
+ * Sponsor logo for the light design, in its own colours:
+ *  - white background: removed, so the logo sits on the white footer
+ *  - coloured background: kept, drawn as a rounded tile
+ *  - transparent and white-only (made for dark backgrounds): recoloured navy
+ * A sponsor's "light" file in the sponsors folder, when there is one, is used instead.
+ *  - transparent with colour: used as it is
+ */
+export function lightLogo(img: CanvasImageSource, navy = '#0D1B4B'): PreparedLogo {
+  const canvas = imageToCanvas(img, 1200)
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return { image: canvas, boxed: false, kind: 'colour-on-clear' }
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const kind = classifyLogo(data.data, canvas.width, canvas.height)
+  if (kind === 'on-colour') return { image: tightTile(canvas, data.data), boxed: true, kind }
+  if (kind === 'on-white') {
+    removeWhiteBackground(data.data)
+    clearEdgeLines(data.data, canvas.width, canvas.height)
+    ctx.putImageData(data, 0, 0)
+  } else if (kind === 'white-on-clear') {
+    ctx.globalCompositeOperation = 'source-in'
+    ctx.fillStyle = navy
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.globalCompositeOperation = 'source-over'
+  }
+  return { image: trimCanvas(canvas), boxed: false, kind }
+}
+
+/** Crops a logo's own background down to the artwork plus a small even margin. */
+function tightTile(canvas: HTMLCanvasElement, data: Uint8ClampedArray): HTMLCanvasElement {
+  const box = contentBounds(data, canvas.width, canvas.height)
+  if (!box) return canvas
+  const pad = Math.round(Math.max(box.width, box.height) * 0.12)
+  const x = Math.max(0, box.x - pad)
+  const y = Math.max(0, box.y - pad)
+  const w = Math.min(canvas.width, box.x + box.width + pad) - x
+  const h = Math.min(canvas.height, box.y + box.height + pad) - y
+  if (w >= canvas.width * 0.95 && h >= canvas.height * 0.95) return canvas
+  const out = document.createElement('canvas')
+  out.width = w
+  out.height = h
+  out.getContext('2d')?.drawImage(canvas, x, y, w, h, 0, 0, w, h)
   return out
 }
 

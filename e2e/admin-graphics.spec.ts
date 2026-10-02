@@ -63,6 +63,19 @@ test.describe('Matchday graphics', () => {
     expect(download.suggestedFilename()).toMatch(/^matchday-.+-\d{4}-\d{2}-\d{2}\.png$/)
   })
 
+  test('switches between the navy and light looks', async ({ page }) => {
+    await openGraphics(page)
+    const canvas = await waitForDrawn(page)
+    const corner = () =>
+      canvas.evaluate((el) => [...(el as HTMLCanvasElement).getContext('2d')!.getImageData(10, 10, 1, 1).data])
+
+    expect((await corner())[0]).toBeLessThan(60) // navy
+    await page.getByRole('button', { name: 'Light', exact: true }).click()
+    await expect.poll(async () => (await corner())[0]).toBeGreaterThan(220)
+    await page.getByRole('button', { name: 'Navy', exact: true }).click()
+    await expect.poll(async () => (await corner())[0]).toBeLessThan(60)
+  })
+
   test('matchday posts can be made for past matches too', async ({ page }) => {
     await openGraphics(page)
     const select = page.locator('#graphics-fixture')

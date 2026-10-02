@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type PointerEvent } from 'react'
 import type { GraphicData } from '../../lib/graphics/data'
-import { clubCrestUrl, ensureGraphicsFonts, knightWatermarkUrl, loadImage, whiteLogo } from '../../lib/graphics/assets'
-import { renderGraphic, type PlayerFraming } from '../../lib/graphics/render'
+import { clubCrestUrl, ensureGraphicsFonts, knightWatermarkUrl, lightLogo, loadImage, whiteLogo } from '../../lib/graphics/assets'
+import { renderGraphic, type GraphicTheme, type PlayerFraming } from '../../lib/graphics/render'
 
 export interface GraphicCanvasHandle {
   canvas: HTMLCanvasElement | null
@@ -18,6 +18,7 @@ interface GraphicCanvasProps {
   framing?: PlayerFraming
   /** When set, dragging on the preview moves the player. */
   onFramingChange?: (framing: PlayerFraming) => void
+  theme?: GraphicTheme
 }
 
 interface LoadedImages {
@@ -26,6 +27,7 @@ interface LoadedImages {
   player: HTMLImageElement | null
   badge: HTMLImageElement | null
   logo: CanvasImageSource | null
+  logoBoxed: boolean
 }
 
 async function tryLoad(url: string | null | undefined): Promise<HTMLImageElement | null> {
@@ -39,7 +41,7 @@ async function tryLoad(url: string | null | undefined): Promise<HTMLImageElement
 
 /** Draws one post. The on-screen canvas is the export — what you see is what downloads. */
 export const GraphicCanvas = forwardRef<GraphicCanvasHandle, GraphicCanvasProps>(function GraphicCanvas(
-  { data, sponsorLogoUrl, logoOnTile = false, onReadyChange, framing, onFramingChange },
+  { data, sponsorLogoUrl, logoOnTile = false, onReadyChange, framing, onFramingChange, theme = 'dark' },
   ref,
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -77,7 +79,15 @@ export const GraphicCanvas = forwardRef<GraphicCanvasHandle, GraphicCanvasProps>
         if (opponentBadgeUrl && !badge) gaps.push("opponent badge couldn't load")
         if (sponsorLogoUrl && !logo) gaps.push("sponsor logo couldn't load")
         setMissing(gaps)
-        setImages({ crest, knight, player, badge, logo: logo ? (logoOnTile ? logo : whiteLogo(logo)) : null })
+        const prepared = logo && theme === 'light' ? lightLogo(logo) : null
+        setImages({
+          crest,
+          knight,
+          player,
+          badge,
+          logo: prepared ? prepared.image : logo ? (logoOnTile ? logo : whiteLogo(logo)) : null,
+          logoBoxed: prepared?.boxed ?? false,
+        })
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Couldn't draw the post")
       }
@@ -85,7 +95,7 @@ export const GraphicCanvas = forwardRef<GraphicCanvasHandle, GraphicCanvasProps>
     return () => {
       cancelled = true
     }
-  }, [data.playerImageUrl, opponentBadgeUrl, sponsorLogoUrl, logoOnTile])
+  }, [data.playerImageUrl, opponentBadgeUrl, sponsorLogoUrl, logoOnTile, theme])
 
   // Drawing is quick once the images are loaded, so moving the player redraws live.
   useEffect(() => {
@@ -97,14 +107,16 @@ export const GraphicCanvas = forwardRef<GraphicCanvasHandle, GraphicCanvasProps>
         player: images.player,
         opponentBadge: images.badge,
         sponsorLogo: images.logo,
-        sponsorLogoOnTile: logoOnTile,
+        sponsorLogoOnTile: theme === 'dark' && logoOnTile,
+        sponsorLogoBoxed: images.logoBoxed,
         playerFraming: framing,
+        theme,
       })
       setReady(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't draw the post")
     }
-  }, [images, data, framing, logoOnTile])
+  }, [images, data, framing, logoOnTile, theme])
 
   const canDrag = Boolean(onFramingChange && framing && images?.player)
 

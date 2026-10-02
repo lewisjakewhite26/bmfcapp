@@ -89,12 +89,33 @@ export function listSharedSponsorLogos(): Promise<SharedLogoFile[]> {
   return listSharedImages('sponsor-logos', SHARED_LOGO_FOLDER)
 }
 
-/** Fills in shared logos for players with a sponsor but no logo of their own. */
+/** "Lines Valeting light.png": the version used on the light design. */
+const LIGHT_VARIANT = /[\s_-]+light(\s*\(\d+\)|[\s_-]*\d+)?\.[a-z0-9]+$/i
+
+export function isLightVariant(fileName: string): boolean {
+  return LIGHT_VARIANT.test(fileName)
+}
+
+/**
+ * Fills in shared logos for players with a sponsor but no logo of their own,
+ * plus the sponsor's light-design version when the folder has one.
+ */
 export function withSharedSponsorLogos(squad: SquadMember[], files: SharedLogoFile[]): SquadMember[] {
   if (!files.length) return squad
+  const main = files.filter((f) => !isLightVariant(f.name))
+  const light = files
+    .filter((f) => isLightVariant(f.name))
+    .map((f) => ({ ...f, matchName: f.name.replace(LIGHT_VARIANT, '.png') }))
   return squad.map((p) => {
-    if (p.sponsor_logo_url || !p.sponsor_name?.trim()) return p
-    const file = matchSharedLogo(p.sponsor_name, files)
-    return file ? { ...p, sponsor_logo_url: file.path, sponsor_logo_shared_file: file.name } : p
+    if (!p.sponsor_name?.trim()) return p
+    const lightMatch = matchSharedLogo(
+      p.sponsor_name,
+      light.map((f) => ({ name: f.matchName, path: f.path })),
+    )
+    const lightUrl = lightMatch?.path ?? null
+    if (p.sponsor_logo_url) return lightUrl ? { ...p, sponsor_logo_light_url: lightUrl } : p
+    const file = matchSharedLogo(p.sponsor_name, main)
+    if (!file) return lightUrl ? { ...p, sponsor_logo_light_url: lightUrl } : p
+    return { ...p, sponsor_logo_url: file.path, sponsor_logo_shared_file: file.name, sponsor_logo_light_url: lightUrl }
   })
 }
