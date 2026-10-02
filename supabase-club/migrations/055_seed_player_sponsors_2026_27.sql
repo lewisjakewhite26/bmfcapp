@@ -62,6 +62,12 @@ CREATE TEMP TABLE sponsor_keys_2026 AS
 SELECT l.full_name, l.sponsor, public.player_name_key(n) AS name_key
 FROM sponsor_list_2026 l, unnest(array_prepend(l.full_name, l.aliases)) AS n;
 
+-- Name tidy: Ellis Hare doesn't use his middle name.
+UPDATE public.profiles
+SET first_name = 'Ellis'
+WHERE public.player_name_key(first_name) = 'ellis james'
+  AND public.player_name_key(last_name) = 'hare';
+
 UPDATE public.profiles p
 SET sponsor_name = k.sponsor
 FROM sponsor_keys_2026 k
