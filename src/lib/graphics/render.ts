@@ -253,7 +253,8 @@ function drawFooterText(
 function drawSponsorBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData, images: GraphicImages) {
   const sponsor = data.sponsor
   if (!sponsor) {
-    drawFooterText(ctx, 'Competition', data.competition, null, MARGIN, FOOTER_SPLIT - MARGIN - 40, 'left')
+    // Free advert for the sponsorship slot every time the player features.
+    drawFooterText(ctx, 'Sponsor this player', 'Get in touch', null, MARGIN, FOOTER_SPLIT - MARGIN - 40, 'left')
     return
   }
   const logo = images.sponsorLogo
