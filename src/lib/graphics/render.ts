@@ -40,7 +40,7 @@ const THEMES: Record<GraphicTheme, ThemeColours> = {
     text: '#FFFFFF',
     softText: '#C7CEDE',
     gold: '#D4A017',
-    goldLine: 'rgba(212, 160, 23, 0.45)',
+    goldLine: '#675734', // solid, so the player or glow behind can't fade one divider more than the other
     headline: ['rgba(255,255,255,1)', 'rgba(255,255,255,0.14)'],
     shadow: 'rgba(4,10,40,0.55)',
     fade: ['rgba(13,27,75,0)', 'rgba(13,27,75,0.86)'],
@@ -56,7 +56,7 @@ const THEMES: Record<GraphicTheme, ThemeColours> = {
     text: '#0D1B4B',
     softText: '#5B6685',
     gold: '#B07F06',
-    goldLine: 'rgba(176, 127, 6, 0.4)',
+    goldLine: '#D5C498',
     headline: ['rgba(13,27,75,1)', 'rgba(13,27,75,0.10)'],
     shadow: 'rgba(13,27,75,0.22)',
     fade: ['rgba(238,242,249,0)', 'rgba(238,242,249,0.86)'],
