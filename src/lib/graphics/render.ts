@@ -11,12 +11,79 @@ import { baselineFor, drawText, fitFontSize, measureText, wrapLines, type TextSt
 export const GRAPHIC_WIDTH = 1080
 export const GRAPHIC_HEIGHT = 1350
 
-const NAVY = '#0D1B4B'
-const FOOTER_NAVY = '#081239'
-const GOLD = '#D4A017'
-const GOLD_LINE = 'rgba(212, 160, 23, 0.45)'
-const SOFT_WHITE = '#C7CEDE'
-const WHITE = '#FFFFFF'
+export type GraphicTheme = 'dark' | 'light'
+
+interface ThemeColours {
+  background: string
+  glow: [string, string]
+  /** White artwork (knight watermark, sponsor logos) is tinted to this; null keeps it white. */
+  artTint: string | null
+  knightAlpha: number
+  text: string
+  softText: string
+  gold: string
+  goldLine: string
+  headline: [string, string]
+  shadow: string
+  fade: [string, string]
+  footer: string
+  roundel: string
+  roundelText: string
+}
+
+const THEMES: Record<GraphicTheme, ThemeColours> = {
+  dark: {
+    background: '#0D1B4B',
+    glow: ['#2D58C4', '#1B3790'],
+    artTint: null,
+    knightAlpha: 0.07,
+    text: '#FFFFFF',
+    softText: '#C7CEDE',
+    gold: '#D4A017',
+    goldLine: 'rgba(212, 160, 23, 0.45)',
+    headline: ['rgba(255,255,255,1)', 'rgba(255,255,255,0.14)'],
+    shadow: 'rgba(4,10,40,0.55)',
+    fade: ['rgba(13,27,75,0)', 'rgba(13,27,75,0.86)'],
+    footer: '#081239',
+    roundel: '#13245E',
+    roundelText: '#FFFFFF',
+  },
+  light: {
+    background: '#EEF2F9',
+    glow: ['#FFFFFF', '#F6F8FC'],
+    artTint: '#0D1B4B',
+    knightAlpha: 0.05,
+    text: '#0D1B4B',
+    softText: '#5B6685',
+    gold: '#B07F06',
+    goldLine: 'rgba(176, 127, 6, 0.4)',
+    headline: ['rgba(13,27,75,1)', 'rgba(13,27,75,0.10)'],
+    shadow: 'rgba(13,27,75,0.22)',
+    fade: ['rgba(238,242,249,0)', 'rgba(238,242,249,0.86)'],
+    footer: '#FFFFFF',
+    roundel: '#DCE3F2',
+    roundelText: '#0D1B4B',
+  },
+}
+
+/** Colours for the post being drawn (set at the start of renderGraphic). */
+let T: ThemeColours = THEMES.dark
+const TILE_WHITE = '#FFFFFF'
+
+/** A copy of white artwork recoloured to `colour`. */
+function tinted(img: CanvasImageSource, colour: string): CanvasImageSource {
+  const { width, height } = imageSize(img)
+  const c = document.createElement('canvas')
+  c.width = width
+  c.height = height
+  const ctx = c.getContext('2d')
+  if (!ctx) return img
+  ctx.drawImage(img, 0, 0)
+  ctx.globalCompositeOperation = 'source-in'
+  ctx.fillStyle = colour
+  ctx.fillRect(0, 0, width, height)
+  return c
+}
 
 const MARGIN = 64
 const CONTENT_WIDTH = GRAPHIC_WIDTH - MARGIN * 2
@@ -38,6 +105,8 @@ export interface GraphicImages {
   sponsorLogoOnTile?: boolean
   /** Per-post size and position of the player photo (not saved). */
   playerFraming?: PlayerFraming
+  /** Navy (default) or light look. */
+  theme?: GraphicTheme
 }
 
 /** Player photo framing: 1 = default size; x/y move it, in post pixels. */
@@ -54,7 +123,7 @@ const PLAYER_BOX = { x: (GRAPHIC_WIDTH - 820) / 2, y: FOOTER_TOP - 880, width: 8
 
 const upper = (s: string) => s.toLocaleUpperCase('en-GB')
 
-function label(size: number, color = GOLD, weight: 600 | 700 = 700, trackingEm = 0.22): TextStyle {
+function label(size: number, color: string = T.gold, weight: 600 | 700 = 700, trackingEm = 0.22): TextStyle {
   return { family: 'text', weight, size, tracking: size * trackingEm, color }
 }
 
@@ -76,7 +145,7 @@ function drawContained(
 }
 
 function drawBackground(ctx: CanvasRenderingContext2D, centreY: number) {
-  ctx.fillStyle = NAVY
+  ctx.fillStyle = T.background
   ctx.fillRect(0, 0, GRAPHIC_WIDTH, GRAPHIC_HEIGHT)
   // CSS: radial-gradient(ellipse 70% 52% at 50% <centre>, …)
   const rx = GRAPHIC_WIDTH * 0.7
@@ -85,10 +154,10 @@ function drawBackground(ctx: CanvasRenderingContext2D, centreY: number) {
   ctx.translate(GRAPHIC_WIDTH / 2, centreY)
   ctx.scale(1, ry / rx)
   const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx)
-  g.addColorStop(0, '#2D58C4')
-  g.addColorStop(0.42, '#1B3790')
-  g.addColorStop(0.82, NAVY)
-  g.addColorStop(1, NAVY)
+  g.addColorStop(0, T.glow[0])
+  g.addColorStop(0.42, T.glow[1])
+  g.addColorStop(0.82, T.background)
+  g.addColorStop(1, T.background)
   ctx.fillStyle = g
   ctx.fillRect(-GRAPHIC_WIDTH, -GRAPHIC_HEIGHT * 2, GRAPHIC_WIDTH * 2, GRAPHIC_HEIGHT * 4)
   ctx.restore()
@@ -98,8 +167,8 @@ function drawKnight(ctx: CanvasRenderingContext2D, knight: CanvasImageSource) {
   const { width, height } = imageSize(knight)
   const w = 1540
   ctx.save()
-  ctx.globalAlpha = 0.07
-  ctx.drawImage(knight, -230, 150, w, (height / width) * w)
+  ctx.globalAlpha = T.knightAlpha
+  ctx.drawImage(T.artTint ? tinted(knight, T.artTint) : knight, -230, 150, w, (height / width) * w)
   ctx.restore()
 }
 
@@ -110,9 +179,9 @@ function drawTopBar(ctx: CanvasRenderingContext2D, crest: CanvasImageSource, sea
     weight: 800,
     size: 22,
     tracking: 22 * 0.06,
-    color: WHITE,
+    color: T.text,
   })
-  drawText(ctx, seasonLabel, GRAPHIC_WIDTH - MARGIN, baselineFor(74, 20), label(20, GOLD, 600, 0.2), 'right')
+  drawText(ctx, seasonLabel, GRAPHIC_WIDTH - MARGIN, baselineFor(74, 20), label(20, T.gold, 600, 0.2), 'right')
 }
 
 /** Big faded word behind the player ("GOALSCORER", "MATCHDAY", …). */
@@ -122,7 +191,7 @@ function drawBigWord(ctx: CanvasRenderingContext2D, lines: string[], top: number
   const fitted = Math.min(
     ...lines.map((line) =>
       fitFontSize(
-        (s) => measureText(ctx, upper(line), { family: 'display', weight: 900, size: s, tracking: -0.01 * s, color: WHITE }),
+        (s) => measureText(ctx, upper(line), { family: 'display', weight: 900, size: s, tracking: -0.01 * s, color: T.text }),
         CONTENT_WIDTH,
         size,
         40,
@@ -131,9 +200,9 @@ function drawBigWord(ctx: CanvasRenderingContext2D, lines: string[], top: number
   )
   const lineHeight = fitted * lineHeightEm
   const g = ctx.createLinearGradient(0, top, 0, top + lineHeight * lines.length)
-  g.addColorStop(0, 'rgba(255,255,255,1)')
-  g.addColorStop(0.92, 'rgba(255,255,255,0.14)')
-  g.addColorStop(1, 'rgba(255,255,255,0.14)')
+  g.addColorStop(0, T.headline[0])
+  g.addColorStop(0.92, T.headline[1])
+  g.addColorStop(1, T.headline[1])
   lines.forEach((line, i) => {
     drawText(
       ctx,
@@ -179,7 +248,7 @@ function drawPlayer(
     // No cut-out yet: a large crest keeps the post usable.
     ctx.save()
     ctx.globalAlpha = 0.95
-    ctx.shadowColor = 'rgba(4,10,40,0.55)'
+    ctx.shadowColor = T.shadow
     ctx.shadowBlur = 48
     ctx.shadowOffsetY = 28
     ctx.drawImage(crest, GRAPHIC_WIDTH / 2 - 210, 440, 420, 420)
@@ -191,7 +260,7 @@ function drawPlayer(
   ctx.beginPath()
   ctx.rect(0, 0, GRAPHIC_WIDTH, FOOTER_TOP)
   ctx.clip()
-  ctx.shadowColor = 'rgba(4,10,40,0.55)'
+  ctx.shadowColor = T.shadow
   ctx.shadowBlur = 48
   ctx.shadowOffsetY = 28
   const r = playerRect(imageSize(player), framing)
@@ -203,17 +272,17 @@ function drawPlayer(
 function drawFade(ctx: CanvasRenderingContext2D) {
   const top = FOOTER_TOP - 360
   const g = ctx.createLinearGradient(0, top, 0, FOOTER_TOP)
-  g.addColorStop(0, 'rgba(13,27,75,0)')
-  g.addColorStop(0.58, 'rgba(13,27,75,0.86)')
-  g.addColorStop(1, NAVY)
+  g.addColorStop(0, T.fade[0])
+  g.addColorStop(0.58, T.fade[1])
+  g.addColorStop(1, T.background)
   ctx.fillStyle = g
   ctx.fillRect(0, top, GRAPHIC_WIDTH, 360)
 }
 
 function drawFooterFrame(ctx: CanvasRenderingContext2D) {
-  ctx.fillStyle = FOOTER_NAVY
+  ctx.fillStyle = T.footer
   ctx.fillRect(0, FOOTER_TOP, GRAPHIC_WIDTH, GRAPHIC_HEIGHT - FOOTER_TOP)
-  ctx.fillStyle = GOLD
+  ctx.fillStyle = T.gold
   ctx.fillRect(0, FOOTER_TOP, GRAPHIC_WIDTH, FOOTER_RULE)
 }
 
@@ -238,10 +307,10 @@ function drawSideMark(
   ctx.save()
   ctx.beginPath()
   ctx.arc(cx, cy, r, 0, Math.PI * 2)
-  ctx.fillStyle = '#13245E'
+  ctx.fillStyle = T.roundel
   ctx.fill()
   ctx.lineWidth = Math.max(2, size * 0.05)
-  ctx.strokeStyle = GOLD
+  ctx.strokeStyle = T.gold
   ctx.beginPath()
   ctx.arc(cx, cy, r - ctx.lineWidth / 2, 0, Math.PI * 2)
   ctx.stroke()
@@ -252,7 +321,7 @@ function drawSideMark(
     teamInitials(side.name),
     cx,
     cy + fontSize * 0.36,
-    { family: 'display', weight: 900, size: fontSize, color: WHITE },
+    { family: 'display', weight: 900, size: fontSize, color: T.roundelText },
     'center',
   )
 }
@@ -271,7 +340,7 @@ function drawFooterText(
   let size = 36
   let lines: string[] | null = null
   for (; size >= 20; size -= 1) {
-    const style: TextStyle = { family: 'display', weight: 800, size, tracking: size * 0.04, color: WHITE }
+    const style: TextStyle = { family: 'display', weight: 800, size, tracking: size * 0.04, color: T.text }
     lines = wrapLines(words, (line) => measureText(ctx, line, style), maxWidth, 2)
     if (lines) break
   }
@@ -288,14 +357,14 @@ function drawFooterText(
       line,
       x,
       baselineFor(top + i * lineHeight, size, lineHeight),
-      { family: 'display', weight: 800, size, tracking: size * 0.04, color: WHITE },
+      { family: 'display', weight: 800, size, tracking: size * 0.04, color: T.text },
       align,
     )
   })
   top += lineHeight * lines.length
   if (extra) {
     top += 12
-    drawText(ctx, upper(extra), x, baselineFor(top, 20), label(20, SOFT_WHITE, 600, 0.2), align)
+    drawText(ctx, upper(extra), x, baselineFor(top, 20), label(20, T.softText, 600, 0.2), align)
   }
 }
 
@@ -325,11 +394,12 @@ function drawSponsorBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData
   drawText(ctx, upper('Sponsored by'), MARGIN, baselineFor(top, 21), label(21))
   const logoTop = top + 21 + 16
   if (images.sponsorLogoOnTile) {
-    ctx.fillStyle = WHITE
+    ctx.fillStyle = TILE_WHITE
     roundRect(ctx, MARGIN, logoTop, logoW + tilePad * 2, logoH + tilePad * 2, 12)
     ctx.fill()
   }
-  ctx.drawImage(logo, MARGIN + tilePad, logoTop + tilePad, logoW, logoH)
+  const mark = !images.sponsorLogoOnTile && T.artTint ? tinted(logo, T.artTint) : logo
+  ctx.drawImage(mark, MARGIN + tilePad, logoTop + tilePad, logoW, logoH)
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -345,7 +415,7 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 function drawResultBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData, images: GraphicImages) {
   const right = GRAPHIC_WIDTH - MARGIN
   const rowCentre = FOOTER_MID - (84 + 16 + 20) / 2 + 42
-  const scoreStyle: TextStyle = { family: 'display', weight: 900, size: 76, tracking: 1.5, color: WHITE }
+  const scoreStyle: TextStyle = { family: 'display', weight: 900, size: 76, tracking: 1.5, color: T.text }
   const score = `${data.homeScore}–${data.awayScore}`
   const scoreW = measureText(ctx, score, scoreStyle)
   const markW = 84
@@ -358,13 +428,13 @@ function drawResultBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData,
   drawText(ctx, score, scoreRight, baselineFor(rowCentre - 38, 76), scoreStyle, 'right')
   drawSideMark(ctx, data.away, images, awayCx, rowCentre, data.away.isClub ? 80 : 84)
 
-  drawText(ctx, upper('Full time'), right, baselineFor(rowCentre + 42 + 16, 20), label(20, SOFT_WHITE, 600, 0.2), 'right')
+  drawText(ctx, upper('Full time'), right, baselineFor(rowCentre + 42 + 16, 20), label(20, T.softText, 600, 0.2), 'right')
 }
 
 function drawNameBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData) {
   const name = upper(data.playerName)
   const size = fitFontSize(
-    (s) => measureText(ctx, name, { family: 'display', weight: 900, size: s, color: WHITE }),
+    (s) => measureText(ctx, name, { family: 'display', weight: 900, size: s, color: T.text }),
     CONTENT_WIDTH,
     84,
     44,
@@ -375,7 +445,7 @@ function drawNameBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData) {
     family: 'display',
     weight: 900,
     size,
-    color: WHITE,
+    color: T.text,
   }, 'center')
 
   const detailStyle = label(26)
@@ -386,7 +456,7 @@ function drawNameBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData) {
   const total = ruleW * 2 + gap * 2 + detailW
   const left = GRAPHIC_WIDTH / 2 - total / 2
   const lineTop = 1038
-  ctx.fillStyle = GOLD
+  ctx.fillStyle = T.gold
   ctx.fillRect(left, lineTop + 12, ruleW, 2)
   ctx.fillRect(left + total - ruleW, lineTop + 12, ruleW, 2)
   drawText(ctx, detail, left + ruleW + gap, baselineFor(lineTop, 26), detailStyle)
@@ -417,7 +487,7 @@ function drawFixtureHeader(ctx: CanvasRenderingContext2D, data: MatchdayGraphicD
     drawSideMark(ctx, side, images, centres[i], 52 + 60, 120)
     const name = upper(side.name)
     const size = fitFontSize(
-      (s) => measureText(ctx, name, { family: 'display', weight: 800, size: s, tracking: s * 0.08, color: WHITE }),
+      (s) => measureText(ctx, name, { family: 'display', weight: 800, size: s, tracking: s * 0.08, color: T.text }),
       colW - 16,
       17,
       11,
@@ -427,7 +497,7 @@ function drawFixtureHeader(ctx: CanvasRenderingContext2D, data: MatchdayGraphicD
       weight: 800,
       size,
       tracking: size * 0.08,
-      color: WHITE,
+      color: T.text,
     }, 'center')
   })
   drawText(ctx, 'VS', GRAPHIC_WIDTH / 2, baselineFor(113, 30), {
@@ -435,7 +505,7 @@ function drawFixtureHeader(ctx: CanvasRenderingContext2D, data: MatchdayGraphicD
     weight: 900,
     size: 30,
     tracking: 3,
-    color: GOLD,
+    color: T.gold,
   }, 'center')
 }
 
@@ -451,14 +521,14 @@ function drawInfoRow(ctx: CanvasRenderingContext2D, data: MatchdayGraphicData) {
     drawText(ctx, upper(heading), cx, baselineFor(994, 18), label(18), 'center')
     const valueText = upper(value)
     const size = fitFontSize(
-      (s) => measureText(ctx, valueText, { family: 'display', weight: 900, size: s, color: WHITE }),
+      (s) => measureText(ctx, valueText, { family: 'display', weight: 900, size: s, color: T.text }),
       colW - 24,
       40,
       24,
     )
-    drawText(ctx, valueText, cx, baselineFor(1024, size, 40), { family: 'display', weight: 900, size, color: WHITE }, 'center')
+    drawText(ctx, valueText, cx, baselineFor(1024, size, 40), { family: 'display', weight: 900, size, color: T.text }, 'center')
   })
-  ctx.fillStyle = GOLD_LINE
+  ctx.fillStyle = T.goldLine
   ctx.fillRect(Math.round(MARGIN + colW), 994, 1, 70)
   ctx.fillRect(Math.round(MARGIN + colW * 2), 994, 1, 70)
 }
@@ -486,6 +556,7 @@ export function renderGraphic(canvas: HTMLCanvasElement, data: GraphicData, imag
   ctx.clearRect(0, 0, GRAPHIC_WIDTH, GRAPHIC_HEIGHT)
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
+  T = THEMES[images.theme ?? 'dark']
   if (data.kind === 'matchday') renderMatchday(ctx, data, images)
   else renderResult(ctx, data, images)
 }
