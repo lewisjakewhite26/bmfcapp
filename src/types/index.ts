@@ -185,6 +185,8 @@ export interface SquadMember {
   photo_url?: string | null
   sponsor_name?: string | null
   sponsor_logo_url?: string | null
+  /** Client-only: name of the shared logo file in use (Supabase sponsors folder). */
+  sponsor_logo_shared_file?: string | null
 }
 
 export interface PlayerStats {

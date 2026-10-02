@@ -8,9 +8,12 @@ import {
   adminSetPlayerSponsorName,
   adminUploadPlayerSponsorLogo,
 } from '../../lib/sponsorAdmin'
+import { SHARED_LOGO_FOLDER, type SharedLogoFile } from '../../lib/sharedSponsorLogos'
 
 interface SponsorsPanelProps {
   squad: SquadMember[]
+  /** Files in the Supabase sponsors folder. */
+  sharedLogos: SharedLogoFile[]
   onChanged: () => void
 }
 
@@ -40,6 +43,7 @@ function PlayerSponsorRow({ player, onChanged }: { player: SquadMember; onChange
   const [name, setName] = useState(player.sponsor_name ?? '')
   const [busy, setBusy] = useState(false)
   const logoUrl = resolveSponsorLogoUrl(player.sponsor_logo_url)
+  const sharedFile = player.sponsor_logo_shared_file ?? null
   const status = statusOf(player)
 
   const run = async (fn: () => Promise<unknown>, done: string) => {
@@ -73,6 +77,7 @@ function PlayerSponsorRow({ player, onChanged }: { player: SquadMember; onChange
         <div className="flex-1 min-w-0">
           <p className="font-medium text-brand-navy truncate">{player.display_name}</p>
           <p className="text-sm text-gray-500 truncate">{player.sponsor_name?.trim() || 'No sponsor'}</p>
+          {sharedFile && <p className="text-xs text-gray-400 truncate">Logo from sponsors folder: {sharedFile}</p>}
         </div>
         <span className={`shrink-0 text-[11px] font-semibold border rounded-pill px-2 py-1 ${STATUS_CLASS[status]}`}>
           {STATUS_LABEL[status]}
@@ -96,9 +101,9 @@ function PlayerSponsorRow({ player, onChanged }: { player: SquadMember; onChange
           }}
         />
         <label htmlFor={fileId} className={`text-brand-blue cursor-pointer min-h-[32px] inline-flex items-center ${busy ? 'opacity-50 pointer-events-none' : ''}`}>
-          {logoUrl ? 'Replace logo' : 'Add logo'}
+          {sharedFile ? 'Use a different logo' : logoUrl ? 'Replace logo' : 'Add logo'}
         </label>
-        {logoUrl && (
+        {logoUrl && !sharedFile && (
           <button
             type="button"
             className="text-red-600 min-h-[32px]"
@@ -140,13 +145,17 @@ function PlayerSponsorRow({ player, onChanged }: { player: SquadMember; onChange
   )
 }
 
-export function SponsorsPanel({ squad, onChanged }: SponsorsPanelProps) {
+export function SponsorsPanel({ squad, sharedLogos, onChanged }: SponsorsPanelProps) {
   const players = useMemo(() => [...squad].sort((a, b) => a.display_name.localeCompare(b.display_name)), [squad])
   const counts = useMemo(() => {
     const c = { done: 0, 'no-logo': 0, 'no-sponsor': 0 } as Record<Status, number>
     for (const p of players) c[statusOf(p)]++
     return c
   }, [players])
+  const unusedLogos = useMemo(() => {
+    const used = new Set(players.map((p) => p.sponsor_logo_shared_file).filter(Boolean))
+    return sharedLogos.filter((f) => !used.has(f.name))
+  }, [players, sharedLogos])
 
   return (
     <section className="glass-card p-4 space-y-3">
@@ -162,11 +171,30 @@ export function SponsorsPanel({ squad, onChanged }: SponsorsPanelProps) {
         <span className="font-semibold">{counts['no-sponsor']}</span> without a sponsor
       </p>
       <p className="text-xs text-gray-500">Logos: JPEG, PNG, WebP or GIF up to 2MB. A PNG with a clear background looks best.</p>
+      <details className="text-xs text-gray-500">
+        <summary className="cursor-pointer font-semibold text-brand-blue">Adding lots of logos at once</summary>
+        <p className="mt-1">
+          In Supabase, open Storage → sponsor-logos and drop the files into the <b>{SHARED_LOGO_FOLDER}</b> folder, each named
+          after the sponsor (e.g. “Lines Valeting.png”). Every player with that sponsor picks it up. A logo added here on a
+          player always takes priority.
+        </p>
+      </details>
       <ul className="divide-y divide-brand-blue/10">
         {players.map((p) => (
           <PlayerSponsorRow key={`${p.player_id}-${p.sponsor_name ?? ''}-${p.sponsor_logo_url ?? ''}`} player={p} onChanged={onChanged} />
         ))}
       </ul>
+      {unusedLogos.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="font-semibold">Logos in the sponsors folder not matched to anyone</p>
+          <p className="text-xs mt-1">Rename them in Supabase to the sponsor's name as shown above.</p>
+          <ul className="mt-2 list-disc pl-5">
+            {unusedLogos.map((f) => (
+              <li key={f.name}>{f.name}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   )
 }

@@ -10,6 +10,7 @@ import { LibraryPanel } from '../components/graphics/LibraryPanel'
 import { SponsorsPanel } from '../components/graphics/SponsorsPanel'
 import { fetchAdminUsers, fetchFixturesWithResults, fetchSquad } from '../lib/clubApi'
 import { withFullNames } from '../lib/graphics/names'
+import { listSharedSponsorLogos, withSharedSponsorLogos, type SharedLogoFile } from '../lib/sharedSponsorLogos'
 import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
 import { resolveSponsorLogoUrl } from '../lib/sponsorLogoUrl'
@@ -223,6 +224,7 @@ export default function AdminGraphics() {
   const [loading, setLoading] = useState(true)
   const [fixtures, setFixtures] = useState<FixtureWithResult[]>([])
   const [squad, setSquad] = useState<SquadMember[]>([])
+  const [sharedLogos, setSharedLogos] = useState<SharedLogoFile[]>([])
   const [library, setLibrary] = useState<GraphicsLibrary>({ photos: [], badges: [] })
   const [kind, setKind] = useState<GraphicKind>('matchday')
   const [fixtureId, setFixtureId] = useState('')
@@ -231,9 +233,15 @@ export default function AdminGraphics() {
   const handles = useRef(new Map<string, { handle: GraphicCanvasHandle; fileName: string }>())
 
   // Full names ("Jack Marley") for posts and matching; the app's "Jack M" is the fallback.
+  // Shared logos (Supabase sponsors folder) fill in for players without their own.
   const loadSquad = useCallback(async () => {
-    const [sq, users] = await Promise.all([fetchSquad(), fetchAdminUsers().catch(() => [])])
-    return withFullNames(sq, users)
+    const [sq, users, logos] = await Promise.all([
+      fetchSquad(),
+      fetchAdminUsers().catch(() => []),
+      listSharedSponsorLogos(),
+    ])
+    setSharedLogos(logos)
+    return withSharedSponsorLogos(withFullNames(sq, users), logos)
   }, [])
 
   const refreshSquad = useCallback(async () => {
@@ -378,7 +386,7 @@ export default function AdminGraphics() {
         ) : tab === 'library' ? (
           <LibraryPanel squad={squad} opponents={opponents} library={library} onChanged={() => void refreshLibrary()} />
         ) : tab === 'sponsors' ? (
-          <SponsorsPanel squad={squad} onChanged={() => void refreshSquad()} />
+          <SponsorsPanel squad={squad} sharedLogos={sharedLogos} onChanged={() => void refreshSquad()} />
         ) : (
           <>
             <div className="glass-card p-4 space-y-4">
