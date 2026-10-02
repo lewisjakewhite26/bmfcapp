@@ -74,9 +74,12 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
   // Size and position of the photo on this post only; starts fresh for each photo.
   const [framing, setFraming] = useState<PlayerFraming>(DEFAULT_FRAMING)
   const [framingFor, setFramingFor] = useState<string | null>(null)
+  // Dragging is locked until asked for, so scrolling on a phone can't nudge the player.
+  const [moving, setMoving] = useState(false)
   if ((chosen?.id ?? null) !== framingFor) {
     setFramingFor(chosen?.id ?? null)
     setFraming(DEFAULT_FRAMING)
+    setMoving(false)
   }
   const framed = framing.scale !== 1 || framing.x !== 0 || framing.y !== 0
   const badge = badgeForOpponent(library.badges, fixture.opponent, library.crests)
@@ -217,7 +220,7 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
         sponsorLogoUrl={sponsorLogoUrl}
         logoOnTile={logoOnTile}
         framing={chosen ? framing : undefined}
-        onFramingChange={chosen ? setFraming : undefined}
+        onFramingChange={chosen && moving ? setFraming : undefined}
         theme={theme}
       />
 
@@ -240,7 +243,22 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
             <span className="w-12 text-right text-sm tabular-nums text-gray-500">{Math.round(framing.scale * 100)}%</span>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-gray-500">Drag the player on the preview to move them. Anything below the footer is cut off.</p>
+            <button
+              type="button"
+              aria-pressed={moving}
+              onClick={() => setMoving((m) => !m)}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-pill border px-3 min-h-[36px] shrink-0 ${
+                moving
+                  ? 'bg-brand-navy text-white border-brand-navy'
+                  : 'bg-white text-brand-navy border-brand-blue/20 hover:border-brand-blue'
+              }`}
+            >
+              <svg aria-hidden="true" viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <rect x="4" y="9" width="12" height="8" rx="1.5" />
+                <path d={moving ? 'M7 9V6.5a3 3 0 0 1 5.8-1' : 'M7 9V6.5a3 3 0 0 1 6 0V9'} />
+              </svg>
+              {moving ? 'Done moving' : 'Move photo'}
+            </button>
             <button
               type="button"
               className="text-xs font-semibold text-brand-blue min-h-[36px] shrink-0 disabled:opacity-40"
@@ -250,6 +268,11 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
               Reset
             </button>
           </div>
+          <p className="text-xs text-gray-500">
+            {moving
+              ? 'Drag the player on the preview to move them, then tap Done moving. Anything below the footer is cut off.'
+              : 'The photo is locked so scrolling won’t move it. Tap Move photo to drag the player.'}
+          </p>
         </div>
       )}
 

@@ -136,11 +136,24 @@ test.describe('Matchday graphics', () => {
     await expect.poll(pixels).not.toBe(original)
 
     const box = (await canvas.boundingBox())!
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-    await page.mouse.down()
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 60, { steps: 4 })
-    await page.mouse.up()
+    const dragDown = async () => {
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 60, { steps: 4 })
+      await page.mouse.up()
+    }
+    // Locked to start, so a drag (or a scroll on a phone) leaves it alone.
+    const sized = await pixels()
+    await dragDown()
+    expect(await pixels()).toBe(sized)
+
+    const move = page.getByRole('button', { name: 'Move photo' })
+    await move.click()
+    await expect(page.getByRole('button', { name: 'Done moving' })).toHaveAttribute('aria-pressed', 'true')
+    await dragDown()
     const dragged = await pixels()
+    expect(dragged).not.toBe(sized)
+    await page.getByRole('button', { name: 'Done moving' }).click()
 
     await reset.click()
     await expect(page.getByText('100%')).toBeVisible()
