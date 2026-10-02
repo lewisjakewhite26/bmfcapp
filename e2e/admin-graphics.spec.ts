@@ -102,3 +102,20 @@ test.describe('Matchday graphics', () => {
     await expect(page.getByText(`No graphics photo for ${name} yet`)).toHaveCount(0)
   })
 })
+
+test.describe('Sponsors', () => {
+  test('admin pastes a sponsor list and it lands on the players', async ({ page }) => {
+    await openGraphics(page)
+    await page.getByRole('tab', { name: 'Sponsors' }).click()
+
+    const names = await page.locator('section', { hasText: 'Player sponsors' }).locator('li > div:first-child > label').allTextContents()
+    const [first, second] = names.map((n) => n.trim())
+    await page.getByLabel('Sponsor list').fill(`${first} – L Brown Installations\n${second} – available\nFreddie Lower – AVAILABLE`)
+    await expect(page.getByText('Freddie Lower (not in squad)')).toBeVisible()
+    await page.getByRole('button', { name: 'Save 2 sponsors' }).click()
+    await expect(page.getByText('2 sponsors saved')).toBeVisible()
+
+    await expect(page.getByLabel(first, { exact: true })).toHaveValue('L Brown Installations')
+    await expect(page.getByLabel(second, { exact: true })).toHaveValue('')
+  })
+})

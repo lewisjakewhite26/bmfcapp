@@ -7,6 +7,7 @@ import { GraphicCanvas, type GraphicCanvasHandle } from '../components/graphics/
 import { PlayerPhotoUploader } from '../components/graphics/PlayerPhotoUploader'
 import { BadgeUploadButton } from '../components/graphics/BadgeUploadButton'
 import { LibraryPanel } from '../components/graphics/LibraryPanel'
+import { SponsorsPanel } from '../components/graphics/SponsorsPanel'
 import { fetchFixturesWithResults, fetchSquad } from '../lib/clubApi'
 import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
@@ -217,7 +218,7 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
 }
 
 export default function AdminGraphics() {
-  const [tab, setTab] = useState<'make' | 'library'>('make')
+  const [tab, setTab] = useState<'make' | 'library' | 'sponsors'>('make')
   const [loading, setLoading] = useState(true)
   const [fixtures, setFixtures] = useState<FixtureWithResult[]>([])
   const [squad, setSquad] = useState<SquadMember[]>([])
@@ -227,6 +228,14 @@ export default function AdminGraphics() {
   const [posterPlayerId, setPosterPlayerId] = useState('')
   const [motmId, setMotmId] = useState('')
   const handles = useRef(new Map<string, { handle: GraphicCanvasHandle; fileName: string }>())
+
+  const refreshSquad = useCallback(async () => {
+    try {
+      setSquad(await fetchSquad())
+    } catch {
+      toast.error("Couldn't reload the squad")
+    }
+  }, [])
 
   const refreshLibrary = useCallback(async () => {
     try {
@@ -339,6 +348,7 @@ export default function AdminGraphics() {
             [
               ['make', 'Make a post'],
               ['library', 'Photos & badges'],
+              ['sponsors', 'Sponsors'],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -347,7 +357,7 @@ export default function AdminGraphics() {
               role="tab"
               aria-selected={tab === id}
               onClick={() => setTab(id)}
-              className={`flex-1 min-h-[44px] rounded-pill text-sm font-semibold transition-colors ${
+              className={`flex-1 min-h-[44px] px-2 rounded-pill text-[13px] sm:text-sm leading-tight font-semibold transition-colors ${
                 tab === id ? 'bg-brand-blue text-white' : 'text-gray-600 hover:bg-white/60'
               }`}
             >
@@ -360,6 +370,8 @@ export default function AdminGraphics() {
           <div className="glass-card h-64 animate-pulse" />
         ) : tab === 'library' ? (
           <LibraryPanel squad={squad} opponents={opponents} library={library} onChanged={() => void refreshLibrary()} />
+        ) : tab === 'sponsors' ? (
+          <SponsorsPanel squad={squad} onChanged={() => void refreshSquad()} />
         ) : (
           <>
             <div className="glass-card p-4 space-y-4">

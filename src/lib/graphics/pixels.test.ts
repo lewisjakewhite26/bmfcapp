@@ -70,6 +70,7 @@ describe('bulk upload matching', () => {
   it('matches file names to player and team names', () => {
     expect(fileNameKey('jack-marley-2.jpg')).toBe(nameKey('Jack Marley'))
     expect(fileNameKey('Ferryhill_Ivorson.PNG')).toBe(nameKey('Ferryhill Ivorson'))
-    expect(fileNameKey("o'brien.png")).toBe(nameKey("O'Brien"))
+    expect(fileNameKey('obrien.png')).toBe(nameKey("O'Brien"))
+    expect(nameKey('Logan Ohara')).toBe(nameKey("Logan O’Hara"))
   })
 })

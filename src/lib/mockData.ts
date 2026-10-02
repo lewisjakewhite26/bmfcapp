@@ -1217,6 +1217,8 @@ export function resetMockData() {
   seedMockFundraiserParticipation()
   availability = []
   mockLineups.clear()
+  mockSponsorNames.clear()
+  mockSponsorLogoUrls.clear()
   adminUsers = [...MOCK_ADMIN_USERS, ...(import.meta.env.VITE_E2E === 'true' ? E2E_SEED_USERS : [])]
   squad = [...MOCK_SQUAD]
   mockPasscodes.clear()
