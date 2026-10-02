@@ -9,6 +9,7 @@ import {
   adminUploadPlayerSponsorLogo,
 } from '../../lib/sponsorAdmin'
 import { SHARED_LOGO_FOLDER, type SharedLogoFile } from '../../lib/sharedSponsorLogos'
+import { ListSection } from './ListSection'
 
 interface SponsorsPanelProps {
   squad: SquadMember[]
@@ -152,23 +153,30 @@ export function SponsorsPanel({ squad, sharedLogos, onChanged }: SponsorsPanelPr
     for (const p of players) c[statusOf(p)]++
     return c
   }, [players])
+  const [filter, setFilter] = useState('all')
   const unusedLogos = useMemo(() => {
     const used = new Set(players.map((p) => p.sponsor_logo_shared_file).filter(Boolean))
     return sharedLogos.filter((f) => !used.has(f.name))
   }, [players, sharedLogos])
 
+  const shown = filter === 'all' ? players : players.filter((p) => statusOf(p) === filter)
+
   return (
-    <section className="glass-card p-4 space-y-3">
-      <div>
-        <h2 className="font-display text-lg text-brand-navy">Player sponsors</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Shown on that player's goalscorer and MOTM posts. Players can also add their own from their profile.
-        </p>
-      </div>
-      <p className="text-sm text-brand-navy">
-        <span className="font-semibold">{counts.done}</span> ready ·{' '}
-        <span className="font-semibold">{counts['no-logo']}</span> need a logo ·{' '}
-        <span className="font-semibold">{counts['no-sponsor']}</span> without a sponsor
+    <ListSection
+      title="Player sponsors"
+      summary={`${counts.done} ready · ${counts['no-logo']} need a logo · ${counts['no-sponsor']} without a sponsor`}
+      filters={[
+        { key: 'all', label: 'All', count: players.length },
+        { key: 'done', label: 'Ready', count: counts.done },
+        { key: 'no-logo', label: 'Needs logo', count: counts['no-logo'] },
+        { key: 'no-sponsor', label: 'No sponsor', count: counts['no-sponsor'] },
+      ]}
+      filter={filter}
+      onFilter={setFilter}
+      defaultOpen
+    >
+      <p className="text-xs text-gray-500">
+        Shown on that player's goalscorer and MOTM posts. Players can also add their own from their profile.
       </p>
       <p className="text-xs text-gray-500">Logos: JPEG, PNG, WebP or GIF up to 2MB. A PNG with a clear background looks best.</p>
       <details className="text-xs text-gray-500">
@@ -180,7 +188,8 @@ export function SponsorsPanel({ squad, sharedLogos, onChanged }: SponsorsPanelPr
         </p>
       </details>
       <ul className="divide-y divide-brand-blue/10">
-        {players.map((p) => (
+        {shown.length === 0 && <li className="py-2 text-sm text-gray-500">Nobody here.</li>}
+        {shown.map((p) => (
           <PlayerSponsorRow key={`${p.player_id}-${p.sponsor_name ?? ''}-${p.sponsor_logo_url ?? ''}`} player={p} onChanged={onChanged} />
         ))}
       </ul>
@@ -195,6 +204,6 @@ export function SponsorsPanel({ squad, sharedLogos, onChanged }: SponsorsPanelPr
           </ul>
         </div>
       )}
-    </section>
+    </ListSection>
   )
 }

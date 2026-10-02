@@ -19,6 +19,7 @@ import {
 } from '../../lib/graphicsApi'
 import { PlayerPhotoUploader } from './PlayerPhotoUploader'
 import { BadgeUploadButton } from './BadgeUploadButton'
+import { ListSection } from './ListSection'
 
 interface LibraryPanelProps {
   squad: SquadMember[]
@@ -55,6 +56,8 @@ export function LibraryPanel({ squad, opponents, library, onChanged }: LibraryPa
   const [openPlayer, setOpenPlayer] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<{ kind: 'photo' | 'badge'; id: string; label: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [photoFilter, setPhotoFilter] = useState('all')
+  const [badgeFilter, setBadgeFilter] = useState('all')
 
   const players = useMemo(
     () => [...squad].sort((a, b) => a.display_name.localeCompare(b.display_name)),
@@ -138,16 +141,23 @@ export function LibraryPanel({ squad, opponents, library, onChanged }: LibraryPa
 
   const pendingCount = rows.filter((r) => r.status !== 'done' && r.target).length
 
+  const playerRows = players.map((player) => ({ player, photos: photosForPlayer(library.photos, player.player_id) }))
+  const withPhoto = playerRows.filter((r) => r.photos.length > 0).length
+  const shownPlayers = playerRows.filter((r) =>
+    photoFilter === 'has' ? r.photos.length > 0 : photoFilter === 'missing' ? r.photos.length === 0 : true,
+  )
+
+  const badgeRows = opponentNames.map((name) => ({ name, badge: badgeForOpponent(library.badges, name, library.crests) }))
+  const withBadge = badgeRows.filter((r) => r.badge).length
+  const shownBadges = badgeRows.filter((r) => (badgeFilter === 'has' ? r.badge : badgeFilter === 'missing' ? !r.badge : true))
+
   return (
-    <div className="space-y-6">
-      <section className="glass-card p-4 space-y-3">
-        <div>
-          <h2 className="font-display text-lg text-brand-navy">Bulk upload</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Name files after the player or team, e.g. <span className="font-mono text-xs">jack-marley-2.jpg</span> or{' '}
-            <span className="font-mono text-xs">ferryhill-ivorson.png</span>. Anything that doesn't match, pick from the list.
-          </p>
-        </div>
+    <div className="space-y-4">
+      <ListSection title="Bulk upload" summary="Add lots of player photos at once" forceOpen={rows.length > 0}>
+        <p className="text-sm text-gray-500">
+          Name files after the player or team, e.g. <span className="font-mono text-xs">jack-marley-2.jpg</span> or{' '}
+          <span className="font-mono text-xs">ferryhill-ivorson.png</span>. Anything that doesn't match, pick from the list.
+        </p>
         <input
           id={bulkInputId}
           type="file"
@@ -226,13 +236,22 @@ export function LibraryPanel({ squad, opponents, library, onChanged }: LibraryPa
             Player photos have their backgrounds removed one at a time on this device. Keep this page open until they're done.
           </p>
         )}
-      </section>
+      </ListSection>
 
-      <section className="glass-card p-4 space-y-3">
-        <h2 className="font-display text-lg text-brand-navy">Player photos</h2>
+      <ListSection
+        title="Player photos"
+        summary={`${withPhoto} of ${playerRows.length} players have a photo`}
+        filters={[
+          { key: 'all', label: 'All', count: playerRows.length },
+          { key: 'has', label: 'Has photo', count: withPhoto },
+          { key: 'missing', label: 'No photo', count: playerRows.length - withPhoto },
+        ]}
+        filter={photoFilter}
+        onFilter={setPhotoFilter}
+      >
+        {shownPlayers.length === 0 && <p className="text-sm text-gray-500">Nobody here.</p>}
         <ul className="divide-y divide-brand-blue/10">
-          {players.map((player) => {
-            const photos = photosForPlayer(library.photos, player.player_id)
+          {shownPlayers.map(({ player, photos }) => {
             const open = openPlayer === player.player_id
             return (
               <li key={player.player_id} className="py-2">
@@ -296,12 +315,21 @@ export function LibraryPanel({ squad, opponents, library, onChanged }: LibraryPa
             )
           })}
         </ul>
-      </section>
+      </ListSection>
 
-      <section className="glass-card p-4 space-y-3">
+      <ListSection
+        title="Opponent badges"
+        summary={`${withBadge} of ${badgeRows.length} opponents have a crest`}
+        filters={[
+          { key: 'all', label: 'All', count: badgeRows.length },
+          { key: 'has', label: 'Has crest', count: withBadge },
+          { key: 'missing', label: 'No crest', count: badgeRows.length - withBadge },
+        ]}
+        filter={badgeFilter}
+        onFilter={setBadgeFilter}
+      >
         <div>
-          <h2 className="font-display text-lg text-brand-navy">Opponent badges</h2>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-500">
             Easiest: in Supabase, open Storage → matchday-graphics and drop crests into the <b>crests</b> folder, named
             after the club (e.g. “Kelloe FC.png”). They match automatically, including clubs added to the fixtures later.
             {library.crests?.length ? ` ${library.crests.length} in the folder.` : ''}
@@ -311,8 +339,8 @@ export function LibraryPanel({ squad, opponents, library, onChanged }: LibraryPa
           <p className="text-sm text-gray-500">No opponents in the fixture list yet.</p>
         ) : (
           <ul className="divide-y divide-brand-blue/10">
-            {opponentNames.map((name) => {
-              const badge = badgeForOpponent(library.badges, name, library.crests)
+            {shownBadges.length === 0 && <li className="py-2 text-sm text-gray-500">Nobody here.</li>}
+            {shownBadges.map(({ name, badge }) => {
               const url = resolveGraphicsUrl(badge?.badge_path)
               return (
                 <li key={name} className="py-2 flex items-center gap-3">
@@ -349,7 +377,7 @@ export function LibraryPanel({ squad, opponents, library, onChanged }: LibraryPa
             })}
           </ul>
         )}
-      </section>
+      </ListSection>
 
       <ConfirmDialog
         open={Boolean(confirm)}
