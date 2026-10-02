@@ -70,7 +70,7 @@ export default defineConfig({
         // Matchday graphics' background removal (onnxruntime, ~24 MB wasm +
         // ~1.6 MB of scripts) loads on demand on that admin page only — keep
         // it out of the offline precache every player downloads.
-        globIgnores: ['**/node_modules/**/*', '**/ort-*.wasm', '**/ort.*.js', '**/ort.*.mjs', '**/models/**', '**/sponsors/**'],
+        globIgnores: ['**/node_modules/**/*', '**/ort-*.wasm', '**/ort.*.js', '**/ort.*.mjs', '**/models/**'],
       },
       injectRegister: false,
       devOptions: {

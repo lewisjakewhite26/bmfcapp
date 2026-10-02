@@ -77,7 +77,6 @@ Apply migrations **in order** via the Supabase SQL Editor (Dashboard → SQL →
 | `supabase-club/migrations/053_matchday_graphics.sql` | Matchday graphics library — player cut-outs, opponent badges, `matchday-graphics` storage bucket (admin only) |
 | `supabase-club/migrations/054_sponsor_admin_and_upload_policy_fix.sql` | Fixes player photo and sponsor logo uploads (storage policies blocked by RLS); admin sponsor management |
 | `supabase-club/migrations/055_seed_player_sponsors_2026_27.sql` | One-off: loads the 2026/27 player sponsor list by full name and prints a cross-reference (saved / not found / not on the list) |
-| `supabase-club/migrations/056_seed_sponsor_logos_2026_27.sql` | One-off: points five players' sponsor logos at files shipped in `public/sponsors/`; uploading a new logo in the app replaces them |
 
 **No pg_cron fines jobs should exist in production** — the canonical scheduler is GitHub Actions (`fines-automation.yml`, every 5 minutes). Migration 042 is a historical placeholder only; 043 unschedules any legacy pg_cron jobs.
 

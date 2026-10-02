@@ -19,8 +19,6 @@ export function resolveSponsorLogoUrl(logoUrl: string | null | undefined): strin
   ) {
     return logoUrl
   }
-  // Logos shipped with the site (public/sponsors/…), loaded by migration.
-  if (logoUrl.startsWith('/')) return logoUrl
   if (!isSupabaseConfigured || !supabaseUrl) return null
   return `${supabaseUrl}/storage/v1/object/public/sponsor-logos/${logoUrl}`
 }
