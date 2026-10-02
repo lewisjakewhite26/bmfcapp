@@ -24,6 +24,7 @@ import {
   type GraphicKind,
 } from '../lib/graphics/data'
 import { canShareFiles, downloadGraphics, shareGraphics, type ExportFile } from '../lib/graphics/exportImage'
+import { DEFAULT_FRAMING, type PlayerFraming } from '../lib/graphics/render'
 import {
   badgeForOpponent,
   fetchGraphicsLibrary,
@@ -69,6 +70,14 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
   const canvasRef = useRef<GraphicCanvasHandle | null>(null)
 
   const chosen = photos.find((p) => p.id === photoId) ?? photos[0] ?? null
+  // Size and position of the photo on this post only; starts fresh for each photo.
+  const [framing, setFraming] = useState<PlayerFraming>(DEFAULT_FRAMING)
+  const [framingFor, setFramingFor] = useState<string | null>(null)
+  if ((chosen?.id ?? null) !== framingFor) {
+    setFramingFor(chosen?.id ?? null)
+    setFraming(DEFAULT_FRAMING)
+  }
+  const framed = framing.scale !== 1 || framing.x !== 0 || framing.y !== 0
   const badge = badgeForOpponent(library.badges, fixture.opponent, library.crests)
   const badgeUrl = resolveGraphicsUrl(badge?.badge_path)
   const playerImageUrl = resolveGraphicsUrl(chosen?.cutout_path)
@@ -196,7 +205,46 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
         </label>
       )}
 
-      <GraphicCanvas ref={setHandle} data={data} sponsorLogoUrl={sponsorLogoUrl} logoOnTile={logoOnTile} />
+      <GraphicCanvas
+        ref={setHandle}
+        data={data}
+        sponsorLogoUrl={sponsorLogoUrl}
+        logoOnTile={logoOnTile}
+        framing={chosen ? framing : undefined}
+        onFramingChange={chosen ? setFraming : undefined}
+      />
+
+      {chosen && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <label htmlFor={`${key}-size`} className="text-sm font-semibold text-brand-navy shrink-0">
+              Photo size
+            </label>
+            <input
+              id={`${key}-size`}
+              type="range"
+              min={60}
+              max={250}
+              step={5}
+              value={Math.round(framing.scale * 100)}
+              onChange={(e) => setFraming((f) => ({ ...f, scale: Number(e.target.value) / 100 }))}
+              className="flex-1 accent-brand-blue"
+            />
+            <span className="w-12 text-right text-sm tabular-nums text-gray-500">{Math.round(framing.scale * 100)}%</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-gray-500">Drag the player on the preview to move them. Anything below the footer is cut off.</p>
+            <button
+              type="button"
+              className="text-xs font-semibold text-brand-blue min-h-[36px] shrink-0 disabled:opacity-40"
+              disabled={!framed}
+              onClick={() => setFraming(DEFAULT_FRAMING)}
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2">
         <button

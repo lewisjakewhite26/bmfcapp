@@ -110,6 +110,29 @@ test.describe('Matchday graphics', () => {
     await page.getByLabel('Poster player').selectOption({ label: name })
     await waitForDrawn(page)
     await expect(page.getByText(`No graphics photo for ${name} yet`)).toHaveCount(0)
+
+    // Resize and drag the photo for this post; Reset puts it back exactly.
+    const canvas = page.getByRole('img', { name: 'Matchday post preview' })
+    const pixels = () => canvas.evaluate((c) => (c as HTMLCanvasElement).toDataURL())
+    const original = await pixels()
+    const reset = page.getByRole('button', { name: 'Reset' })
+    await expect(reset).toBeDisabled()
+
+    await page.getByLabel('Photo size').fill('180')
+    await expect(page.getByText('180%')).toBeVisible()
+    await expect.poll(pixels).not.toBe(original)
+
+    const box = (await canvas.boundingBox())!
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 60, { steps: 4 })
+    await page.mouse.up()
+    const dragged = await pixels()
+
+    await reset.click()
+    await expect(page.getByText('100%')).toBeVisible()
+    await expect.poll(pixels).toBe(original)
+    expect(dragged).not.toBe(original)
   })
 })
 
