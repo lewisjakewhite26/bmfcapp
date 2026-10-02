@@ -104,18 +104,20 @@ test.describe('Matchday graphics', () => {
 })
 
 test.describe('Sponsors', () => {
-  test('admin pastes a sponsor list and it lands on the players', async ({ page }) => {
+  test('admin adds a sponsor to a player and sees the status change', async ({ page }) => {
     await openGraphics(page)
     await page.getByRole('tab', { name: 'Sponsors' }).click()
 
-    const names = await page.locator('section', { hasText: 'Player sponsors' }).locator('li > div:first-child > label').allTextContents()
-    const [first, second] = names.map((n) => n.trim())
-    await page.getByLabel('Sponsor list').fill(`${first} – L Brown Installations\n${second} – available\nFreddie Lower – AVAILABLE`)
-    await expect(page.getByText('Freddie Lower (not in squad)')).toBeVisible()
-    await page.getByRole('button', { name: 'Save 2 sponsors' }).click()
-    await expect(page.getByText('2 sponsors saved')).toBeVisible()
+    const row = page.locator('li', { has: page.getByRole('button', { name: 'Add sponsor' }) }).first()
+    const name = (await row.locator('p').first().textContent())?.trim() ?? ''
+    await expect(row.getByText('No sponsor', { exact: true }).first()).toBeVisible()
 
-    await expect(page.getByLabel(first, { exact: true })).toHaveValue('L Brown Installations')
-    await expect(page.getByLabel(second, { exact: true })).toHaveValue('')
+    await row.getByRole('button', { name: 'Add sponsor' }).click()
+    await page.getByLabel(`Sponsor for ${name}`).fill('L Brown Installations')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByText('Sponsor saved')).toBeVisible()
+
+    const updated = page.locator('li', { hasText: name }).filter({ hasText: 'L Brown Installations' })
+    await expect(updated.getByText('Needs logo')).toBeVisible()
   })
 })

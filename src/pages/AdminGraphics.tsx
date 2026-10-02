@@ -8,7 +8,8 @@ import { PlayerPhotoUploader } from '../components/graphics/PlayerPhotoUploader'
 import { BadgeUploadButton } from '../components/graphics/BadgeUploadButton'
 import { LibraryPanel } from '../components/graphics/LibraryPanel'
 import { SponsorsPanel } from '../components/graphics/SponsorsPanel'
-import { fetchFixturesWithResults, fetchSquad } from '../lib/clubApi'
+import { fetchAdminUsers, fetchFixturesWithResults, fetchSquad } from '../lib/clubApi'
+import { withFullNames } from '../lib/graphics/names'
 import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
 import { resolveSponsorLogoUrl } from '../lib/sponsorLogoUrl'
@@ -229,13 +230,19 @@ export default function AdminGraphics() {
   const [motmId, setMotmId] = useState('')
   const handles = useRef(new Map<string, { handle: GraphicCanvasHandle; fileName: string }>())
 
+  // Full names ("Jack Marley") for posts and matching; the app's "Jack M" is the fallback.
+  const loadSquad = useCallback(async () => {
+    const [sq, users] = await Promise.all([fetchSquad(), fetchAdminUsers().catch(() => [])])
+    return withFullNames(sq, users)
+  }, [])
+
   const refreshSquad = useCallback(async () => {
     try {
-      setSquad(await fetchSquad())
+      setSquad(await loadSquad())
     } catch {
       toast.error("Couldn't reload the squad")
     }
-  }, [])
+  }, [loadSquad])
 
   const refreshLibrary = useCallback(async () => {
     try {
@@ -249,7 +256,7 @@ export default function AdminGraphics() {
     let cancelled = false
     ;(async () => {
       try {
-        const [fx, sq, lib] = await Promise.all([fetchFixturesWithResults(), fetchSquad(), fetchGraphicsLibrary()])
+        const [fx, sq, lib] = await Promise.all([fetchFixturesWithResults(), loadSquad(), fetchGraphicsLibrary()])
         if (cancelled) return
         setFixtures(fx)
         setSquad(sq)
@@ -263,7 +270,7 @@ export default function AdminGraphics() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [loadSquad])
 
   const upcoming = useMemo(() => {
     const startOfToday = new Date()

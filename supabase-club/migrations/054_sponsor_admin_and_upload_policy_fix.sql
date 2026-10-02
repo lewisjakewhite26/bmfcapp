@@ -6,8 +6,7 @@
 --    Same fix as 053: check grants through SECURITY DEFINER helpers.
 --
 -- 2) Admin sponsor management: admins can set any player's sponsor name and
---    logo (players can still manage their own from their profile), plus a
---    bulk import for the season's sponsor list.
+--    logo (players can still manage their own from their profile).
 
 -- ---------------------------------------------------------------------------
 -- 1) Upload policy fix
@@ -99,49 +98,6 @@ BEGIN
   END IF;
 
   RETURN json_build_object('sponsor_name', v_name);
-END;
-$$;
-
--- Bulk import: [{"player_id": "…", "sponsor_name": "…" | null}, …]. All or nothing.
-CREATE OR REPLACE FUNCTION public.admin_import_player_sponsors(
-  p_admin_id uuid,
-  p_session_token text,
-  p_rows json
-)
-RETURNS json
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  r record;
-  v_name text;
-  v_count integer := 0;
-BEGIN
-  PERFORM public.assert_graphics_admin(p_admin_id, p_session_token);
-
-  IF json_typeof(p_rows) <> 'array' THEN
-    RAISE EXCEPTION 'Expected a list of sponsors';
-  END IF;
-  IF json_array_length(p_rows) > 200 THEN
-    RAISE EXCEPTION 'Too many rows (200 max)';
-  END IF;
-
-  FOR r IN SELECT (e->>'player_id')::uuid AS player_id, e->>'sponsor_name' AS sponsor_name
-           FROM json_array_elements(p_rows) AS e
-  LOOP
-    v_name := nullif(trim(coalesce(r.sponsor_name, '')), '');
-    IF v_name IS NOT NULL AND length(v_name) > 80 THEN
-      RAISE EXCEPTION 'Sponsor name too long: %', left(v_name, 40);
-    END IF;
-    UPDATE public.profiles SET sponsor_name = v_name WHERE id = r.player_id;
-    IF NOT FOUND THEN
-      RAISE EXCEPTION 'Player not found: %', r.player_id;
-    END IF;
-    v_count := v_count + 1;
-  END LOOP;
-
-  RETURN json_build_object('updated', v_count);
 END;
 $$;
 
@@ -247,7 +203,6 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.admin_set_player_sponsor_name(uuid, text, uuid, text) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_import_player_sponsors(uuid, text, json) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_prepare_player_sponsor_logo_upload(uuid, text, uuid, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_confirm_player_sponsor_logo(uuid, text, uuid, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_clear_player_sponsor_logo(uuid, text, uuid) TO anon, authenticated;

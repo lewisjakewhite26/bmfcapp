@@ -54,7 +54,7 @@
 | `/admin/notifications` | `AdminNotifications.tsx` | `adminOnly` | Admin + committee — push notifications |
 | `/admin/fines` | `AdminFines.tsx` | `adminOnly` + `finesAdminOk` | Admin + committee + **Fines Helper** — log fines, mark payments |
 | `/admin/todo` | `AdminTodo.tsx` | `adminOnly` | Admin + committee — shared task list, assign, mark done/undo |
-| `/admin/graphics` | `AdminGraphics.tsx` | `adminOnly requireAdmin` | Admin only — matchday, goalscorer & MOTM posts drawn in the browser; player cut-out and opponent badge library; player sponsors (edit any player, paste a list). `/admin/canva` redirects here |
+| `/admin/graphics` | `AdminGraphics.tsx` | `adminOnly requireAdmin` | Admin only — matchday, goalscorer & MOTM posts drawn in the browser; player cut-out and opponent badge library; player sponsors (status per player; edit any player's sponsor and logo). `/admin/canva` redirects here |
 | `/admin/audit` | `AdminAuditLog.tsx` | `adminOnly` + `requireAdmin` | **Admin only** — recent admin/committee actions |
 | `/admin/users` | `AdminUsers.tsx` | `adminOnly` + `requireAdmin` | **Admin only** — invites, approval, passcodes, name edits |
 

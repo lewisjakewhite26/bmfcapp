@@ -34,7 +34,7 @@ To connect a real backend:
 1. Copy `.env.example` to `.env.local`
 2. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_CLUB_DATA_SOURCE=supabase`  
    Use the **Club Hub** Supabase project (not the World Cup predictor). Keys are under **Settings → API**.
-3. Follow **[docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md)** to run migrations **001–054**, seed admins, and deploy the edge functions (`send-push`, `fines-scheduler`)
+3. Follow **[docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md)** to run migrations **001–055**, seed admins, and deploy the edge functions (`send-push`, `fines-scheduler`)
 4. Restart `npm run dev` after changing env vars
 
 New players can join via:
@@ -114,7 +114,7 @@ src/
   data/           # Committed DDSFL scrape JSON
 e2e/              # Playwright smoke, squad, admin, onboarding specs
 supabase-club/
-  migrations/     # Database schema (001–054)
+  migrations/     # Database schema (001–055)
   functions/      # Edge functions (send-push, fines-scheduler)
   seed.sql        # Initial admin account
 docs/

@@ -1,11 +1,9 @@
 import { recordAdminAudit } from './adminAudit'
 import { isMockDataMode } from './clubApi'
 import { getClubSession } from './clubAuth'
-import { nameKey } from './graphicsApi'
 import { deleteMockSponsorLogo, saveMockSponsorName, uploadMockSponsorLogo } from './mockData'
 import { sponsorLogoFileExt, validateSponsorLogoFile, SPONSOR_NAME_MAX_LENGTH } from './sponsorLogo'
 import { supabase } from './supabase'
-import type { SquadMember } from '../types'
 
 /**
  * Admin sponsor management (migration 054). Players can still manage their
@@ -41,23 +39,6 @@ export async function adminSetPlayerSponsorName(playerId: string, name: string |
   if (error) throw error
   void recordAdminAudit('player_sponsor_updated', { entityType: 'profile', entityId: playerId })
   return (data as { sponsor_name: string | null }).sponsor_name
-}
-
-export async function adminImportPlayerSponsors(rows: { playerId: string; sponsorName: string | null }[]): Promise<number> {
-  if (isMockDataMode()) {
-    await delay()
-    for (const r of rows) saveMockSponsorName(r.playerId, r.sponsorName ?? '')
-    return rows.length
-  }
-  const session = requireSession()
-  const { data, error } = await supabase.rpc('admin_import_player_sponsors', {
-    p_admin_id: session.userId,
-    p_session_token: session.sessionToken,
-    p_rows: rows.map((r) => ({ player_id: r.playerId, sponsor_name: r.sponsorName })),
-  })
-  if (error) throw error
-  void recordAdminAudit('player_sponsors_imported', { entityType: 'profile', details: { count: rows.length } })
-  return (data as { updated: number }).updated
 }
 
 export async function adminUploadPlayerSponsorLogo(playerId: string, file: File): Promise<string> {
@@ -106,38 +87,4 @@ export async function adminClearPlayerSponsorLogo(playerId: string): Promise<voi
   })
   if (error) throw error
   void recordAdminAudit('player_sponsor_updated', { entityType: 'profile', entityId: playerId })
-}
-
-// ---------------------------------------------------------------------------
-// Pasted list parsing
-// ---------------------------------------------------------------------------
-
-export interface ParsedSponsorLine {
-  line: string
-  playerName: string
-  /** null = no sponsor ("available", "none", blank). */
-  sponsorName: string | null
-  player: SquadMember | null
-}
-
-const NO_SPONSOR = new Set(['available', 'none', 'no sponsor', '-', 'n/a', 'tbc'])
-
-/**
- * Parses lines like "Jack Marley – L Brown Installations". Accepts en/em
- * dashes, " - ", tabs, colons or commas between name and sponsor. Lines that
- * don't split are reported with no player so the admin can fix them.
- */
-export function parseSponsorList(text: string, squad: SquadMember[]): ParsedSponsorLine[] {
-  const byKey = new Map(squad.map((s) => [nameKey(s.display_name), s]))
-  const out: ParsedSponsorLine[] = []
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim()
-    if (!line) continue
-    const match = line.match(/^(.+?)\s*(?:\t|\s[–—-]\s|[–—]|:|,)\s*(.*)$/)
-    const playerName = (match ? match[1] : line).trim()
-    const sponsorRaw = (match ? match[2] : '').trim()
-    const sponsorName = !sponsorRaw || NO_SPONSOR.has(sponsorRaw.toLowerCase()) ? null : sponsorRaw
-    out.push({ line, playerName, sponsorName, player: byKey.get(nameKey(playerName)) ?? null })
-  }
-  return out
 }
