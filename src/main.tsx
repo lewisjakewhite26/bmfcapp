@@ -14,9 +14,10 @@ if ('serviceWorker' in navigator) {
 
 if (import.meta.env.VITE_E2E === 'true') {
   import('./hooks/authContext').then(({ saveSession }) => {
-    import('./lib/mockData').then(({ completeMockInvite, resetMockDataForE2e }) => {
+    Promise.all([import('./lib/mockData'), import('./lib/graphicsApi')]).then(([{ completeMockInvite, resetMockDataForE2e, seedMockGraphicsMatchesForE2e }, { resetMockGraphicsForE2e }]) => {
       const w = window as Window & {
         __BMFC_E2E_RESET__?: () => void
+        __BMFC_E2E_SEED_GRAPHICS__?: typeof seedMockGraphicsMatchesForE2e
         __BMFC_E2E_FINISH_INVITE__?: (
           token: string,
           firstName: string,
@@ -24,7 +25,11 @@ if (import.meta.env.VITE_E2E === 'true') {
           passcode: string,
         ) => ReturnType<typeof completeMockInvite>
       }
-      w.__BMFC_E2E_RESET__ = resetMockDataForE2e
+      w.__BMFC_E2E_RESET__ = () => {
+        resetMockDataForE2e()
+        resetMockGraphicsForE2e()
+      }
+      w.__BMFC_E2E_SEED_GRAPHICS__ = seedMockGraphicsMatchesForE2e
       w.__BMFC_E2E_FINISH_INVITE__ = (token, firstName, lastName, passcode) => {
         const user = completeMockInvite(token, firstName, lastName, passcode)
         if (!user) throw new Error('Invalid invite link')

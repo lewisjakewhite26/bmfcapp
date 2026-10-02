@@ -5,6 +5,11 @@ import { VitePWA } from 'vite-plugin-pwa'
 const e2eMode = process.env.VITE_E2E === 'true'
 
 export default defineConfig({
+  // onnxruntime-web loads its wasm glue relative to its own file; Vite's
+  // dependency pre-bundling moves it and breaks that in dev.
+  optimizeDeps: {
+    exclude: ['onnxruntime-web'],
+  },
   server: {
     host: '127.0.0.1',
     port: 5173,
@@ -61,6 +66,12 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
+      injectManifest: {
+        // Matchday graphics' background removal (onnxruntime, ~24 MB wasm +
+        // ~1.6 MB of scripts) loads on demand on that admin page only — keep
+        // it out of the offline precache every player downloads.
+        globIgnores: ['**/node_modules/**/*', '**/ort-*.wasm', '**/ort.*.js', '**/ort.*.mjs', '**/models/**'],
+      },
       injectRegister: false,
       devOptions: {
         enabled: !e2eMode,

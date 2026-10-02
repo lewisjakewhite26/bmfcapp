@@ -1,0 +1,27 @@
+{
+  "model": "isnet-general-use (DIS, Apache-2.0), fp16, MaxPool ceil_mode off",
+  "bytes": 90447799,
+  "sha256": "7082db18090f7f7f08f87dc18473d99f26b2d5c6fa9ab204294096e46ae4c977",
+  "parts": [
+    {
+      "file": "part-0.bin",
+      "bytes": 18089560
+    },
+    {
+      "file": "part-1.bin",
+      "bytes": 18089560
+    },
+    {
+      "file": "part-2.bin",
+      "bytes": 18089560
+    },
+    {
+      "file": "part-3.bin",
+      "bytes": 18089560
+    },
+    {
+      "file": "part-4.bin",
+      "bytes": 18089559
+    }
+  ]
+}
