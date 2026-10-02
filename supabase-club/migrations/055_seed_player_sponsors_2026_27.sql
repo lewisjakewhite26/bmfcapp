@@ -53,7 +53,7 @@ INSERT INTO sponsor_list_2026 (full_name, sponsor, aliases) VALUES
   ('Jamie Halliday', 'Squirrel Bars', '{}'),
   ('Caidan King', 'David Redfern Building Services', '{}'),
   ('Freddie McCormack', 'Lines Valeting', '{"Frederick McCormack","Fred McCormack"}'),
-  ('Logan Ohara', NULL, '{}'),
+  ('Logan Ohara', NULL, '{"Logan Doyle"}'), -- registered as Logan Doyle, goes by O'Hara
   ('Jack Kell', NULL, '{}');
 -- Will Dodsworth (Makepeace Interior Solutions) has left the club.
 
