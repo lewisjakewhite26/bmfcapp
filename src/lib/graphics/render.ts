@@ -23,7 +23,9 @@ const CONTENT_WIDTH = GRAPHIC_WIDTH - MARGIN * 2
 const FOOTER_TOP = 1100
 const FOOTER_RULE = 3
 const FOOTER_MID = FOOTER_TOP + FOOTER_RULE + (GRAPHIC_HEIGHT - FOOTER_TOP - FOOTER_RULE) / 2
-const FOOTER_SPLIT = MARGIN + (CONTENT_WIDTH * 1.55) / 2.55
+/** Centre of the footer: sponsor/competition on the left, score/venue on the right. */
+const FOOTER_SPLIT = GRAPHIC_WIDTH / 2
+const HEADLINE_SCALE = 1.4
 
 export interface GraphicImages {
   crest: CanvasImageSource
@@ -101,6 +103,8 @@ function drawTopBar(ctx: CanvasRenderingContext2D, crest: CanvasImageSource, sea
 
 /** Big faded word behind the player ("GOALSCORER", "MATCHDAY", …). */
 function drawBigWord(ctx: CanvasRenderingContext2D, lines: string[], top: number, size: number, lineHeightEm: number) {
+  // The condensed face is narrower, so headlines get more height to fill the width.
+  size = size * HEADLINE_SCALE
   const fitted = Math.min(
     ...lines.map((line) =>
       fitFontSize(
@@ -164,8 +168,6 @@ function drawFooterFrame(ctx: CanvasRenderingContext2D) {
   ctx.fillRect(0, FOOTER_TOP, GRAPHIC_WIDTH, GRAPHIC_HEIGHT - FOOTER_TOP)
   ctx.fillStyle = GOLD
   ctx.fillRect(0, FOOTER_TOP, GRAPHIC_WIDTH, FOOTER_RULE)
-  ctx.fillStyle = GOLD_LINE
-  ctx.fillRect(Math.round(FOOTER_SPLIT), FOOTER_MID - 75, 1, 150)
 }
 
 /** Badge (or initials roundel) centred on (cx, cy), `size` tall. */
@@ -219,20 +221,20 @@ function drawFooterText(
   align: 'left' | 'right',
 ) {
   const words = upper(body).split(/\s+/).filter(Boolean)
-  let size = 26
+  let size = 36
   let lines: string[] | null = null
-  for (; size >= 16; size -= 1) {
+  for (; size >= 20; size -= 1) {
     const style: TextStyle = { family: 'display', weight: 800, size, tracking: size * 0.04, color: WHITE }
     lines = wrapLines(words, (line) => measureText(ctx, line, style), maxWidth, 2)
     if (lines) break
   }
   if (!lines) lines = [upper(body)]
   const lineHeight = size * 1.15
-  const blockHeight = 18 + 14 + lineHeight * lines.length + (extra ? 14 + 17 : 0)
+  const blockHeight = 21 + 14 + lineHeight * lines.length + (extra ? 12 + 20 : 0)
   let top = FOOTER_MID - blockHeight / 2
 
-  drawText(ctx, upper(heading), x, baselineFor(top, 18), label(18), align)
-  top += 18 + 14
+  drawText(ctx, upper(heading), x, baselineFor(top, 21), label(21), align)
+  top += 21 + 14
   lines.forEach((line, i) => {
     drawText(
       ctx,
@@ -245,8 +247,8 @@ function drawFooterText(
   })
   top += lineHeight * lines.length
   if (extra) {
-    top += 14
-    drawText(ctx, upper(extra), x, baselineFor(top, 17), label(17, SOFT_WHITE, 600, 0.2), align)
+    top += 12
+    drawText(ctx, upper(extra), x, baselineFor(top, 20), label(20, SOFT_WHITE, 600, 0.2), align)
   }
 }
 
@@ -270,11 +272,11 @@ function drawSponsorBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData
   const scale = Math.min((maxW - tilePad * 2) / width, (maxH - tilePad * 2) / height)
   const logoW = width * scale
   const logoH = height * scale
-  const blockH = 18 + 16 + logoH + tilePad * 2
+  const blockH = 21 + 16 + logoH + tilePad * 2
   const top = FOOTER_MID - blockH / 2
 
-  drawText(ctx, upper('Sponsored by'), MARGIN, baselineFor(top, 18), label(18))
-  const logoTop = top + 18 + 16
+  drawText(ctx, upper('Sponsored by'), MARGIN, baselineFor(top, 21), label(21))
+  const logoTop = top + 21 + 16
   if (images.sponsorLogoOnTile) {
     ctx.fillStyle = WHITE
     roundRect(ctx, MARGIN, logoTop, logoW + tilePad * 2, logoH + tilePad * 2, 12)
@@ -295,21 +297,21 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 
 function drawResultBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData, images: GraphicImages) {
   const right = GRAPHIC_WIDTH - MARGIN
-  const rowCentre = FOOTER_MID - (70 + 16 + 17) / 2 + 35
-  const scoreStyle: TextStyle = { family: 'display', weight: 900, size: 60, tracking: 1.2, color: WHITE }
+  const rowCentre = FOOTER_MID - (84 + 16 + 20) / 2 + 42
+  const scoreStyle: TextStyle = { family: 'display', weight: 900, size: 76, tracking: 1.5, color: WHITE }
   const score = `${data.homeScore}–${data.awayScore}`
   const scoreW = measureText(ctx, score, scoreStyle)
-  const markW = 70
-  const gap = 22
+  const markW = 84
+  const gap = 24
   const awayCx = right - markW / 2
   const scoreRight = right - markW - gap
   const homeCx = scoreRight - scoreW - gap - markW / 2
 
-  drawSideMark(ctx, data.home, images, homeCx, rowCentre, data.home.isClub ? 66 : 70)
-  drawText(ctx, score, scoreRight, baselineFor(rowCentre - 30, 60), scoreStyle, 'right')
-  drawSideMark(ctx, data.away, images, awayCx, rowCentre, data.away.isClub ? 66 : 70)
+  drawSideMark(ctx, data.home, images, homeCx, rowCentre, data.home.isClub ? 80 : 84)
+  drawText(ctx, score, scoreRight, baselineFor(rowCentre - 38, 76), scoreStyle, 'right')
+  drawSideMark(ctx, data.away, images, awayCx, rowCentre, data.away.isClub ? 80 : 84)
 
-  drawText(ctx, upper('Full time'), right, baselineFor(rowCentre + 35 + 16, 17), label(17, SOFT_WHITE, 600, 0.2), 'right')
+  drawText(ctx, upper('Full time'), right, baselineFor(rowCentre + 42 + 16, 20), label(20, SOFT_WHITE, 600, 0.2), 'right')
 }
 
 function drawNameBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData) {
