@@ -1,0 +1,27 @@
+{
+  "model": "isnet-general-use (DIS, Apache-2.0) converted to fp16",
+  "bytes": 90447799,
+  "sha256": "c4794b3f576d707d6a06c73ff1eb2bc2850929c3d0356c4dd9851e3c0a4397cd",
+  "parts": [
+    {
+      "file": "part-0.bin",
+      "bytes": 18089560
+    },
+    {
+      "file": "part-1.bin",
+      "bytes": 18089560
+    },
+    {
+      "file": "part-2.bin",
+      "bytes": 18089560
+    },
+    {
+      "file": "part-3.bin",
+      "bytes": 18089560
+    },
+    {
+      "file": "part-4.bin",
+      "bytes": 18089559
+    }
+  ]
+}

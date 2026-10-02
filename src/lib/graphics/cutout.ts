@@ -4,10 +4,10 @@ import { imageToCanvas, trimCanvas } from './assets'
 /**
  * Player cut-outs for the graphics library.
  *
- * Background removal runs on the device with @imgly/background-removal
- * (AGPL-3.0, ISNet model). The model (~40–80 MB) is downloaded from IMG.LY's
- * CDN on first use and cached by the browser; the library is lazy-loaded so
- * it never touches the rest of the app's bundle.
+ * Background removal runs on the device (see segment.ts: ISNet, Apache-2.0,
+ * on ONNX Runtime Web, MIT). The model is served from our own site, downloaded
+ * on first use and cached; the code is lazy-loaded so it never touches the
+ * rest of the app's bundle.
  */
 
 /** Longest side kept for the stored original and the image sent to the model. */
@@ -108,21 +108,12 @@ export async function makeCutout(source: PreparedSource, onProgress?: CutoutProg
     result = source.canvas
   } else {
     onProgress?.('Loading the cut-out tool…', null)
-    const { removeBackground } = await import('@imgly/background-removal')
-    const input = await canvasBlob(source.canvas, 'image/png')
-    const blob = await removeBackground(input, {
-      model: 'isnet_fp16',
-      output: { format: 'image/png' },
-      progress: (key, current, total) => {
-        if (key.startsWith('fetch')) {
-          onProgress?.('Downloading the cut-out tool (first time only)…', total ? current / total : null)
-        } else {
-          onProgress?.('Removing the background…', null)
-        }
-      },
-    })
-    const img = await fileToImage(blob)
-    result = imageToCanvas(img, SOURCE_MAX_SIDE)
+    const { loadSegmenter, removeBackground } = await import('./segment')
+    await loadSegmenter((fraction) => onProgress?.('Downloading the cut-out tool (first time only)…', fraction))
+    onProgress?.('Removing the background…', null)
+    // Let the message paint before the model takes over the main thread.
+    await new Promise((r) => setTimeout(r, 50))
+    result = await removeBackground(source.canvas)
     tightenAlpha(result)
   }
 

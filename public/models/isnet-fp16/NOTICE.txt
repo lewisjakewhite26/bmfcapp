@@ -1,0 +1,10 @@
+Background-removal model used by Admin → Matchday graphics.
+
+Model: ISNet "isnet-general-use" from DIS (Dichotomous Image Segmentation),
+https://github.com/xuebinqin/DIS, released under the Apache License 2.0.
+
+Changes: side outputs removed and weights converted to float16 so it downloads
+faster; split into five parts (part-0.bin … part-4.bin) for hosting. Joined in
+order they form the ONNX file whose SHA-256 is in manifest.json.
+
+Runs on the device with ONNX Runtime Web (MIT licence, Microsoft).
