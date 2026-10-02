@@ -103,6 +103,8 @@ export interface GraphicImages {
   sponsorLogo: CanvasImageSource | null
   /** Draw the original logo on a white tile instead of a white mark. */
   sponsorLogoOnTile?: boolean
+  /** Logo keeps its own coloured background, drawn with rounded corners (light design). */
+  sponsorLogoBoxed?: boolean
   /** Per-post size and position of the player photo (not saved). */
   playerFraming?: PlayerFraming
   /** Navy (default) or light look. */
@@ -398,8 +400,15 @@ function drawSponsorBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData
     roundRect(ctx, MARGIN, logoTop, logoW + tilePad * 2, logoH + tilePad * 2, 12)
     ctx.fill()
   }
-  const mark = !images.sponsorLogoOnTile && T.artTint ? tinted(logo, T.artTint) : logo
-  ctx.drawImage(mark, MARGIN + tilePad, logoTop + tilePad, logoW, logoH)
+  if (images.sponsorLogoBoxed) {
+    ctx.save()
+    roundRect(ctx, MARGIN, logoTop, logoW, logoH, Math.min(14, logoH * 0.12))
+    ctx.clip()
+    ctx.drawImage(logo, MARGIN, logoTop, logoW, logoH)
+    ctx.restore()
+    return
+  }
+  ctx.drawImage(logo, MARGIN + tilePad, logoTop + tilePad, logoW, logoH)
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

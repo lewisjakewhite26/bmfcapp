@@ -144,3 +144,82 @@ function whitenCore(data: Uint8ClampedArray, width: number, height: number): Uin
   }
   return data
 }
+
+export type LogoKind =
+  /** Transparent background, white/very light artwork only (made for dark backgrounds). */
+  | 'white-on-clear'
+  /** Transparent background with coloured artwork. */
+  | 'colour-on-clear'
+  /** Solid white or near-white background. */
+  | 'on-white'
+  /** Solid coloured background (its own "box"). */
+  | 'on-colour'
+
+/** Works out how a sponsor logo is drawn so the light design can show it in its own colours. */
+export function classifyLogo(data: Uint8ClampedArray, width: number, height: number): LogoKind {
+  const corners = cornerSamples(data, width, height)
+  const cornerAlpha = median(corners.map((c) => c[3]))
+  if (cornerAlpha < 200) {
+    let visible = 0
+    let light = 0
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 128) continue
+      visible++
+      if (Math.min(data[i], data[i + 1], data[i + 2]) > 215) light++
+    }
+    return visible > 0 && light / visible > 0.85 ? 'white-on-clear' : 'colour-on-clear'
+  }
+  const bg = [0, 1, 2].map((ch) => median(corners.map((c) => c[ch])))
+  return Math.min(bg[0], bg[1], bg[2]) > 225 ? 'on-white' : 'on-colour'
+}
+
+/**
+ * Makes a white background transparent, keeping the logo's own colours.
+ * Soft edges are un-blended from white so they don't leave a pale halo.
+ * Mutates and returns `data`.
+ */
+export function removeWhiteBackground(data: Uint8ClampedArray): Uint8ClampedArray {
+  const low = 10
+  const high = 70
+  for (let i = 0; i < data.length; i += 4) {
+    const distance = 255 - Math.min(data[i], data[i + 1], data[i + 2])
+    const a = Math.min(1, Math.max(0, (distance - low) / (high - low)))
+    if (a <= 0) {
+      data[i + 3] = 0
+      continue
+    }
+    for (let ch = 0; ch < 3; ch++) {
+      // observed = a * colour + (1 - a) * 255  →  colour = (observed - (1 - a) * 255) / a
+      data[i + ch] = Math.max(0, Math.min(255, Math.round((data[i + ch] - (1 - a) * 255) / a)))
+    }
+    data[i + 3] = Math.round(a * (data[i + 3] / 255) * 255)
+  }
+  return data
+}
+
+/**
+ * Bounds of the artwork on a solid background (pixels that differ clearly
+ * from the corner colour), or null when nothing stands out.
+ */
+export function contentBounds(data: Uint8ClampedArray, width: number, height: number, threshold = 48): Box | null {
+  const corners = cornerSamples(data, width, height)
+  const bg = [0, 1, 2].map((ch) => median(corners.map((c) => c[ch])))
+  let minX = width
+  let minY = height
+  let maxX = -1
+  let maxY = -1
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4
+      const diff = Math.max(Math.abs(data[i] - bg[0]), Math.abs(data[i + 1] - bg[1]), Math.abs(data[i + 2] - bg[2]))
+      if (diff > threshold) {
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+      }
+    }
+  }
+  if (maxX < 0) return null
+  return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 }
+}
