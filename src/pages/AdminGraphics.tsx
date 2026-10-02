@@ -228,6 +228,7 @@ export default function AdminGraphics() {
   const [library, setLibrary] = useState<GraphicsLibrary>({ photos: [], badges: [] })
   const [kind, setKind] = useState<GraphicKind>('matchday')
   const [fixtureId, setFixtureId] = useState('')
+  const [includePast, setIncludePast] = useState(false)
   const [posterPlayerId, setPosterPlayerId] = useState('')
   const [motmId, setMotmId] = useState('')
   const handles = useRef(new Map<string, { handle: GraphicCanvasHandle; fileName: string }>())
@@ -280,13 +281,19 @@ export default function AdminGraphics() {
     }
   }, [loadSquad])
 
+  // Matchday posts: upcoming games, plus past ones on request (a week that got missed).
   const upcoming = useMemo(() => {
     const startOfToday = new Date()
     startOfToday.setHours(0, 0, 0, 0)
-    return fixtures
+    const next = fixtures
       .filter((f) => f.status === 'scheduled' && new Date(f.match_date) >= startOfToday)
       .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
-  }, [fixtures])
+    if (!includePast) return next
+    const past = fixtures
+      .filter((f) => !next.includes(f))
+      .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())
+    return [...next, ...past]
+  }, [fixtures, includePast])
 
   const played = useMemo(
     () =>
@@ -411,7 +418,7 @@ export default function AdminGraphics() {
 
               <div>
                 <label htmlFor="graphics-fixture" className="text-sm font-semibold text-brand-navy block mb-2">
-                  {kind === 'matchday' ? 'Upcoming match' : 'Match'}
+                  {kind === 'matchday' ? (includePast ? 'Match' : 'Upcoming match') : 'Match (newest first)'}
                 </label>
                 {fixtureOptions.length === 0 ? (
                   <p className="text-sm text-gray-500">
@@ -425,6 +432,17 @@ export default function AdminGraphics() {
                       </option>
                     ))}
                   </select>
+                )}
+                {kind === 'matchday' && (
+                  <label className="mt-2 flex items-center gap-2 text-sm text-brand-navy">
+                    <input
+                      type="checkbox"
+                      className="accent-brand-blue"
+                      checked={includePast}
+                      onChange={(e) => setIncludePast(e.target.checked)}
+                    />
+                    Include past matches
+                  </label>
                 )}
               </div>
 
