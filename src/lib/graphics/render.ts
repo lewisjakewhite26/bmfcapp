@@ -36,7 +36,21 @@ export interface GraphicImages {
   sponsorLogo: CanvasImageSource | null
   /** Draw the original logo on a white tile instead of a white mark. */
   sponsorLogoOnTile?: boolean
+  /** Per-post size and position of the player photo (not saved). */
+  playerFraming?: PlayerFraming
 }
+
+/** Player photo framing: 1 = default size; x/y move it, in post pixels. */
+export interface PlayerFraming {
+  scale: number
+  x: number
+  y: number
+}
+
+export const DEFAULT_FRAMING: PlayerFraming = { scale: 1, x: 0, y: 0 }
+
+/** Area the player can show in: everything above the footer. */
+const PLAYER_BOX = { x: (GRAPHIC_WIDTH - 820) / 2, y: FOOTER_TOP - 880, width: 820, height: 880 }
 
 const upper = (s: string) => s.toLocaleUpperCase('en-GB')
 
@@ -132,7 +146,35 @@ function drawBigWord(ctx: CanvasRenderingContext2D, lines: string[], top: number
   })
 }
 
-function drawPlayer(ctx: CanvasRenderingContext2D, player: CanvasImageSource | null, crest: CanvasImageSource) {
+/**
+ * Where the player photo goes. By default it fits the player box, feet on the
+ * footer. Enlarging zooms around the upper body (so a full-length shot crops
+ * down to head and shoulders), then x/y move it.
+ */
+export function playerRect(img: { width: number; height: number }, framing: PlayerFraming = DEFAULT_FRAMING) {
+  const fit = Math.min(PLAYER_BOX.width / img.width, PLAYER_BOX.height / img.height)
+  const w = img.width * fit
+  const h = img.height * fit
+  const x = PLAYER_BOX.x + (PLAYER_BOX.width - w) / 2
+  const y = PLAYER_BOX.y + PLAYER_BOX.height - h
+  const anchorX = x + w / 2
+  const anchorY = y + h * 0.2
+  const sw = w * framing.scale
+  const sh = h * framing.scale
+  return {
+    x: anchorX - (anchorX - x) * framing.scale + framing.x,
+    y: anchorY - (anchorY - y) * framing.scale + framing.y,
+    width: sw,
+    height: sh,
+  }
+}
+
+function drawPlayer(
+  ctx: CanvasRenderingContext2D,
+  player: CanvasImageSource | null,
+  crest: CanvasImageSource,
+  framing?: PlayerFraming,
+) {
   if (!player) {
     // No cut-out yet: a large crest keeps the post usable.
     ctx.save()
@@ -145,10 +187,15 @@ function drawPlayer(ctx: CanvasRenderingContext2D, player: CanvasImageSource | n
     return
   }
   ctx.save()
+  // Anything moved below the footer line is cropped off.
+  ctx.beginPath()
+  ctx.rect(0, 0, GRAPHIC_WIDTH, FOOTER_TOP)
+  ctx.clip()
   ctx.shadowColor = 'rgba(4,10,40,0.55)'
   ctx.shadowBlur = 48
   ctx.shadowOffsetY = 28
-  drawContained(ctx, player, { x: (GRAPHIC_WIDTH - 820) / 2, y: FOOTER_TOP - 880, width: 820, height: 880 }, 'center', 'bottom')
+  const r = playerRect(imageSize(player), framing)
+  ctx.drawImage(player, r.x, r.y, r.width, r.height)
   ctx.restore()
 }
 
@@ -354,7 +401,7 @@ function renderResult(ctx: CanvasRenderingContext2D, data: ResultGraphicData, im
   } else {
     drawBigWord(ctx, ['Man of', 'the Match'], 156, 116, 0.92)
   }
-  drawPlayer(ctx, images.player, images.crest)
+  drawPlayer(ctx, images.player, images.crest, images.playerFraming)
   drawFade(ctx)
   drawNameBlock(ctx, data)
   drawFooterFrame(ctx)
@@ -421,7 +468,7 @@ function renderMatchday(ctx: CanvasRenderingContext2D, data: MatchdayGraphicData
   drawKnight(ctx, images.knight)
   drawFixtureHeader(ctx, data, images)
   drawBigWord(ctx, ['Matchday'], 270, 128, 0.9)
-  drawPlayer(ctx, images.player, images.crest)
+  drawPlayer(ctx, images.player, images.crest, images.playerFraming)
   drawFade(ctx)
   drawInfoRow(ctx, data)
   drawFooterFrame(ctx)
