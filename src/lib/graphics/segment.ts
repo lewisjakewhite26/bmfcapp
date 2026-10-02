@@ -1,8 +1,10 @@
-import type { InferenceSession } from 'onnxruntime-common'
+import type { InferenceSession, Tensor } from 'onnxruntime-common'
 // ONNX Runtime's engine files, emitted by Vite as plain assets (the package's
-// "exports" hide them, hence the direct path).
+// "exports" hide them, hence the direct path). The "jsep" pair adds WebGPU.
 import ortWasmUrl from '../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url'
 import ortMjsUrl from '../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url'
+import ortJsepWasmUrl from '../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm?url'
+import ortJsepMjsUrl from '../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.mjs?url'
 
 /**
  * On-device background removal.
@@ -13,10 +15,14 @@ import ortMjsUrl from '../../../node_modules/onnxruntime-web/dist/ort-wasm-simd-
  *
  * The model (~90 MB) downloads on first use and is kept in the browser's
  * Cache Storage, so later cut-outs start straight away.
+ *
+ * Uses the graphics chip (WebGPU) when the browser has it: a few seconds per
+ * photo instead of 20–30. If the GPU isn't available, fails, or returns a
+ * broken mask, it falls back to the CPU for the rest of the visit.
  */
 
 const MODEL_BASE = '/models/isnet-fp16/'
-const CACHE_NAME = 'bmfc-cutout-model-v1'
+const CACHE_NAME = 'bmfc-cutout-model-v2'
 const SIZE = 1024
 const MEAN = [0.485, 0.456, 0.406]
 
@@ -27,11 +33,11 @@ interface Manifest {
 
 export type DownloadProgress = (fraction: number) => void
 
-let sessionPromise: Promise<InferenceSession> | null = null
-
 async function openCache(): Promise<Cache | null> {
   try {
-    return typeof caches === 'undefined' ? null : await caches.open(CACHE_NAME)
+    if (typeof caches === 'undefined') return null
+    await caches.delete('bmfc-cutout-model-v1')
+    return await caches.open(CACHE_NAME)
   } catch {
     return null
   }
@@ -99,27 +105,149 @@ async function loadModelBytes(onProgress?: DownloadProgress): Promise<Uint8Array
   return model
 }
 
-/** Loads ONNX Runtime and the model once per page visit. */
-export function loadSegmenter(onProgress?: DownloadProgress): Promise<InferenceSession> {
-  if (!sessionPromise) {
-    sessionPromise = (async () => {
-      const ort = await import('onnxruntime-web/wasm')
-      ort.env.wasm.wasmPaths = { wasm: ortWasmUrl, mjs: ortMjsUrl }
-      ort.env.wasm.numThreads =
-        typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated
-          ? Math.min(4, navigator.hardwareConcurrency || 1)
-          : 1
-      const bytes = await loadModelBytes(onProgress)
-      return ort.InferenceSession.create(bytes, {
-        executionProviders: ['wasm'],
-        graphOptimizationLevel: 'all',
-      })
-    })()
-    sessionPromise.catch(() => {
-      sessionPromise = null
+type Backend = 'gpu' | 'cpu'
+type Ort = typeof import('onnxruntime-web/wasm')
+
+interface Segmenter {
+  ort: Ort
+  session: InferenceSession
+  backend: Backend
+}
+
+const CPU_ONLY_KEY = 'bmfc-cutout-cpu-only'
+
+let modelPromise: Promise<Uint8Array> | null = null
+let segmenterPromise: Promise<Segmenter> | null = null
+let gpuFailed = false
+
+function cpuOnly(): boolean {
+  if (gpuFailed) return true
+  try {
+    return localStorage.getItem(CPU_ONLY_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+/** Use the slower CPU path on this device from now on (e.g. GPU cut-outs look wrong). */
+export function setCutoutCpuOnly(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(CPU_ONLY_KEY, '1')
+    else localStorage.removeItem(CPU_ONLY_KEY)
+  } catch {
+    // Storage blocked: falls back per visit instead.
+  }
+  if (on) gpuFailed = true
+  segmenterPromise = null
+}
+
+export function cutoutCpuOnly(): boolean {
+  return cpuOnly()
+}
+
+function threads(): number {
+  return typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated
+    ? Math.min(4, navigator.hardwareConcurrency || 1)
+    : 1
+}
+
+/** WebGPU with half-precision maths (the model is fp16). */
+async function gpuAvailable(): Promise<boolean> {
+  type Adapter = { features: { has(name: string): boolean } }
+  const gpu = (navigator as Navigator & { gpu?: { requestAdapter(): Promise<Adapter | null> } }).gpu
+  if (!gpu) return false
+  try {
+    const adapter = await gpu.requestAdapter()
+    return adapter != null && adapter.features.has('shader-f16')
+  } catch {
+    return false
+  }
+}
+
+async function createGpu(bytes: Uint8Array): Promise<Segmenter> {
+  const ort = (await import('onnxruntime-web/webgpu')) as unknown as Ort
+  ort.env.wasm.wasmPaths = { wasm: ortJsepWasmUrl, mjs: ortJsepMjsUrl }
+  ort.env.wasm.numThreads = threads()
+  const session = await ort.InferenceSession.create(bytes, {
+    executionProviders: ['webgpu'],
+    graphOptimizationLevel: 'all',
+  })
+  return { ort, session, backend: 'gpu' }
+}
+
+async function createCpu(bytes: Uint8Array): Promise<Segmenter> {
+  const ort = await import('onnxruntime-web/wasm')
+  ort.env.wasm.wasmPaths = { wasm: ortWasmUrl, mjs: ortMjsUrl }
+  ort.env.wasm.numThreads = threads()
+  const session = await ort.InferenceSession.create(bytes, {
+    executionProviders: ['wasm'],
+    graphOptimizationLevel: 'all',
+  })
+  return { ort, session, backend: 'cpu' }
+}
+
+function getModel(onProgress?: DownloadProgress): Promise<Uint8Array> {
+  if (!modelPromise) {
+    modelPromise = loadModelBytes(onProgress)
+    modelPromise.catch(() => {
+      modelPromise = null
     })
   }
-  return sessionPromise
+  return modelPromise
+}
+
+/** Downloads the model and starts the engine (GPU if possible) once per visit. */
+export function loadSegmenter(onProgress?: DownloadProgress): Promise<Segmenter> {
+  if (!segmenterPromise) {
+    segmenterPromise = (async () => {
+      const bytes = await getModel(onProgress)
+      if (!cpuOnly() && (await gpuAvailable())) {
+        try {
+          return await createGpu(bytes)
+        } catch (err) {
+          console.warn('Cut-out: graphics chip unavailable, using the CPU instead', err)
+          gpuFailed = true
+        }
+      }
+      return createCpu(bytes)
+    })()
+    segmenterPromise.catch(() => {
+      segmenterPromise = null
+    })
+  }
+  return segmenterPromise
+}
+
+/** Which engine the next cut-out will use, once loaded. */
+export async function segmenterBackend(): Promise<Backend> {
+  return (await loadSegmenter()).backend
+}
+
+/** A usable mask has real numbers and actually separates something. */
+function maskLooksValid(mask: Float32Array): boolean {
+  let min = Infinity
+  let max = -Infinity
+  for (let i = 0; i < mask.length; i += 7) {
+    const v = mask[i]
+    if (!Number.isFinite(v)) return false
+    if (v < min) min = v
+    if (v > max) max = v
+  }
+  return max - min > 0.05
+}
+
+async function runModel(seg: Segmenter, data: Float32Array): Promise<Float32Array> {
+  const input = new seg.ort.Tensor('float32', data, [1, 3, SIZE, SIZE])
+  let output: Tensor | undefined
+  try {
+    const results = await seg.session.run({ [seg.session.inputNames[0]]: input })
+    output = results[seg.session.outputNames[0]]
+    // Copy out: GPU-backed results are released on dispose.
+    return new Float32Array((await output.getData()) as Float32Array)
+  } finally {
+    input.dispose()
+    output?.dispose()
+  }
 }
 
 /** Model input: the photo squashed to 1024×1024, RGB in 0–1 minus the ImageNet mean. */
@@ -186,15 +314,21 @@ function applyMask(source: HTMLCanvasElement, mask: Float32Array): HTMLCanvasEle
 
 /** Returns a copy of the photo with the background made transparent. */
 export async function removeBackground(source: HTMLCanvasElement, onDownload?: DownloadProgress): Promise<HTMLCanvasElement> {
-  const session = await loadSegmenter(onDownload)
-  const ort = await import('onnxruntime-web/wasm')
-  const input = new ort.Tensor('float32', toTensorData(source), [1, 3, SIZE, SIZE])
-  const results = await session.run({ [session.inputNames[0]]: input })
-  const output = results[session.outputNames[0]]
-  try {
-    return applyMask(source, output.data as Float32Array)
-  } finally {
-    input.dispose()
-    output.dispose()
+  const data = toTensorData(source)
+  const seg = await loadSegmenter(onDownload)
+
+  if (seg.backend === 'gpu') {
+    try {
+      const mask = await runModel(seg, data)
+      if (maskLooksValid(mask)) return applyMask(source, mask)
+      console.warn('Cut-out: graphics chip returned an unusable mask, retrying on the CPU')
+    } catch (err) {
+      console.warn('Cut-out: graphics chip failed, retrying on the CPU', err)
+    }
+    gpuFailed = true
+    segmenterPromise = null
+    return removeBackground(source, onDownload)
   }
+
+  return applyMask(source, await runModel(seg, data))
 }

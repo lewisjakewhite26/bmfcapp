@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { makeCutout, prepareSource, type PreparedSource } from '../../lib/graphics/cutout'
+import { lastCutoutUsedGpu, makeCutout, prepareSource, switchToSlowerCutouts, type PreparedSource } from '../../lib/graphics/cutout'
 import { uploadGraphicPlayerPhoto, type GraphicPlayerPhoto } from '../../lib/graphicsApi'
 
 interface PlayerPhotoUploaderProps {
@@ -15,7 +15,7 @@ interface PlayerPhotoUploaderProps {
 type Stage =
   | { kind: 'idle' }
   | { kind: 'working'; message: string; fraction: number | null }
-  | { kind: 'review'; source: PreparedSource; cutout: Blob; previewUrl: string }
+  | { kind: 'review'; source: PreparedSource; cutout: Blob; previewUrl: string; usedGpu: boolean }
   | { kind: 'saving'; previewUrl: string }
 
 /** Pick a photo → background removed on the phone → check it → save to the library. */
@@ -40,20 +40,33 @@ export function PlayerPhotoUploader({ playerId, playerName, hasPhotos, onSaved, 
     }
     setStage({ kind: 'working', message: 'Preparing photo…', fraction: null })
     try {
-      const source = await prepareSource(file)
-      const cutout = await makeCutout(source, (message, fraction) => setStage({ kind: 'working', message, fraction }))
-      setStage({ kind: 'review', source, cutout, previewUrl: URL.createObjectURL(cutout) })
-    } catch (err) {
-      setStage({ kind: 'idle' })
-      toast.error(err instanceof Error ? err.message : "Couldn't cut out that photo")
+      await cutOut(await prepareSource(file))
     } finally {
       if (inputRef.current) inputRef.current.value = ''
     }
   }
 
+  const cutOut = async (source: PreparedSource) => {
+    try {
+      const cutout = await makeCutout(source, (message, fraction) => setStage({ kind: 'working', message, fraction }))
+      setStage({ kind: 'review', source, cutout, previewUrl: URL.createObjectURL(cutout), usedGpu: lastCutoutUsedGpu() })
+    } catch (err) {
+      setStage({ kind: 'idle' })
+      toast.error(err instanceof Error ? err.message : "Couldn't cut out that photo")
+    }
+  }
+
+  const redoSlower = async () => {
+    if (stage.kind !== 'review') return
+    const { source } = stage
+    await switchToSlowerCutouts()
+    setStage({ kind: 'working', message: 'Removing the background…', fraction: null })
+    await cutOut(source)
+  }
+
   const handleSave = async () => {
     if (stage.kind !== 'review') return
-    const { source, cutout, previewUrl: url } = stage
+    const { source, cutout, previewUrl: url, usedGpu } = stage
     setStage({ kind: 'saving', previewUrl: url })
     try {
       const photo = await uploadGraphicPlayerPhoto(
@@ -66,7 +79,7 @@ export function PlayerPhotoUploader({ playerId, playerName, hasPhotos, onSaved, 
       setStage({ kind: 'idle' })
       onSaved(photo)
     } catch (err) {
-      setStage({ kind: 'review', source, cutout, previewUrl: url })
+      setStage({ kind: 'review', source, cutout, previewUrl: url, usedGpu })
       toast.error(err instanceof Error ? err.message : "Couldn't save the photo")
     }
   }
@@ -106,6 +119,11 @@ export function PlayerPhotoUploader({ playerId, playerName, hasPhotos, onSaved, 
             <img src={stage.previewUrl} alt={`Cut-out of ${playerName}`} className="max-h-72 w-auto" />
           </div>
           <p className="text-xs text-gray-500">Check the edges, hair and hands. If it looks rough, try a clearer photo.</p>
+          {stage.kind === 'review' && stage.usedGpu && (
+            <button type="button" className="text-xs font-semibold text-brand-blue" onClick={() => void redoSlower()}>
+              Patchy or glitchy? Redo it the slower way
+            </button>
+          )}
           {hasPhotos && (
             <label className="flex items-center gap-2 text-sm text-brand-navy">
               <input

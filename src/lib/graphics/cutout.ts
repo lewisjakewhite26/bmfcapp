@@ -100,20 +100,35 @@ function capHeight(canvas: HTMLCanvasElement, maxHeight: number): HTMLCanvasElem
   return out
 }
 
+let lastUsedGpu = false
+
+/** Whether the most recent cut-out was made on the graphics chip. */
+export function lastCutoutUsedGpu(): boolean {
+  return lastUsedGpu
+}
+
+/** Makes later cut-outs on this device use the slower CPU path. */
+export async function switchToSlowerCutouts(): Promise<void> {
+  const { setCutoutCpuOnly } = await import('./segment')
+  setCutoutCpuOnly(true)
+}
+
 /** Removes the background (unless already transparent) and returns a trimmed PNG. */
 export async function makeCutout(source: PreparedSource, onProgress?: CutoutProgress): Promise<Blob> {
   let result: HTMLCanvasElement
 
+  lastUsedGpu = false
   if (source.alreadyCutOut) {
     result = source.canvas
   } else {
     onProgress?.('Loading the cut-out tool…', null)
-    const { loadSegmenter, removeBackground } = await import('./segment')
+    const { loadSegmenter, removeBackground, segmenterBackend } = await import('./segment')
     await loadSegmenter((fraction) => onProgress?.('Downloading the cut-out tool (first time only)…', fraction))
     onProgress?.('Removing the background…', null)
     // Let the message paint before the model takes over the main thread.
     await new Promise((r) => setTimeout(r, 50))
     result = await removeBackground(source.canvas)
+    lastUsedGpu = (await segmenterBackend()) === 'gpu'
     tightenAlpha(result)
   }
 

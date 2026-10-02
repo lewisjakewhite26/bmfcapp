@@ -1,7 +1,7 @@
 {
-  "model": "isnet-general-use (DIS, Apache-2.0) converted to fp16",
+  "model": "isnet-general-use (DIS, Apache-2.0), fp16, MaxPool ceil_mode off",
   "bytes": 90447799,
-  "sha256": "c4794b3f576d707d6a06c73ff1eb2bc2850929c3d0356c4dd9851e3c0a4397cd",
+  "sha256": "7082db18090f7f7f08f87dc18473d99f26b2d5c6fa9ab204294096e46ae4c977",
   "parts": [
     {
       "file": "part-0.bin",
