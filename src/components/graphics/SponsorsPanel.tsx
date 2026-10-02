@@ -156,7 +156,8 @@ export function SponsorsPanel({ squad, sharedLogos, onChanged }: SponsorsPanelPr
   const [filter, setFilter] = useState('all')
   const unusedLogos = useMemo(() => {
     const used = new Set(players.map((p) => p.sponsor_logo_shared_file).filter(Boolean))
-    return sharedLogos.filter((f) => !used.has(f.name))
+    const usedLight = new Set(players.map((p) => p.sponsor_logo_light_url).filter(Boolean))
+    return sharedLogos.filter((f) => !used.has(f.name) && !usedLight.has(f.path))
   }, [players, sharedLogos])
 
   const shown = filter === 'all' ? players : players.filter((p) => statusOf(p) === filter)

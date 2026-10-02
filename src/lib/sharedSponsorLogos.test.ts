@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchSharedLogo, withSharedSponsorLogos, type SharedLogoFile } from './sharedSponsorLogos'
+import { isLightVariant, matchSharedLogo, withSharedSponsorLogos, type SharedLogoFile } from './sharedSponsorLogos'
 import type { SquadMember } from '../types'
 
 const file = (name: string): SharedLogoFile => ({ name, path: `sponsors/${encodeURIComponent(name)}` })
@@ -55,5 +55,27 @@ describe('shared sponsor logo matching', () => {
     expect(out[0].sponsor_logo_shared_file).toBe('Lines Valeting.png')
     expect(out[1].sponsor_logo_url).toBe('b/logo.png')
     expect(out[2].sponsor_logo_url).toBeNull()
+  })
+
+  it('picks up a light-design version named "<sponsor> light"', () => {
+    expect(isLightVariant('Chris Ford Sliding Wardrobes light.png')).toBe(true)
+    expect(isLightVariant('l-brown-installations-light.jpg')).toBe(true)
+    expect(isLightVariant('Lines Valeting.png')).toBe(false)
+    expect(isLightVariant('Lightfoot Plumbing.png')).toBe(false)
+
+    const folder = [
+      file('Chris Ford Sliding Wardrobes.png'),
+      file('Chris Ford Sliding Wardrobes light.png'),
+      file('Martin Gray FA.png'),
+    ]
+    const squad = [
+      { player_id: 'w', sponsor_name: 'Chris Ford Sliding Wardrobes', sponsor_logo_url: null },
+      { player_id: 'm', sponsor_name: 'Martin Gray FA', sponsor_logo_url: null },
+    ] as SquadMember[]
+    const [will, dougie] = withSharedSponsorLogos(squad, folder)
+    expect(will.sponsor_logo_shared_file).toBe('Chris Ford Sliding Wardrobes.png')
+    expect(will.sponsor_logo_light_url).toBe('sponsors/Chris%20Ford%20Sliding%20Wardrobes%20light.png')
+    expect(dougie.sponsor_logo_shared_file).toBe('Martin Gray FA.png')
+    expect(dougie.sponsor_logo_light_url).toBeNull()
   })
 })

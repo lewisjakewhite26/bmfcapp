@@ -24,7 +24,7 @@ import {
   type GraphicKind,
 } from '../lib/graphics/data'
 import { canShareFiles, downloadGraphics, shareGraphics, type ExportFile } from '../lib/graphics/exportImage'
-import { DEFAULT_FRAMING, type PlayerFraming } from '../lib/graphics/render'
+import { DEFAULT_FRAMING, type GraphicTheme, type PlayerFraming } from '../lib/graphics/render'
 import {
   badgeForOpponent,
   fetchGraphicsLibrary,
@@ -60,9 +60,10 @@ interface PostCardProps {
   library: GraphicsLibrary
   onLibraryChanged: () => void
   register: (key: string, handle: GraphicCanvasHandle | null, fileName: string) => void
+  theme: GraphicTheme
 }
 
-function PostCard({ kind, fixture, player, squadMember, library, onLibraryChanged, register }: PostCardProps) {
+function PostCard({ kind, fixture, player, squadMember, library, onLibraryChanged, register, theme }: PostCardProps) {
   const photos = useMemo(() => (player ? photosForPlayer(library.photos, player.playerId) : []), [library.photos, player])
   const [photoId, setPhotoId] = useState<string | null>(null)
   const [logoOnTile, setLogoOnTile] = useState(false)
@@ -81,7 +82,12 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
   const badge = badgeForOpponent(library.badges, fixture.opponent, library.crests)
   const badgeUrl = resolveGraphicsUrl(badge?.badge_path)
   const playerImageUrl = resolveGraphicsUrl(chosen?.cutout_path)
-  const sponsorLogoUrl = kind === 'matchday' ? null : resolveSponsorLogoUrl(squadMember?.sponsor_logo_url)
+  const sponsorLogoUrl =
+    kind === 'matchday'
+      ? null
+      : resolveSponsorLogoUrl(
+          (theme === 'light' && squadMember?.sponsor_logo_light_url) || squadMember?.sponsor_logo_url,
+        )
 
   const data = useMemo<GraphicData | null>(() => {
     try {
@@ -198,7 +204,7 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
         </div>
       )}
 
-      {kind !== 'matchday' && sponsorLogoUrl && (
+      {kind !== 'matchday' && sponsorLogoUrl && theme === 'dark' && (
         <label className="flex items-center gap-2 text-sm text-brand-navy">
           <input type="checkbox" className="accent-brand-blue" checked={logoOnTile} onChange={(e) => setLogoOnTile(e.target.checked)} />
           Show sponsor logo on a white tile
@@ -212,6 +218,7 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
         logoOnTile={logoOnTile}
         framing={chosen ? framing : undefined}
         onFramingChange={chosen ? setFraming : undefined}
+        theme={theme}
       />
 
       {chosen && (
@@ -275,6 +282,21 @@ export default function AdminGraphics() {
   const [sharedLogos, setSharedLogos] = useState<SharedLogoFile[]>([])
   const [library, setLibrary] = useState<GraphicsLibrary>({ photos: [], badges: [] })
   const [kind, setKind] = useState<GraphicKind>('matchday')
+  const [theme, setTheme] = useState<GraphicTheme>(() => {
+    try {
+      return localStorage.getItem('bmfc-graphics-theme') === 'light' ? 'light' : 'dark'
+    } catch {
+      return 'dark'
+    }
+  })
+  const chooseTheme = (t: GraphicTheme) => {
+    setTheme(t)
+    try {
+      localStorage.setItem('bmfc-graphics-theme', t)
+    } catch {
+      // Not saved; the choice still applies on this visit.
+    }
+  }
   const [fixtureId, setFixtureId] = useState('')
   const [includePast, setIncludePast] = useState(false)
   const [posterPlayerId, setPosterPlayerId] = useState('')
@@ -464,6 +486,30 @@ export default function AdminGraphics() {
                 </div>
               </fieldset>
 
+              <fieldset>
+                <legend className="text-sm font-semibold text-brand-navy mb-2">Look</legend>
+                <div className="flex gap-2">
+                  {(
+                    [
+                      ['dark', 'Navy'],
+                      ['light', 'Light'],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-pressed={theme === id}
+                      onClick={() => chooseTheme(id)}
+                      className={`flex-1 min-h-[44px] rounded-pill text-sm font-semibold border transition-colors ${
+                        theme === id ? 'bg-brand-navy text-white border-brand-navy' : 'border-brand-blue/20 text-brand-navy bg-white/70'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+
               <div>
                 <label htmlFor="graphics-fixture" className="text-sm font-semibold text-brand-navy block mb-2">
                   {kind === 'matchday' ? (includePast ? 'Match' : 'Upcoming match') : 'Match (newest first)'}
@@ -547,6 +593,7 @@ export default function AdminGraphics() {
                 library={library}
                 onLibraryChanged={() => void refreshLibrary()}
                 register={register}
+                theme={theme}
               />
             )}
 
@@ -562,6 +609,7 @@ export default function AdminGraphics() {
                   library={library}
                   onLibraryChanged={() => void refreshLibrary()}
                   register={register}
+                  theme={theme}
                 />
               ))}
 

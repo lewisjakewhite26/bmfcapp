@@ -125,6 +125,7 @@ export interface PreparedLogo {
  *  - white background: removed, so the logo sits on the white footer
  *  - coloured background: kept, drawn as a rounded tile
  *  - transparent and white-only (made for dark backgrounds): recoloured navy
+ * A sponsor's "light" file in the sponsors folder, when there is one, is used instead.
  *  - transparent with colour: used as it is
  */
 export function lightLogo(img: CanvasImageSource, navy = '#0D1B4B'): PreparedLogo {
