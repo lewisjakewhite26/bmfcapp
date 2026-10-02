@@ -69,7 +69,7 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
   const canvasRef = useRef<GraphicCanvasHandle | null>(null)
 
   const chosen = photos.find((p) => p.id === photoId) ?? photos[0] ?? null
-  const badge = badgeForOpponent(library.badges, fixture.opponent)
+  const badge = badgeForOpponent(library.badges, fixture.opponent, library.crests)
   const badgeUrl = resolveGraphicsUrl(badge?.badge_path)
   const playerImageUrl = resolveGraphicsUrl(chosen?.cutout_path)
   const sponsorLogoUrl = kind === 'matchday' ? null : resolveSponsorLogoUrl(squadMember?.sponsor_logo_url)

@@ -24,18 +24,18 @@ export interface SharedLogoFile {
   path: string
 }
 
-export function sponsorWords(text: string): string[] {
+export function sponsorWords(text: string, ignored: Set<string> = IGNORED_WORDS): string[] {
   return text
     .toLowerCase()
     .replace(/&/g, ' and ')
     .replace(/['’]/g, '')
     .split(/[^a-z0-9]+/)
-    .filter((w) => w && !IGNORED_WORDS.has(w))
+    .filter((w) => w && !ignored.has(w))
 }
 
 /** Words in a file name, without the extension or a trailing copy number ("logo-2", "logo (1)"). */
-export function logoFileWords(fileName: string): string[] {
-  const words = sponsorWords(fileName.replace(/\.[a-z0-9]+$/i, ''))
+export function logoFileWords(fileName: string, ignored: Set<string> = IGNORED_WORDS): string[] {
+  const words = sponsorWords(fileName.replace(/\.[a-z0-9]+$/i, ''), ignored)
   if (words.length > 1 && /^\d+$/.test(words[words.length - 1])) words.pop()
   return words
 }
@@ -46,12 +46,16 @@ export function logoFileWords(fileName: string): string[] {
  * "lines-valeting-north-east.jpg" → "Lines Valeting"), preferring the
  * closest. Returns null when nothing fits.
  */
-export function matchSharedLogo(sponsorName: string, files: SharedLogoFile[]): SharedLogoFile | null {
-  const sponsor = sponsorWords(sponsorName)
+export function matchSharedLogo(
+  sponsorName: string,
+  files: SharedLogoFile[],
+  ignored: Set<string> = IGNORED_WORDS,
+): SharedLogoFile | null {
+  const sponsor = sponsorWords(sponsorName, ignored)
   if (!sponsor.length) return null
   let best: { file: SharedLogoFile; score: number } | null = null
   for (const file of files) {
-    const words = logoFileWords(file.name)
+    const words = logoFileWords(file.name, ignored)
     if (!words.length) continue
     const fileInSponsor = words.every((w) => sponsor.includes(w))
     const sponsorInFile = sponsor.every((w) => words.includes(w))
@@ -65,20 +69,24 @@ export function matchSharedLogo(sponsorName: string, files: SharedLogoFile[]): S
   return best?.file ?? null
 }
 
-/** Lists the shared logos. Never throws: on any problem the app carries on without them. */
-export async function listSharedSponsorLogos(): Promise<SharedLogoFile[]> {
+/** Lists image files in a storage folder. Never throws: on any problem the app carries on without them. */
+export async function listSharedImages(bucket: string, folder: string): Promise<SharedLogoFile[]> {
   if (isMockDataMode()) return []
   try {
     const { data, error } = await supabase.storage
-      .from('sponsor-logos')
-      .list(SHARED_LOGO_FOLDER, { limit: 1000, sortBy: { column: 'name', order: 'asc' } })
+      .from(bucket)
+      .list(folder, { limit: 1000, sortBy: { column: 'name', order: 'asc' } })
     if (error || !data) return []
     return data
       .filter((f) => IMAGE_FILE.test(f.name))
-      .map((f) => ({ name: f.name, path: `${SHARED_LOGO_FOLDER}/${encodeURIComponent(f.name)}` }))
+      .map((f) => ({ name: f.name, path: `${folder}/${encodeURIComponent(f.name)}` }))
   } catch {
     return []
   }
+}
+
+export function listSharedSponsorLogos(): Promise<SharedLogoFile[]> {
+  return listSharedImages('sponsor-logos', SHARED_LOGO_FOLDER)
 }
 
 /** Fills in shared logos for players with a sponsor but no logo of their own. */

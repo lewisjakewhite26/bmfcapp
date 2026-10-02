@@ -2,6 +2,7 @@ import { recordAdminAudit } from './adminAudit'
 import { isMockDataMode } from './clubApi'
 import { getClubSession } from './clubAuth'
 import { opponentKey } from './graphics/data'
+import { listSharedImages, matchSharedLogo, type SharedLogoFile } from './sharedSponsorLogos'
 import { isSupabaseConfigured, supabase } from './supabase'
 
 /**
@@ -27,11 +28,21 @@ export interface OpponentBadge {
   opponent_name: string
   badge_path: string
   updated_at: string
+  /** Set when the badge comes from the crests folder rather than an upload in the app. */
+  shared_file?: string
 }
+
+/** Crests dropped into this folder of the graphics bucket in Supabase, named after the club. */
+export const CREST_FOLDER = 'crests'
+
+/** Words that don't help tell clubs apart ("Kelloe FC" = "Kelloe"). */
+const CREST_IGNORED_WORDS = new Set(['fc', 'afc', 'the', 'club', 'football', 'and', 'logo', 'badge', 'crest'])
 
 export interface GraphicsLibrary {
   photos: GraphicPlayerPhoto[]
   badges: OpponentBadge[]
+  /** Files in the crests folder. */
+  crests?: SharedLogoFile[]
 }
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim() || undefined
@@ -97,16 +108,19 @@ async function uploadTo(path: string, blob: Blob, contentType: string): Promise<
 export async function fetchGraphicsLibrary(): Promise<GraphicsLibrary> {
   if (isMockDataMode()) {
     await delay(40)
-    return { photos: [...mockPhotos], badges: [...mockBadges] }
+    return { photos: [...mockPhotos], badges: [...mockBadges], crests: [] }
   }
   const session = requireSession()
-  const { data, error } = await supabase.rpc('admin_list_graphics_library', {
-    p_admin_id: session.userId,
-    p_session_token: session.sessionToken,
-  })
+  const [{ data, error }, crests] = await Promise.all([
+    supabase.rpc('admin_list_graphics_library', {
+      p_admin_id: session.userId,
+      p_session_token: session.sessionToken,
+    }),
+    listSharedImages(GRAPHICS_BUCKET, CREST_FOLDER),
+  ])
   if (error) throw error
   const lib = data as Partial<GraphicsLibrary> | null
-  return { photos: lib?.photos ?? [], badges: lib?.badges ?? [] }
+  return { photos: lib?.photos ?? [], badges: lib?.badges ?? [], crests }
 }
 
 export async function uploadGraphicPlayerPhoto(
@@ -279,9 +293,28 @@ export async function deleteOpponentBadge(badgeId: string): Promise<void> {
 }
 
 /** Badge for a fixture's opponent, matched on the normalised name. */
-export function badgeForOpponent(badges: OpponentBadge[], opponent: string): OpponentBadge | null {
+/**
+ * The opponent's badge: one uploaded in the app wins, otherwise a crest from
+ * the crests folder whose file name matches the club.
+ */
+export function badgeForOpponent(
+  badges: OpponentBadge[],
+  opponent: string,
+  crests: SharedLogoFile[] = [],
+): OpponentBadge | null {
   const key = opponentKey(opponent)
-  return badges.find((b) => b.opponent_key === key) ?? null
+  const uploaded = badges.find((b) => b.opponent_key === key)
+  if (uploaded) return uploaded
+  const crest = matchSharedLogo(opponent, crests, CREST_IGNORED_WORDS)
+  if (!crest) return null
+  return {
+    id: `crest:${crest.name}`,
+    opponent_key: key,
+    opponent_name: opponent,
+    badge_path: crest.path,
+    updated_at: '',
+    shared_file: crest.name,
+  }
 }
 
 /** A player's photos, default first then newest. */

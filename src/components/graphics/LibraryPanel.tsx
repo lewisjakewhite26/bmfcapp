@@ -299,13 +299,20 @@ export function LibraryPanel({ squad, opponents, library, onChanged }: LibraryPa
       </section>
 
       <section className="glass-card p-4 space-y-3">
-        <h2 className="font-display text-lg text-brand-navy">Opponent badges</h2>
+        <div>
+          <h2 className="font-display text-lg text-brand-navy">Opponent badges</h2>
+          <p className="text-xs text-gray-500 mt-1">
+            Easiest: in Supabase, open Storage → matchday-graphics and drop crests into the <b>crests</b> folder, named
+            after the club (e.g. “Kelloe FC.png”). They match automatically, including clubs added to the fixtures later.
+            {library.crests?.length ? ` ${library.crests.length} in the folder.` : ''}
+          </p>
+        </div>
         {opponentNames.length === 0 ? (
           <p className="text-sm text-gray-500">No opponents in the fixture list yet.</p>
         ) : (
           <ul className="divide-y divide-brand-blue/10">
             {opponentNames.map((name) => {
-              const badge = badgeForOpponent(library.badges, name)
+              const badge = badgeForOpponent(library.badges, name, library.crests)
               const url = resolveGraphicsUrl(badge?.badge_path)
               return (
                 <li key={name} className="py-2 flex items-center gap-3">
@@ -316,14 +323,19 @@ export function LibraryPanel({ squad, opponents, library, onChanged }: LibraryPa
                       <span className="text-xs font-bold text-white">{teamInitials(name)}</span>
                     )}
                   </div>
-                  <span className="flex-1 text-sm font-medium text-brand-navy">{name}</span>
+                  <span className="flex-1 min-w-0 text-sm font-medium text-brand-navy">
+                    {name}
+                    {badge?.shared_file && (
+                      <span className="block text-xs font-normal text-gray-400 truncate">From crests folder: {badge.shared_file}</span>
+                    )}
+                  </span>
                   <BadgeUploadButton
                     opponentName={name}
                     hasBadge={Boolean(badge)}
                     onSaved={onChanged}
                     className="text-xs font-semibold text-brand-blue min-h-[44px] px-2 inline-flex items-center"
                   />
-                  {badge && (
+                  {badge && !badge.shared_file && (
                     <button
                       type="button"
                       className="text-xs font-semibold text-red-600 min-h-[44px] px-2"
