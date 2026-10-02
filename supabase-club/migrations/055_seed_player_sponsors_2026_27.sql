@@ -1,6 +1,7 @@
 -- One-off data load: 2026/27 player sponsors (from the club's sponsorship list).
 -- Matches on first + last name, ignoring case, apostrophes and punctuation
--- ("Logan Ohara" = "Logan O'Hara"). Safe to run more than once.
+-- ("Logan Ohara" = "Logan O'Hara"),
+-- plus a few common short forms (Will/William, Dave/David). Safe to run more than once.
 --
 -- When run in the Supabase SQL editor, the final SELECT shows a cross-reference:
 --   Saved                         → sponsor written to that player
@@ -20,43 +21,50 @@ AS $$
 $$;
 
 DROP TABLE IF EXISTS pg_temp.sponsor_list_2026;
-CREATE TEMP TABLE sponsor_list_2026 (full_name text, sponsor text);
+-- full_name is the registered (DDSFL) name; aliases cover how the player may
+-- have typed it in the app (Will/William, Dave/David, Chris/Christopher...).
+CREATE TEMP TABLE sponsor_list_2026 (full_name text, sponsor text, aliases text[] DEFAULT '{}');
 
-INSERT INTO sponsor_list_2026 (full_name, sponsor) VALUES
-  ('Simon Darwin', 'MD Construction'),
-  ('Ciaran Lines', 'Lines Valeting'),
-  ('Will Dodsworth', 'Makepeace Interior Solutions'),
-  ('George Davey', 'Outrank'),
-  ('Chris Park', 'GH Elite'),
-  ('Thomas Laing', 'DTS Consult'),
-  ('Jack Hinch', 'Aspire Accounting & Tax Ltd'),
-  ('Ryan Hunter', 'Walker Tyres Ltd'),
-  ('James Marshall', 'JSC Locum'),
-  ('Connor Noades', 'Xpress Heating'),
-  ('Callum Watson', 'Village Tavern Coxhoe'),
-  ('Charlie Coates', 'Emily''s Beauty'),
-  ('Joe Williamson', 'Sqew'),
-  ('Jack Marley', 'L Brown Installations'),
-  ('Matthew Jones', 'SJ Vocals'),
-  ('Jordan Cooksey', 'West Cornforth Fisheries'),
-  ('Will Denholm', 'Chris Ford Sliding Wardrobes'),
-  ('Carl Hodges', 'Ash Dodsworth'),
-  ('Harvey Ryder', 'Bishops Lodge'),
-  ('Jack Scanlon', 'Apex Mouthguards'),
-  ('Dougie English', 'Martin Gray FA'),
-  ('Sam Marshall', 'David Redfern Building Services'),
-  ('Lee Hutchinson', 'David Redfern Building Services'),
-  ('Dave Redfern', 'Mess Sedgefield'),
-  ('Lewis White', '13 Apparel'),
-  ('Jamie Halliday', 'Squirrel Bars'),
-  ('Logan Ohara', NULL),
-  ('Jack Kell', NULL);
+INSERT INTO sponsor_list_2026 (full_name, sponsor, aliases) VALUES
+  ('Simon Darwin', 'MD Construction', '{}'),
+  ('Ciaran Lines', 'Lines Valeting', '{}'),
+  ('George Davey', 'Outrank', '{}'),
+  ('Christopher Park', 'GH Elite', '{"Chris Park"}'),
+  ('Thomas Laing', 'DTS Consult', '{"Tom Laing"}'),
+  ('Jack Hinch', 'Aspire Accounting & Tax Ltd', '{}'),
+  ('Ryan Hunter', 'Walker Tyres Ltd', '{}'),
+  ('James Marshall', 'JSC Locum', '{}'),
+  ('Connor Noades', 'Xpress Heating', '{}'),
+  ('Callum Watson', 'Village Tavern Coxhoe', '{}'),
+  ('Charlie Coates', 'Emily''s Beauty', '{"Charles Coates"}'),
+  ('Joe Williamson', 'Sqew', '{"Joseph Williamson"}'),
+  ('Jack Marley', 'L Brown Installations', '{}'),
+  ('Mathew Jones', 'SJ Vocals', '{"Matthew Jones","Matt Jones"}'),
+  ('Jordan Cooksey', 'West Cornforth Fisheries', '{}'),
+  ('William Denholm', 'Chris Ford Sliding Wardrobes', '{"Will Denholm"}'),
+  ('Carl Hodges', 'Ash Dodsworth', '{}'),
+  ('Harvey Ryder', 'Bishops Lodge', '{}'),
+  ('Jack Scanlon', 'Apex Mouthguards', '{}'),
+  ('Dougie English', 'Martin Gray FA', '{"Douglas English","Doug English"}'),
+  ('Sam Marshall', 'David Redfern Building Services', '{"Samuel Marshall"}'),
+  ('Lee Hutchinson', 'David Redfern Building Services', '{}'),
+  ('David Redfern', 'Mess Sedgefield', '{"Dave Redfern"}'),
+  ('Lewis White', '13 Apparel', '{}'),
+  ('Jamie Halliday', 'Squirrel Bars', '{}'),
+  ('Logan Ohara', NULL, '{}'),
+  ('Jack Kell', NULL, '{}');
+-- Will Dodsworth (Makepeace Interior Solutions) has left the club.
+
+DROP TABLE IF EXISTS pg_temp.sponsor_keys_2026;
+CREATE TEMP TABLE sponsor_keys_2026 AS
+SELECT l.full_name, l.sponsor, public.player_name_key(n) AS name_key
+FROM sponsor_list_2026 l, unnest(array_prepend(l.full_name, l.aliases)) AS n;
 
 UPDATE public.profiles p
-SET sponsor_name = l.sponsor
-FROM sponsor_list_2026 l
-WHERE l.sponsor IS NOT NULL
-  AND public.player_name_key(p.first_name || ' ' || p.last_name) = public.player_name_key(l.full_name);
+SET sponsor_name = k.sponsor
+FROM sponsor_keys_2026 k
+WHERE k.sponsor IS NOT NULL
+  AND public.player_name_key(p.first_name || ' ' || p.last_name) = k.name_key;
 
 -- Cross-reference report
 WITH players AS (
@@ -65,22 +73,27 @@ WITH players AS (
          public.player_name_key(p.first_name || ' ' || p.last_name) AS name_key,
          EXISTS (SELECT 1 FROM public.squad s WHERE s.player_id = p.id AND s.active) AS in_squad
   FROM public.profiles p
+),
+matched AS (
+  SELECT DISTINCT l.full_name, l.sponsor, pl.id
+  FROM sponsor_list_2026 l
+  LEFT JOIN sponsor_keys_2026 k ON k.full_name = l.full_name
+  LEFT JOIN players pl ON pl.name_key = k.name_key
 )
 SELECT result, name, sponsor FROM (
-  SELECT
+  SELECT DISTINCT
     CASE
-      WHEN pl.id IS NULL THEN '2. Not found in app'
-      WHEN l.sponsor IS NULL THEN '3. Available (unchanged)'
+      WHEN NOT EXISTS (SELECT 1 FROM matched m2 WHERE m2.full_name = m.full_name AND m2.id IS NOT NULL) THEN '2. Not found in app'
+      WHEN m.sponsor IS NULL THEN '3. Available (unchanged)'
       ELSE '1. Saved'
     END AS result,
-    l.full_name AS name,
-    coalesce(l.sponsor, '') AS sponsor
-  FROM sponsor_list_2026 l
-  LEFT JOIN players pl ON pl.name_key = public.player_name_key(l.full_name)
+    m.full_name AS name,
+    coalesce(m.sponsor, '') AS sponsor
+  FROM matched m
   UNION ALL
   SELECT '4. In squad, not on the list', pl.full_name, ''
   FROM players pl
   WHERE pl.in_squad
-    AND NOT EXISTS (SELECT 1 FROM sponsor_list_2026 l WHERE public.player_name_key(l.full_name) = pl.name_key)
+    AND NOT EXISTS (SELECT 1 FROM sponsor_keys_2026 k WHERE k.name_key = pl.name_key)
 ) report
 ORDER BY result, name;
