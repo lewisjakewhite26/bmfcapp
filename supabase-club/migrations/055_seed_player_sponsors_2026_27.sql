@@ -51,6 +51,8 @@ INSERT INTO sponsor_list_2026 (full_name, sponsor, aliases) VALUES
   ('David Redfern', 'Mess Sedgefield', '{"Dave Redfern"}'),
   ('Lewis White', '13 Apparel', '{}'),
   ('Jamie Halliday', 'Squirrel Bars', '{}'),
+  ('Caidan King', 'David Redfern Building Services', '{}'),
+  ('Freddie McCormack', 'Lines Valeting', '{"Frederick McCormack","Fred McCormack"}'),
   ('Logan Ohara', NULL, '{}'),
   ('Jack Kell', NULL, '{}');
 -- Will Dodsworth (Makepeace Interior Solutions) has left the club.
