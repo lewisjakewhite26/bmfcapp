@@ -534,6 +534,11 @@ export default function AdminLive() {
       navigate(`/admin/live/${id}`)
       return
     }
+    // Starting is one tap, so check before going live on a match that isn't today.
+    if (picked && new Date(picked.match_date).toDateString() !== new Date().toDateString()) {
+      const day = new Date(picked.match_date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })
+      if (!window.confirm(`This match is on ${day}, not today. Start logging it live now?`)) return
+    }
     void goLive(id)
   }
 
