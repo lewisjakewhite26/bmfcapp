@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { fetchSquad } from '../lib/clubApi'
-import { ensureGraphicsFonts } from '../lib/graphics/assets'
+import { ensureGraphicsFonts, imageToCanvas, loadImage } from '../lib/graphics/assets'
 import { DISPLAY_FONT, TEXT_FONT } from '../lib/graphics/text'
 import { listSharedSponsorLogos, withSharedSponsorLogos } from '../lib/sharedSponsorLogos'
 import { resolveSponsorLogoUrl } from '../lib/sponsorLogoUrl'
-import { reelSponsors, type ReelSponsor } from '../lib/sponsorReel'
+import { logoBackdrop, reelSponsors, type LogoBackdrop, type ReelSponsor } from '../lib/sponsorReel'
 
 /**
  * Sponsors reel: a full-screen, looping background for the TVs at club
@@ -67,11 +67,41 @@ function useIsPortrait() {
   return portrait
 }
 
-function preload(urls: string[]) {
-  for (const url of urls) {
-    const img = new Image()
-    img.src = url
+interface ReelSlide {
+  name: string
+  /** Resolved URL of the logo to show, or null for a name-only slide. */
+  logoUrl: string | null
+  backdrop: LogoBackdrop
+}
+
+/**
+ * Picks each sponsor's logo and what it sits on. A "light" file wins (made
+ * for white backgrounds); otherwise the logo's pixels decide. If the pixels
+ * can't be read, the white card is the safe default.
+ */
+async function prepareSlide(s: ReelSponsor): Promise<ReelSlide> {
+  const light = resolveSponsorLogoUrl(s.logoLight)
+  if (light) {
+    void loadImage(light).catch(() => {})
+    return { name: s.name, logoUrl: light, backdrop: 'white' }
   }
+  const url = resolveSponsorLogoUrl(s.logo)
+  if (!url) return { name: s.name, logoUrl: null, backdrop: 'white' }
+  try {
+    const canvas = imageToCanvas(await loadImage(url), 400)
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return { name: s.name, logoUrl: url, backdrop: 'white' }
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    return { name: s.name, logoUrl: url, backdrop: logoBackdrop(data.data, canvas.width, canvas.height) }
+  } catch {
+    return { name: s.name, logoUrl: url, backdrop: 'white' }
+  }
+}
+
+const CARD_STYLE: Record<LogoBackdrop, React.CSSProperties> = {
+  white: { background: '#FFFFFF', boxShadow: '0 30px 80px rgba(0, 0, 0, 0.35)' },
+  blue: { background: BLUE, boxShadow: '0 30px 80px rgba(0, 0, 0, 0.35)' },
+  none: { background: 'transparent' },
 }
 
 /** Long names drop a size or two so they stay on one or two lines. */
@@ -81,8 +111,8 @@ function nameSize(name: string): number {
   return 96
 }
 
-function SponsorSlide({ sponsor }: { sponsor: ReelSponsor }) {
-  const logoUrl = resolveSponsorLogoUrl(sponsor.logo)
+function SponsorSlide({ sponsor }: { sponsor: ReelSlide }) {
+  const { logoUrl } = sponsor
   const [logoFailed, setLogoFailed] = useState(false)
   const showLogo = logoUrl && !logoFailed
 
@@ -121,8 +151,7 @@ function SponsorSlide({ sponsor }: { sponsor: ReelSponsor }) {
             width: 880,
             height: 440,
             borderRadius: 36,
-            background: '#FFFFFF',
-            boxShadow: '0 30px 80px rgba(0, 0, 0, 0.35)',
+            ...CARD_STYLE[sponsor.backdrop],
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -168,7 +197,7 @@ export default function AdminSponsorsReel() {
   const [fullscreenOk] = useState(canFullscreen)
   const [installed] = useState(isInstalledApp)
   const [hasKeyboard] = useState(() => window.matchMedia?.('(hover: hover) and (pointer: fine)').matches ?? true)
-  const [sponsors, setSponsors] = useState<ReelSponsor[] | null>(null)
+  const [sponsors, setSponsors] = useState<ReelSlide[] | null>(null)
   const [error, setError] = useState(false)
   const [index, setIndex] = useState(0)
   const [idle, setIdle] = useState(false)
@@ -177,8 +206,7 @@ export default function AdminSponsorsReel() {
   const load = useCallback(async () => {
     try {
       const [squad, logos] = await Promise.all([fetchSquad(), listSharedSponsorLogos()])
-      const list = reelSponsors(withSharedSponsorLogos(squad, logos))
-      preload(list.map((s) => resolveSponsorLogoUrl(s.logo)).filter((u): u is string => !!u))
+      const list = await Promise.all(reelSponsors(withSharedSponsorLogos(squad, logos)).map(prepareSlide))
       setSponsors(list)
       setError(false)
     } catch {
