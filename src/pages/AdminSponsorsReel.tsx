@@ -64,8 +64,8 @@ function SponsorSlide({ sponsor }: { sponsor: ReelSponsor }) {
       className="absolute inset-0 flex flex-col items-center justify-center"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 1.4, ease: 'easeInOut' }}
+      exit={{ opacity: 0, transition: { duration: 0.8, ease: 'easeIn' } }}
+      transition={{ duration: 1, ease: 'easeOut' }}
     >
       <motion.p
         initial={{ opacity: 0, y: 16 }}
@@ -295,7 +295,7 @@ export default function AdminSponsorsReel() {
             ))}
         </div>
 
-        <AnimatePresence mode="sync">
+        <AnimatePresence mode="wait">
           {current ? <SponsorSlide key={`${index}-${current.name}`} sponsor={current} /> : null}
         </AnimatePresence>
 
