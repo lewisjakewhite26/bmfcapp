@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isLightVariant, matchSharedLogo, withSharedSponsorLogos, type SharedLogoFile } from './sharedSponsorLogos'
+import { bundledSponsorLogos, isLightVariant, matchSharedLogo, mergeSharedLogos, withSharedSponsorLogos, type SharedLogoFile } from './sharedSponsorLogos'
 import type { SquadMember } from '../types'
 
 const file = (name: string): SharedLogoFile => ({ name, path: `sponsors/${encodeURIComponent(name)}` })
@@ -77,5 +77,28 @@ describe('shared sponsor logo matching', () => {
     expect(will.sponsor_logo_light_url).toBe('sponsors/Chris%20Ford%20Sliding%20Wardrobes%20light.png')
     expect(dougie.sponsor_logo_shared_file).toBe('Martin Gray FA.png')
     expect(dougie.sponsor_logo_light_url).toBeNull()
+  })
+})
+
+describe('bundled sponsor logos', () => {
+  it("builds full URLs to the app's own files", () => {
+    expect(bundledSponsorLogos('https://bmfcapp.co.uk', '/')).toContainEqual({
+      name: 'Three Horseshoes.png',
+      path: 'https://bmfcapp.co.uk/sponsors/Three%20Horseshoes.png',
+    })
+  })
+
+  it('adds them after Supabase files, letting Supabase win on a name clash', () => {
+    const supabase = [{ name: 'three-horseshoes.jpg', path: 'sponsors/three-horseshoes.jpg' }]
+    const bundled = [
+      { name: 'Three Horseshoes.png', path: 'https://x/sponsors/Three%20Horseshoes.png' },
+      { name: 'Corner Shop.png', path: 'https://x/sponsors/Corner%20Shop.png' },
+    ]
+    expect(mergeSharedLogos(supabase, bundled)).toEqual([supabase[0], bundled[1]])
+  })
+
+  it('lets a sponsor with no logo pick up the bundled file', () => {
+    const files = mergeSharedLogos([], bundledSponsorLogos('https://x'))
+    expect(matchSharedLogo('Three Horseshoes', files)?.name).toBe('Three Horseshoes.png')
   })
 })
