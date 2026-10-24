@@ -1,9 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import type { SquadMember } from '../types'
-import { logoBackdrop, reelSponsors } from './sponsorReel'
+import { logoBackdrop, reelSponsors, splitPlayers } from './sponsorReel'
 
-const player = (sponsor_name: string | null, sponsor_logo_url: string | null = null, sponsor_logo_light_url: string | null = null) =>
-  ({ sponsor_name, sponsor_logo_url, sponsor_logo_light_url }) as SquadMember
+let nextId = 0
+const player = (
+  sponsor_name: string | null,
+  sponsor_logo_url: string | null = null,
+  sponsor_logo_light_url: string | null = null,
+  extra: Partial<SquadMember> = {},
+) =>
+  ({
+    player_id: `p${++nextId}`,
+    display_name: `Player ${nextId}`,
+    squad_number: null,
+    photo_url: null,
+    sponsor_name,
+    sponsor_logo_url,
+    sponsor_logo_light_url,
+    ...extra,
+  }) as SquadMember
+
+const names = (list: ReturnType<typeof reelSponsors>) =>
+  list.map((s) => ({ name: s.name, logo: s.logo, logoLight: s.logoLight }))
 
 describe('reelSponsors', () => {
   it('lists each sponsor once, alphabetically, skipping players without one', () => {
@@ -15,14 +33,40 @@ describe('reelSponsors', () => {
       player('lines valeting', 'sponsors/Lines%20Valeting.png', 'sponsors/Lines%20Valeting%20light.png'),
       player('Mess Sedgefield', 'b.png'),
     ])
-    expect(list).toEqual([
+    expect(names(list)).toEqual([
       { name: 'Lines Valeting Ltd', logo: 'sponsors/Lines%20Valeting.png', logoLight: 'sponsors/Lines%20Valeting%20light.png' },
       { name: 'Mess Sedgefield', logo: 'a.png', logoLight: null },
     ])
   })
 
   it('keeps sponsors with no logo so nobody is missed', () => {
-    expect(reelSponsors([player('Corner Shop')])).toEqual([{ name: 'Corner Shop', logo: null, logoLight: null }])
+    expect(names(reelSponsors([player('Corner Shop')]))).toEqual([{ name: 'Corner Shop', logo: null, logoLight: null }])
+  })
+
+  it("lists each sponsor's players by squad number, with their photo", () => {
+    const [sponsor] = reelSponsors([
+      player('Mess', null, null, { player_id: 'a', display_name: 'Jack Marley', squad_number: 9, photo_url: 'a.jpg' }),
+      player('Mess', null, null, { player_id: 'b', display_name: 'Tom Hall', squad_number: 1 }),
+      player('Mess', null, null, { player_id: 'c', display_name: 'Sam Lee' }),
+    ])
+    expect(sponsor.players).toEqual([
+      { playerId: 'b', name: 'Tom Hall', number: 1, photo: null },
+      { playerId: 'a', name: 'Jack Marley', number: 9, photo: 'a.jpg' },
+      { playerId: 'c', name: 'Sam Lee', number: null, photo: null },
+    ])
+  })
+})
+
+describe('splitPlayers', () => {
+  it('keeps up to four on one slide', () => {
+    expect(splitPlayers([1, 2, 3, 4])).toEqual([[1, 2, 3, 4]])
+    expect(splitPlayers([])).toEqual([[]])
+  })
+
+  it('shares bigger groups evenly so nobody stands alone', () => {
+    expect(splitPlayers([1, 2, 3, 4, 5])).toEqual([[1, 2, 3], [4, 5]])
+    expect(splitPlayers([1, 2, 3, 4, 5, 6, 7])).toEqual([[1, 2, 3, 4], [5, 6, 7]])
+    expect(splitPlayers([1, 2, 3, 4, 5, 6, 7, 8, 9])).toEqual([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
   })
 })
 

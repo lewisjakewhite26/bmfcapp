@@ -2,6 +2,15 @@ import type { SquadMember } from '../types'
 import { classifyLogo } from './graphics/pixels'
 import { sponsorWords } from './sharedSponsorLogos'
 
+export interface ReelPlayer {
+  playerId: string
+  /** Full name where the app has one ("Jack Marley"), else the display name. */
+  name: string
+  number: number | null
+  /** Profile picture path or URL (resolve with resolvePlayerPhotoUrl), or null. */
+  photo: string | null
+}
+
 export interface ReelSponsor {
   /** Sponsor name as entered in the app. */
   name: string
@@ -9,6 +18,8 @@ export interface ReelSponsor {
   logo: string | null
   /** The sponsor's "light" file from the sponsors folder (made for white backgrounds), if any. */
   logoLight: string | null
+  /** Players this sponsor backs, by squad number. */
+  players: ReelPlayer[]
 }
 
 /**
@@ -25,14 +36,40 @@ export function reelSponsors(squad: SquadMember[]): ReelSponsor[] {
     const existing = byKey.get(key)
     const logo = p.sponsor_logo_url ?? null
     const logoLight = p.sponsor_logo_light_url ?? null
+    const player: ReelPlayer = { playerId: p.player_id, name: p.display_name, number: p.squad_number ?? null, photo: p.photo_url ?? null }
     if (!existing) {
-      byKey.set(key, { name, logo, logoLight })
+      byKey.set(key, { name, logo, logoLight, players: [player] })
       continue
     }
     if (!existing.logo && logo) existing.logo = logo
     if (!existing.logoLight && logoLight) existing.logoLight = logoLight
+    if (!existing.players.some((x) => x.playerId === player.playerId)) existing.players.push(player)
   }
-  return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name, 'en-GB', { sensitivity: 'base' }))
+  const byNumber = (a: ReelPlayer, b: ReelPlayer) =>
+    (a.number ?? 999) - (b.number ?? 999) || a.name.localeCompare(b.name, 'en-GB')
+  return [...byKey.values()]
+    .map((s) => ({ ...s, players: [...s.players].sort(byNumber) }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'en-GB', { sensitivity: 'base' }))
+}
+
+/** Most players shown on one slide; a sponsor backing more gets extra slides. */
+export const MAX_PLAYERS_PER_SLIDE = 4
+
+/**
+ * Splits players into slides as evenly as possible (7 → 4 + 3, 5 → 3 + 2),
+ * so no slide ends up with a lone player. A sponsor with no players is one slide.
+ */
+export function splitPlayers<T>(players: T[], max = MAX_PLAYERS_PER_SLIDE): T[][] {
+  if (players.length <= max) return [players]
+  const groups = Math.ceil(players.length / max)
+  const out: T[][] = []
+  let start = 0
+  for (let g = 0; g < groups; g++) {
+    const size = Math.ceil((players.length - start) / (groups - g))
+    out.push(players.slice(start, start + size))
+    start += size
+  }
+  return out
 }
 
 /**
