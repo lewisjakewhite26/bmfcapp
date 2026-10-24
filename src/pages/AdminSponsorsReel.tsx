@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { fetchSquad } from '../lib/clubApi'
+import { fetchAdminUsers, fetchSquad } from '../lib/clubApi'
+import { fetchGraphicsLibrary, resolveGraphicsUrl, type GraphicPlayerPhoto } from '../lib/graphicsApi'
+import { withFullNames } from '../lib/graphics/names'
+import { resolvePlayerPhotoUrl } from '../lib/playerPhotoUrl'
 import { ensureGraphicsFonts, imageToCanvas, loadImage } from '../lib/graphics/assets'
 import { DISPLAY_FONT, TEXT_FONT } from '../lib/graphics/text'
 import { listSharedSponsorLogos, withSharedSponsorLogos } from '../lib/sharedSponsorLogos'
 import { resolveSponsorLogoUrl } from '../lib/sponsorLogoUrl'
-import { logoBackdrop, reelSponsors, type LogoBackdrop, type ReelSponsor } from '../lib/sponsorReel'
+import { logoBackdrop, reelSponsors, splitPlayers, type LogoBackdrop, type ReelSponsor } from '../lib/sponsorReel'
 
 /**
  * Sponsors reel: a full-screen, looping background for the TVs at club
@@ -67,9 +70,27 @@ function useIsPortrait() {
   return portrait
 }
 
+interface SlidePlayer {
+  playerId: string
+  name: string
+  number: number | null
+  /** Matchday graphics cut-out (transparent PNG), the nicest option. */
+  cutoutUrl: string | null
+  /** Profile picture, used when there's no cut-out. */
+  photoUrl: string | null
+}
+
 interface ReelSlide {
+  /** Unique per slide (a sponsor with lots of players spans several). */
+  key: string
   name: string
   /** Resolved URL of the logo to show, or null for a name-only slide. */
+  logoUrl: string | null
+  backdrop: LogoBackdrop
+  players: SlidePlayer[]
+}
+
+interface SponsorLogo {
   logoUrl: string | null
   backdrop: LogoBackdrop
 }
@@ -79,23 +100,69 @@ interface ReelSlide {
  * for white backgrounds); otherwise the logo's pixels decide. If the pixels
  * can't be read, the white card is the safe default.
  */
-async function prepareSlide(s: ReelSponsor): Promise<ReelSlide> {
+async function prepareLogo(s: ReelSponsor): Promise<SponsorLogo> {
   const light = resolveSponsorLogoUrl(s.logoLight)
   if (light) {
     void loadImage(light).catch(() => {})
-    return { name: s.name, logoUrl: light, backdrop: 'white' }
+    return { logoUrl: light, backdrop: 'white' }
   }
   const url = resolveSponsorLogoUrl(s.logo)
-  if (!url) return { name: s.name, logoUrl: null, backdrop: 'white' }
+  if (!url) return { logoUrl: null, backdrop: 'white' }
   try {
     const canvas = imageToCanvas(await loadImage(url), 400)
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
-    if (!ctx) return { name: s.name, logoUrl: url, backdrop: 'white' }
+    if (!ctx) return { logoUrl: url, backdrop: 'white' }
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height)
-    return { name: s.name, logoUrl: url, backdrop: logoBackdrop(data.data, canvas.width, canvas.height) }
+    return { logoUrl: url, backdrop: logoBackdrop(data.data, canvas.width, canvas.height) }
   } catch {
-    return { name: s.name, logoUrl: url, backdrop: 'white' }
+    return { logoUrl: url, backdrop: 'white' }
   }
+}
+
+/** Each player's default Matchday graphics cut-out (or their first one). */
+function defaultCutouts(photos: GraphicPlayerPhoto[]): Map<string, string> {
+  const byPlayer = new Map<string, GraphicPlayerPhoto>()
+  for (const photo of photos) {
+    const current = byPlayer.get(photo.player_id)
+    if (!current || (photo.is_default && !current.is_default)) byPlayer.set(photo.player_id, photo)
+  }
+  const urls = new Map<string, string>()
+  for (const [playerId, photo] of byPlayer) {
+    const url = resolveGraphicsUrl(photo.cutout_path)
+    if (url) urls.set(playerId, url)
+  }
+  return urls
+}
+
+async function buildSlides(): Promise<ReelSlide[]> {
+  const [squad, logos, users, library] = await Promise.all([
+    fetchSquad(),
+    listSharedSponsorLogos(),
+    // Full names and cut-outs are admin-only; committee members still get a reel without them.
+    fetchAdminUsers().catch(() => []),
+    fetchGraphicsLibrary().catch(() => ({ photos: [] as GraphicPlayerPhoto[] })),
+  ])
+  const cutouts = defaultCutouts(library.photos)
+  const sponsors = reelSponsors(withSharedSponsorLogos(withFullNames(squad, users), logos))
+  const prepared = await Promise.all(sponsors.map(prepareLogo))
+  const slides: ReelSlide[] = []
+  sponsors.forEach((sponsor, i) => {
+    const players: SlidePlayer[] = sponsor.players.map((p) => ({
+      playerId: p.playerId,
+      name: p.name,
+      number: p.number,
+      cutoutUrl: cutouts.get(p.playerId) ?? null,
+      photoUrl: resolvePlayerPhotoUrl(p.photo),
+    }))
+    for (const p of players) {
+      const url = p.cutoutUrl ?? p.photoUrl
+      if (url) void loadImage(url).catch(() => {})
+    }
+    splitPlayers(players).forEach((group, g) => {
+      slides.push({ key: `${sponsor.name}-${g}`, name: sponsor.name, ...prepared[i], players: group })
+    })
+  })
+  return slides
 }
 
 const CARD_STYLE: Record<LogoBackdrop, React.CSSProperties> = {
@@ -111,82 +178,210 @@ function nameSize(name: string): number {
   return 96
 }
 
-function SponsorSlide({ sponsor }: { sponsor: ReelSlide }) {
-  const { logoUrl } = sponsor
-  const [logoFailed, setLogoFailed] = useState(false)
-  const showLogo = logoUrl && !logoFailed
+const LABEL_STYLE: React.CSSProperties = {
+  fontFamily: `'${TEXT_FONT}', Inter, system-ui, sans-serif`,
+  fontWeight: 700,
+  letterSpacing: '0.32em',
+  color: GOLD,
+  textTransform: 'uppercase',
+  margin: 0,
+}
+
+const NAME_STYLE: React.CSSProperties = {
+  fontFamily: `'${DISPLAY_FONT}', Figtree, system-ui, sans-serif`,
+  fontWeight: 900,
+  lineHeight: 1.05,
+  color: '#FFFFFF',
+  textTransform: 'uppercase',
+  textAlign: 'center',
+  margin: 0,
+}
+
+function LogoCard({ url, backdrop, width, height, padding, onError }: {
+  url: string
+  backdrop: LogoBackdrop
+  width: number
+  height: number
+  padding: number
+  onError: () => void
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 1.6, delay: 0.5, ease: 'easeOut' }}
+      style={{
+        width,
+        height,
+        borderRadius: 36,
+        ...CARD_STYLE[backdrop],
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding,
+        boxSizing: 'border-box',
+      }}
+    >
+      <img src={url} alt="" onError={onError} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
+    </motion.div>
+  )
+}
+
+/** "Jack Marley" → "JM", "Jack M" → "JM". */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  return parts.slice(0, 2).map((w) => w[0]!.toUpperCase()).join('')
+}
+
+/** One player: cut-out standing on the name plate, or a ringed profile picture, or just the name. */
+function PlayerTile({ player, slotWidth, photoHeight, index, count }: {
+  player: SlidePlayer
+  slotWidth: number
+  photoHeight: number
+  index: number
+  count: number
+}) {
+  const [cutoutFailed, setCutoutFailed] = useState(false)
+  const [photoFailed, setPhotoFailed] = useState(false)
+  const cutout = player.cutoutUrl && !cutoutFailed ? player.cutoutUrl : null
+  const photo = !cutout && player.photoUrl && !photoFailed ? player.photoUrl : null
+  const big = count <= 2
+  const circle = Math.min(slotWidth - 40, big ? 360 : 250)
 
   return (
     <motion.div
-      className="absolute inset-0 flex flex-col items-center justify-center"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.8, ease: 'easeIn' } }}
-      transition={{ duration: 1, ease: 'easeOut' }}
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 1.2, delay: 0.7 + index * 0.15, ease: 'easeOut' }}
+      style={{ width: slotWidth, display: 'flex', flexDirection: 'column', alignItems: 'center' }}
     >
-      <motion.p
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1.2, delay: 0.3, ease: 'easeOut' }}
-        style={{
-          fontFamily: `'${TEXT_FONT}', Inter, system-ui, sans-serif`,
-          fontWeight: 700,
-          fontSize: 40,
-          letterSpacing: '0.32em',
-          color: GOLD,
-          textTransform: 'uppercase',
-          margin: 0,
-        }}
-      >
-        Proudly sponsored by
-      </motion.p>
-
-      {showLogo ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.6, delay: 0.5, ease: 'easeOut' }}
-          style={{
-            marginTop: 56,
-            width: 880,
-            height: 440,
-            borderRadius: 36,
-            ...CARD_STYLE[sponsor.backdrop],
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 56,
-            boxSizing: 'border-box',
-          }}
-        >
+      <div style={{ height: photoHeight, width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+        {cutout ? (
           <img
-            src={logoUrl}
+            src={cutout}
             alt=""
-            onError={() => setLogoFailed(true)}
-            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}
+            onError={() => setCutoutFailed(true)}
+            style={{
+              maxWidth: '112%',
+              height: '100%',
+              objectFit: 'contain',
+              objectPosition: 'bottom center',
+              display: 'block',
+              filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.45))',
+              maskImage: 'linear-gradient(to bottom, #000 82%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, #000 82%, transparent 100%)',
+            }}
           />
-        </motion.div>
-      ) : null}
+        ) : photo ? (
+          <img
+            src={photo}
+            alt=""
+            onError={() => setPhotoFailed(true)}
+            style={{
+              width: circle,
+              height: circle,
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: `8px solid ${GOLD}`,
+              boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+              marginBottom: 28,
+              display: 'block',
+            }}
+          />
+        ) : (
+          <div
+            aria-hidden
+            style={{
+              width: circle,
+              height: circle,
+              borderRadius: '50%',
+              background: BLUE,
+              border: `8px solid ${GOLD}`,
+              boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+              marginBottom: 28,
+              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              ...NAME_STYLE,
+              fontSize: Math.round(circle * 0.36),
+            }}
+          >
+            {initials(player.name)}
+          </div>
+        )}
+      </div>
+      <div style={{ marginTop: 14, textAlign: 'center', width: '100%' }}>
+        {player.number != null ? (
+          <p style={{ ...NAME_STYLE, color: GOLD, fontSize: big ? 56 : 44 }}>#{player.number}</p>
+        ) : null}
+        <p style={{ ...NAME_STYLE, fontSize: big ? 48 : 36, overflowWrap: 'anywhere' }}>{player.name}</p>
+      </div>
+    </motion.div>
+  )
+}
 
-      <motion.h1
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1.2, delay: showLogo ? 0.8 : 0.5, ease: 'easeOut' }}
-        style={{
-          fontFamily: `'${DISPLAY_FONT}', Figtree, system-ui, sans-serif`,
-          fontWeight: 900,
-          fontSize: showLogo ? nameSize(sponsor.name) : nameSize(sponsor.name) * 1.5,
-          lineHeight: 1.05,
-          color: '#FFFFFF',
-          textTransform: 'uppercase',
-          textAlign: 'center',
-          maxWidth: 1500,
-          margin: 0,
-          marginTop: showLogo ? 52 : 40,
-        }}
-      >
-        {sponsor.name}
-      </motion.h1>
+function SponsorSlide({ sponsor }: { sponsor: ReelSlide }) {
+  const { logoUrl, players } = sponsor
+  const [logoFailed, setLogoFailed] = useState(false)
+  const showLogo = !!logoUrl && !logoFailed
+  const fade = {
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    exit: { opacity: 0, transition: { duration: 0.8, ease: 'easeIn' as const } },
+    transition: { duration: 1, ease: 'easeOut' as const },
+  }
+  const rise = (delay: number) => ({
+    initial: { opacity: 0, y: 16 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 1.2, delay, ease: 'easeOut' as const },
+  })
+
+  if (!players.length) {
+    return (
+      <motion.div className="absolute inset-0 flex flex-col items-center justify-center" {...fade}>
+        <motion.p {...rise(0.3)} style={{ ...LABEL_STYLE, fontSize: 40 }}>Proudly sponsored by</motion.p>
+        {showLogo ? (
+          <div style={{ marginTop: 56 }}>
+            <LogoCard url={logoUrl} backdrop={sponsor.backdrop} width={880} height={440} padding={56} onError={() => setLogoFailed(true)} />
+          </div>
+        ) : null}
+        <motion.h1
+          {...rise(showLogo ? 0.8 : 0.5)}
+          style={{ ...NAME_STYLE, fontSize: nameSize(sponsor.name) * (showLogo ? 1 : 1.5), maxWidth: 1500, marginTop: showLogo ? 52 : 40 }}
+        >
+          {sponsor.name}
+        </motion.h1>
+      </motion.div>
+    )
+  }
+
+  // Sponsor on the left, their players on the right.
+  const AREA_W = 860
+  const slotWidth = Math.min(420, AREA_W / players.length)
+  const photoHeight = players.length <= 2 ? 680 : 560
+
+  return (
+    <motion.div className="absolute inset-0" {...fade}>
+      <div style={{ position: 'absolute', left: 100, top: 0, bottom: 0, width: 820, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.p {...rise(0.3)} style={{ ...LABEL_STYLE, fontSize: 34 }}>Proudly sponsored by</motion.p>
+        {showLogo ? (
+          <div style={{ marginTop: 48 }}>
+            <LogoCard url={logoUrl} backdrop={sponsor.backdrop} width={720} height={380} padding={48} onError={() => setLogoFailed(true)} />
+          </div>
+        ) : null}
+        <motion.h1
+          {...rise(showLogo ? 0.8 : 0.5)}
+          style={{ ...NAME_STYLE, fontSize: Math.round(nameSize(sponsor.name) * (showLogo ? 0.85 : 1.2)), maxWidth: 820, marginTop: showLogo ? 44 : 32 }}
+        >
+          {sponsor.name}
+        </motion.h1>
+      </div>
+      <div style={{ position: 'absolute', left: 960, width: AREA_W, top: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {players.map((p, i) => (
+          <PlayerTile key={p.playerId} player={p} slotWidth={slotWidth} photoHeight={photoHeight} index={i} count={players.length} />
+        ))}
+      </div>
     </motion.div>
   )
 }
@@ -205,9 +400,7 @@ export default function AdminSponsorsReel() {
 
   const load = useCallback(async () => {
     try {
-      const [squad, logos] = await Promise.all([fetchSquad(), listSharedSponsorLogos()])
-      const list = await Promise.all(reelSponsors(withSharedSponsorLogos(squad, logos)).map(prepareSlide))
-      setSponsors(list)
+      setSponsors(await buildSlides())
       setError(false)
     } catch {
       // Keep showing what we had; only show the error if there's nothing yet.
@@ -357,7 +550,7 @@ export default function AdminSponsorsReel() {
             count <= 40 &&
             sponsors!.map((s, i) => (
               <span
-                key={s.name}
+                key={s.key}
                 style={{
                   width: i === index % count ? 34 : 10,
                   height: 10,
@@ -370,7 +563,7 @@ export default function AdminSponsorsReel() {
         </div>
 
         <AnimatePresence mode="wait">
-          {current ? <SponsorSlide key={`${index}-${current.name}`} sponsor={current} /> : null}
+          {current ? <SponsorSlide key={`${index}-${current.key}`} sponsor={current} /> : null}
         </AnimatePresence>
 
         {sponsors && !count ? (
