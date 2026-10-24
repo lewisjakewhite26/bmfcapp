@@ -85,8 +85,31 @@ export async function listSharedImages(bucket: string, folder: string): Promise<
   }
 }
 
-export function listSharedSponsorLogos(): Promise<SharedLogoFile[]> {
-  return listSharedImages('sponsor-logos', SHARED_LOGO_FOLDER)
+/**
+ * Logos shipped with the app (public/sponsors), for sponsors whose logo
+ * isn't in Supabase yet. A file of the same name in Supabase always wins.
+ * Add a file there and list its name here.
+ */
+export const BUNDLED_SPONSOR_LOGOS = ['Three Horseshoes.png']
+
+export function bundledSponsorLogos(origin: string, base = '/'): SharedLogoFile[] {
+  return BUNDLED_SPONSOR_LOGOS.map((name) => ({
+    name,
+    path: `${origin}${base}sponsors/${encodeURIComponent(name)}`,
+  }))
+}
+
+/** Supabase sponsors folder plus the app's own logos (Supabase wins on a name clash). */
+export function mergeSharedLogos(fromSupabase: SharedLogoFile[], bundled: SharedLogoFile[]): SharedLogoFile[] {
+  const key = (name: string) => logoFileWords(name).join(' ')
+  const taken = new Set(fromSupabase.map((f) => key(f.name)))
+  return [...fromSupabase, ...bundled.filter((f) => !taken.has(key(f.name)))]
+}
+
+export async function listSharedSponsorLogos(): Promise<SharedLogoFile[]> {
+  const fromSupabase = await listSharedImages('sponsor-logos', SHARED_LOGO_FOLDER)
+  if (typeof window === 'undefined') return fromSupabase
+  return mergeSharedLogos(fromSupabase, bundledSponsorLogos(window.location.origin, import.meta.env.BASE_URL ?? '/'))
 }
 
 /** "Lines Valeting light.png": the version used on the light design. */
