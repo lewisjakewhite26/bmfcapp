@@ -17,6 +17,8 @@ import { reelSponsors, type ReelSponsor } from '../lib/sponsorReel'
 const SLIDE_MS = 8000
 const REFRESH_MS = 5 * 60 * 1000
 const CURSOR_IDLE_MS = 2500
+/** Touch screens get longer to reach the buttons after a tap. */
+const TOUCH_IDLE_MS = 5000
 
 /** Designed at 1920×1080 and scaled to fit any screen. */
 const STAGE_W = 1920
@@ -38,6 +40,31 @@ function useStageScale() {
     return () => window.removeEventListener('resize', update)
   }, [])
   return scale
+}
+
+type FsDoc = Document & { webkitFullscreenEnabled?: boolean; webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => Promise<void> }
+type FsEl = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }
+
+/** False on iPhones, where web pages can't go full screen. */
+function canFullscreen(): boolean {
+  const d = document as FsDoc
+  return !!(d.fullscreenEnabled || d.webkitFullscreenEnabled)
+}
+
+/** Opened from the Home Screen icon: already full screen with no browser bars. */
+function isInstalledApp(): boolean {
+  const nav = navigator as Navigator & { standalone?: boolean }
+  return nav.standalone === true || window.matchMedia?.('(display-mode: standalone)').matches === true
+}
+
+function useIsPortrait() {
+  const [portrait, setPortrait] = useState(() => window.innerHeight > window.innerWidth)
+  useEffect(() => {
+    const update = () => setPortrait(window.innerHeight > window.innerWidth)
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+  return portrait
 }
 
 function preload(urls: string[]) {
@@ -137,6 +164,10 @@ function SponsorSlide({ sponsor }: { sponsor: ReelSponsor }) {
 
 export default function AdminSponsorsReel() {
   const scale = useStageScale()
+  const portrait = useIsPortrait()
+  const [fullscreenOk] = useState(canFullscreen)
+  const [installed] = useState(isInstalledApp)
+  const [hasKeyboard] = useState(() => window.matchMedia?.('(hover: hover) and (pointer: fine)').matches ?? true)
   const [sponsors, setSponsors] = useState<ReelSponsor[] | null>(null)
   const [error, setError] = useState(false)
   const [index, setIndex] = useState(0)
@@ -170,18 +201,21 @@ export default function AdminSponsorsReel() {
     return () => window.clearInterval(id)
   }, [count])
 
-  // Hide the cursor and controls when the mouse is still.
+  // Hide the cursor and controls when the mouse is still; a tap brings them back.
   useEffect(() => {
-    const wake = () => {
+    const wake = (e?: Event) => {
       setIdle(false)
       window.clearTimeout(idleTimer.current)
-      idleTimer.current = window.setTimeout(() => setIdle(true), CURSOR_IDLE_MS)
+      const touch = e instanceof PointerEvent && e.pointerType === 'touch'
+      idleTimer.current = window.setTimeout(() => setIdle(true), touch ? TOUCH_IDLE_MS : CURSOR_IDLE_MS)
     }
     wake()
     window.addEventListener('mousemove', wake)
+    window.addEventListener('pointerdown', wake)
     window.addEventListener('keydown', wake)
     return () => {
       window.removeEventListener('mousemove', wake)
+      window.removeEventListener('pointerdown', wake)
       window.removeEventListener('keydown', wake)
       window.clearTimeout(idleTimer.current)
     }
@@ -205,8 +239,20 @@ export default function AdminSponsorsReel() {
   }, [])
 
   const toggleFullscreen = () => {
-    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
-    else void document.documentElement.requestFullscreen().catch(() => {})
+    const d = document as FsDoc
+    const el = document.documentElement as FsEl
+    if (d.fullscreenElement || d.webkitFullscreenElement) {
+      void (d.exitFullscreen?.() ?? d.webkitExitFullscreen?.())?.catch(() => {})
+      return
+    }
+    const request = el.requestFullscreen?.bind(el) ?? el.webkitRequestFullscreen?.bind(el)
+    void request?.()
+      .then(() => {
+        // Phones: turn the picture sideways for the TV where the browser allows it.
+        const orientation = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }
+        return orientation?.lock?.('landscape')
+      })
+      .catch(() => {})
   }
 
   useEffect(() => {
@@ -315,24 +361,38 @@ export default function AdminSponsorsReel() {
         ) : null}
       </div>
 
-      {/* Controls: only visible while the mouse moves. */}
+      {/* Controls: only visible while the mouse moves or after a tap. */}
       <div
-        className="absolute top-4 right-4 flex items-center gap-2 transition-opacity duration-500"
+        className="absolute top-4 right-4 left-4 flex flex-col items-end gap-2 transition-opacity duration-500"
         style={{ opacity: idle ? 0 : 1, pointerEvents: idle ? 'none' : 'auto' }}
       >
-        <button
-          type="button"
-          onClick={toggleFullscreen}
-          className="rounded-pill bg-white/15 hover:bg-white/25 text-white text-sm font-semibold px-4 py-2 backdrop-blur"
-        >
-          Full screen (F)
-        </button>
-        <Link
-          to="/admin"
-          className="rounded-pill bg-white/15 hover:bg-white/25 text-white text-sm font-semibold px-4 py-2 backdrop-blur"
-        >
-          Exit
-        </Link>
+        <div className="flex items-center gap-2">
+          {fullscreenOk ? (
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="rounded-pill bg-white/15 hover:bg-white/25 text-white text-base font-semibold px-5 py-3 backdrop-blur"
+            >
+              {hasKeyboard ? 'Full screen (F)' : 'Full screen'}
+            </button>
+          ) : null}
+          <Link
+            to="/admin"
+            className="rounded-pill bg-white/15 hover:bg-white/25 text-white text-base font-semibold px-5 py-3 backdrop-blur"
+          >
+            Exit
+          </Link>
+        </div>
+        {!fullscreenOk && !installed ? (
+          <p className="max-w-xs rounded-2xl bg-white/15 text-white text-sm leading-snug px-4 py-3 backdrop-blur text-right">
+            For full screen on iPhone, open the app from its Home Screen icon (Share → Add to Home Screen).
+          </p>
+        ) : null}
+        {portrait ? (
+          <p className="max-w-xs rounded-2xl bg-white/15 text-white text-sm leading-snug px-4 py-3 backdrop-blur text-right">
+            Turn your phone sideways so it fills the TV.
+          </p>
+        ) : null}
       </div>
     </div>
   )
