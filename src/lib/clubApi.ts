@@ -1,3 +1,4 @@
+import { defaultProgramme, normaliseProgramme, type Programme } from './raceNight'
 import { hasOriginalDatePassed, isUpcomingScheduledFixture, isVisiblePostponedFixture } from './fixtureFilters'
 import { supabase, isSupabaseConfigured } from './supabase'
 import { findClubTableRow } from './clubTeams'
@@ -2651,4 +2652,61 @@ export async function fetchMyUnpaidFines(): Promise<FineEntry[]> {
   })
   if (error) throw error
   return ((data ?? []) as Record<string, unknown>[]).map(mapFineEntry)
+}
+
+// ---------------------------------------------------------------------------
+// Race night programme (Admin → Race night)
+// ---------------------------------------------------------------------------
+
+export interface RaceNightDoc {
+  programme: Programme
+  /** Bumped on every save; used to detect two people editing at once. */
+  version: number
+}
+
+export const RACE_NIGHT_CONFLICT = 'Changed elsewhere'
+
+let mockRaceNight: RaceNightDoc | null = null
+
+export async function fetchRaceNight(): Promise<RaceNightDoc> {
+  if (isMockDataMode()) {
+    await delay()
+    if (!mockRaceNight) mockRaceNight = { programme: defaultProgramme(), version: 1 }
+    return { programme: structuredClone(mockRaceNight.programme), version: mockRaceNight.version }
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_get_race_night', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+  })
+  if (error) throw error
+  if (!data) return { programme: defaultProgramme(), version: 0 }
+  const row = data as { data: unknown; version: number }
+  return { programme: normaliseProgramme(row.data), version: row.version }
+}
+
+/** Saves the whole programme and returns the new version. Throws RACE_NIGHT_CONFLICT if someone else saved first. */
+export async function saveRaceNight(programme: Programme, expectedVersion: number): Promise<number> {
+  if (isMockDataMode()) {
+    await delay(60)
+    const current = mockRaceNight?.version ?? 1
+    if (current !== expectedVersion) throw new Error(RACE_NIGHT_CONFLICT)
+    mockRaceNight = { programme: structuredClone(programme), version: current + 1 }
+    return mockRaceNight.version
+  }
+
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+
+  const { data, error } = await supabase.rpc('admin_save_race_night', {
+    p_admin_id: session.userId,
+    p_session_token: session.sessionToken,
+    p_data: programme,
+    p_expected_version: expectedVersion,
+  })
+  if (error) throw error
+  return (data as { version: number }).version
 }

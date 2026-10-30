@@ -39,6 +39,7 @@ const AdminLive = lazy(() => import('./pages/AdminLive'))
 const AdminAuditLog = lazy(() => import('./pages/AdminAuditLog'))
 const AdminGraphics = lazy(() => import('./pages/AdminGraphics'))
 const AdminSponsorsReel = lazy(() => import('./pages/AdminSponsorsReel'))
+const AdminRaceNight = lazy(() => import('./pages/AdminRaceNight'))
 const AdminTodo = lazy(() => import('./pages/AdminTodo'))
 const Fines = lazy(() => import('./pages/Fines'))
 
@@ -328,6 +329,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <AdminSponsorsReel />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/race-night"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminRaceNight />
           </ProtectedRoute>
         }
       />
