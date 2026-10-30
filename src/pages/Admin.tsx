@@ -19,6 +19,7 @@ const LINKS = [
   { to: '/admin/fines', title: 'Fines', desc: 'Log squad fines and track payments', finesOk: true },
   { to: '/admin/finance', title: 'Finance', desc: 'Sponsorships, expenses and club balance' },
   { to: '/admin/graphics', title: 'Matchday graphics', desc: 'Matchday, goalscorer & MOTM posts', adminOnly: true },
+  { to: '/admin/race-night', title: 'Race night', desc: 'Races, horses, owners & jockeys — edit, print and show on the TVs' },
   { to: '/admin/sponsors-reel', title: 'Sponsors reel', desc: 'Full-screen sponsor loop for the TVs at events' },
   { to: '/admin/todo', title: 'Committee to-do', desc: 'Shared task list for committee and admin' },
   { to: '/admin/users', title: 'Squad members', desc: 'Add players, invite links & passcodes', adminOnly: true },
