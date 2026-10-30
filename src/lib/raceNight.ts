@@ -8,11 +8,18 @@ export interface Runner {
   jockey: string
   /** Finishing position (1, 2, 3…) once the race has run. */
   position: number | null
+  /** Payment ticks: has the horse entry / owner / jockey paid? */
+  horsePaid: boolean
+  ownerPaid: boolean
+  jockeyPaid: boolean
 }
+
+export type PaidField = 'horsePaid' | 'ownerPaid' | 'jockeyPaid'
 
 export interface Race {
   id: string
   sponsor: string
+  sponsorPaid: boolean
   runners: Runner[]
 }
 
@@ -37,6 +44,10 @@ function str(value: unknown): string {
   return typeof value === 'string' ? value : ''
 }
 
+function bool(value: unknown): boolean {
+  return value === true
+}
+
 /** Tolerates old/partial data from the database so the page never crashes. */
 export function normaliseProgramme(raw: unknown): Programme {
   const obj = (raw && typeof raw === 'object' ? raw : {}) as { title?: unknown; races?: unknown }
@@ -44,11 +55,12 @@ export function normaliseProgramme(raw: unknown): Programme {
   return {
     title: str(obj.title) || 'Race Night',
     races: races.map((r, ri) => {
-      const race = (r && typeof r === 'object' ? r : {}) as { id?: unknown; sponsor?: unknown; runners?: unknown }
+      const race = (r && typeof r === 'object' ? r : {}) as { id?: unknown; sponsor?: unknown; sponsorPaid?: unknown; runners?: unknown }
       const runners = Array.isArray(race.runners) ? race.runners : []
       return {
         id: str(race.id) || `race-${ri + 1}`,
         sponsor: str(race.sponsor),
+        sponsorPaid: bool(race.sponsorPaid),
         runners: runners.map((x, xi) => {
           const runner = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>
           const position = typeof runner.position === 'number' && runner.position > 0 ? runner.position : null
@@ -59,6 +71,9 @@ export function normaliseProgramme(raw: unknown): Programme {
             owner: str(runner.owner),
             jockey: str(runner.jockey),
             position,
+            horsePaid: bool(runner.horsePaid),
+            ownerPaid: bool(runner.ownerPaid),
+            jockeyPaid: bool(runner.jockeyPaid),
           }
         }),
       }
@@ -98,7 +113,7 @@ function renumber(runners: Runner[]): Runner[] {
 }
 
 function emptyRunner(raceId: string, number: number): Runner {
-  return { id: newId(`${raceId}-runner`), number, horse: '', owner: '', jockey: '', position: null }
+  return { id: newId(`${raceId}-runner`), number, horse: '', owner: '', jockey: '', position: null, horsePaid: false, ownerPaid: false, jockeyPaid: false }
 }
 
 export function addRace(p: Programme): Programme {
@@ -110,6 +125,7 @@ export function addRace(p: Programme): Programme {
       {
         id,
         sponsor: '',
+        sponsorPaid: false,
         runners: Array.from({ length: DEFAULT_RUNNERS_PER_RACE }, (_, i) => emptyRunner(id, i + 1)),
       },
     ],
@@ -120,7 +136,7 @@ export function removeRace(p: Programme, raceId: string): Programme {
   return { ...p, races: p.races.filter((r) => r.id !== raceId) }
 }
 
-export function updateRace(p: Programme, raceId: string, patch: Partial<Pick<Race, 'sponsor'>>): Programme {
+export function updateRace(p: Programme, raceId: string, patch: Partial<Pick<Race, 'sponsor' | 'sponsorPaid'>>): Programme {
   return { ...p, races: p.races.map((r) => (r.id === raceId ? { ...r, ...patch } : r)) }
 }
 
@@ -146,7 +162,7 @@ export function updateRunner(
   p: Programme,
   raceId: string,
   runnerId: string,
-  patch: Partial<Pick<Runner, 'horse' | 'owner' | 'jockey'>>,
+  patch: Partial<Pick<Runner, 'horse' | 'owner' | 'jockey' | PaidField>>,
 ): Programme {
   return {
     ...p,
@@ -231,4 +247,118 @@ export function knownPeople(p: Programme): string[] {
     }
   }
   return [...names].sort((a, b) => a.localeCompare(b, 'en-GB'))
+}
+
+export const MAX_PLACES = 3
+
+/**
+ * Result entry by tapping runners in finishing order: the first tap is 1st,
+ * the next is 2nd, and so on. Tapping a placed runner removes their place.
+ * Ignored once every place is taken.
+ */
+export function tapResult(p: Programme, raceId: string, runnerId: string): Programme {
+  return {
+    ...p,
+    races: p.races.map((r) => {
+      if (r.id !== raceId) return r
+      const tapped = r.runners.find((x) => x.id === runnerId)
+      if (!tapped) return r
+      if (tapped.position !== null) {
+        return { ...r, runners: r.runners.map((x) => (x.id === runnerId ? { ...x, position: null } : x)) }
+      }
+      const used = new Set(r.runners.map((x) => x.position).filter((n): n is number => n !== null))
+      let next = 1
+      while (used.has(next)) next += 1
+      if (next > MAX_PLACES) return r
+      return { ...r, runners: r.runners.map((x) => (x.id === runnerId ? { ...x, position: next } : x)) }
+    }),
+  }
+}
+
+export interface RaceSummary {
+  /** Runner slots in the race. */
+  total: number
+  /** Slots with an owner, horse or jockey. */
+  filled: number
+  /** Slots still empty. */
+  free: number
+  /** Runners with a horse name. */
+  horses: number
+  /** Runners with no jockey yet (only counted for filled slots). */
+  missingJockey: number
+  placed: number
+  /** Payments still to collect in this race (sponsor, horses, owners, jockeys). */
+  unpaid: number
+  /** Payments expected in this race. */
+  dueCount: number
+  state: 'complete' | 'partial' | 'empty'
+}
+
+export function raceSummary(race: Race): RaceSummary {
+  const filledRunners = race.runners.filter(isRunnerFilled)
+  const filled = filledRunners.length
+  const total = race.runners.length
+  return {
+    total,
+    filled,
+    free: total - filled,
+    horses: race.runners.filter((r) => r.horse.trim()).length,
+    missingJockey: filledRunners.filter((r) => !r.jockey.trim()).length,
+    placed: race.runners.filter((r) => r.position !== null).length,
+    ...racePayments(race),
+    state: filled === 0 ? 'empty' : filled === total ? 'complete' : 'partial',
+  }
+}
+
+/** Owner/jockey names that match what's being typed, most-used first. */
+export function suggestPeople(p: Programme, query: string, limit = 6): string[] {
+  const counts = new Map<string, number>()
+  for (const race of p.races) {
+    for (const r of race.runners) {
+      for (const name of [r.owner.trim(), r.jockey.trim()]) {
+        if (name) counts.set(name, (counts.get(name) ?? 0) + 1)
+      }
+    }
+  }
+  const q = query.trim().toLowerCase()
+  return [...counts.entries()]
+    .filter(([name]) => name.toLowerCase() !== q && (q === '' || name.toLowerCase().includes(q)))
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'en-GB'))
+    .slice(0, limit)
+    .map(([name]) => name)
+}
+
+export interface PaymentCount {
+  /** Things that have a name against them, so money is expected. */
+  dueCount: number
+  unpaid: number
+}
+
+/** A payment is only expected once the sponsor/horse/owner/jockey has a name. */
+export function racePayments(race: Race): PaymentCount {
+  let dueCount = 0
+  let unpaid = 0
+  const count = (named: string, paid: boolean) => {
+    if (!named.trim()) return
+    dueCount += 1
+    if (!paid) unpaid += 1
+  }
+  count(race.sponsor, race.sponsorPaid)
+  for (const r of race.runners) {
+    count(r.horse, r.horsePaid)
+    count(r.owner, r.ownerPaid)
+    count(r.jockey, r.jockeyPaid)
+  }
+  return { dueCount, unpaid }
+}
+
+export interface PaymentTotals extends PaymentCount {
+  paid: number
+}
+
+export function paymentTotals(p: Programme): PaymentTotals {
+  const all = p.races.map(racePayments)
+  const dueCount = all.reduce((n, x) => n + x.dueCount, 0)
+  const unpaid = all.reduce((n, x) => n + x.unpaid, 0)
+  return { dueCount, unpaid, paid: dueCount - unpaid }
 }

@@ -7,10 +7,15 @@ import {
   knownPeople,
   normaliseProgramme,
   ordinal,
+  paymentTotals,
   placedRunners,
   programmeTotals,
   removeRunner,
+  raceSummary,
   setRunnerPosition,
+  suggestPeople,
+  tapResult,
+  updateRace,
   updateRunner,
 } from './raceNight'
 
@@ -105,5 +110,90 @@ describe('helpers', () => {
     const p = normaliseProgramme({ races: [{ runners: [{ horse: 5, position: -1 }] }] })
     expect(p.title).toBe('Race Night')
     expect(p.races[0].runners[0]).toMatchObject({ horse: '', position: null, number: 1 })
+  })
+})
+
+describe('tap-to-place results', () => {
+  it('places runners 1st, 2nd, 3rd in tap order and ignores a fourth', () => {
+    let p = defaultProgramme()
+    const race = p.races[0]
+    const [a, b, c, d] = race.runners
+    p = tapResult(p, race.id, b.id)
+    p = tapResult(p, race.id, d.id)
+    p = tapResult(p, race.id, a.id)
+    p = tapResult(p, race.id, c.id)
+    expect(placedRunners(p.races[0]).map((r) => [r.id, r.position])).toEqual([
+      [b.id, 1],
+      [d.id, 2],
+      [a.id, 3],
+    ])
+  })
+
+  it('removing a place frees it for the next tap', () => {
+    let p = defaultProgramme()
+    const race = p.races[0]
+    const [a, b, c] = race.runners
+    p = tapResult(p, race.id, a.id)
+    p = tapResult(p, race.id, b.id)
+    p = tapResult(p, race.id, a.id) // un-place 1st
+    p = tapResult(p, race.id, c.id) // takes the free 1st
+    expect(placedRunners(p.races[0]).map((r) => [r.id, r.position])).toEqual([
+      [c.id, 1],
+      [b.id, 2],
+    ])
+  })
+})
+
+describe('race summary', () => {
+  it('reports completeness for races from the sheet', () => {
+    const p = defaultProgramme()
+    expect(raceSummary(p.races[0])).toMatchObject({ total: 8, filled: 8, free: 0, horses: 2, state: 'complete' })
+    expect(raceSummary(p.races[4])).toMatchObject({ filled: 6, free: 2, horses: 0, state: 'partial' })
+    expect(raceSummary(p.races[5])).toMatchObject({ filled: 0, state: 'empty' })
+  })
+})
+
+describe('name suggestions', () => {
+  it('offers matching names, most used first, without the exact match', () => {
+    const p = defaultProgramme()
+    const names = suggestPeople(p, 'car')
+    expect(names[0]).toBe('Carrie Mekins')
+    expect(suggestPeople(p, 'Carrie Mekins')).not.toContain('Carrie Mekins')
+    expect(suggestPeople(p, '', 3)).toHaveLength(3)
+  })
+})
+
+describe('payments', () => {
+  it('starts with nothing paid and only expects money for named entries', () => {
+    const p = defaultProgramme()
+    // 6 sponsors + 12 horses + 43 owners + 21 jockeys would be wrong to hard-code; derive instead.
+    const named = p.races.flatMap((r) => r.runners)
+    const expected =
+      p.races.filter((r) => r.sponsor.trim()).length +
+      named.filter((r) => r.horse.trim()).length +
+      named.filter((r) => r.owner.trim()).length +
+      named.filter((r) => r.jockey.trim()).length
+    expect(paymentTotals(p)).toEqual({ dueCount: expected, unpaid: expected, paid: 0 })
+    expect(raceSummary(p.races[5])).toMatchObject({ dueCount: 1, unpaid: 1 })
+  })
+
+  it('counts ticks as paid and ignores blank names', () => {
+    let p = defaultProgramme()
+    const race = p.races[0]
+    const runner = race.runners[0]
+    const before = paymentTotals(p)
+    p = updateRace(p, race.id, { sponsorPaid: true })
+    p = updateRunner(p, race.id, runner.id, { ownerPaid: true, jockeyPaid: true })
+    expect(paymentTotals(p).paid).toBe(3)
+    expect(paymentTotals(p).unpaid).toBe(before.unpaid - 3)
+    // Ticking a horse with no name doesn't create a payment due.
+    p = updateRunner(p, race.id, runner.id, { horsePaid: true })
+    expect(paymentTotals(p).dueCount).toBe(before.dueCount)
+  })
+
+  it('reads old saved data without payment fields as unpaid', () => {
+    const p = normaliseProgramme({ races: [{ id: 'r', sponsor: 'X', runners: [{ id: 'a', owner: 'Y' }] }] })
+    expect(p.races[0].sponsorPaid).toBe(false)
+    expect(p.races[0].runners[0]).toMatchObject({ horsePaid: false, ownerPaid: false, jockeyPaid: false })
   })
 })
