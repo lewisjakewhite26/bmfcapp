@@ -15,7 +15,8 @@ export function FixtureCard({ fixture, availabilitySlot, useCalendarColors }: Fi
   const us = CLUB_NAME.replace(' FC', '')
   const them = fixture.opponent.replace(' FC', '').replace(' Fc', '')
   const completed = fixture.status === 'completed' && fixture.result
-  const borderClass = useCalendarColors ? 'border-brand-blue' : fixtureResultBorderClass(fixture)
+  const postponed = fixture.status === 'postponed'
+  const borderClass = postponed ? 'border-amber-400' : useCalendarColors ? 'border-brand-blue' : fixtureResultBorderClass(fixture)
 
   return (
     <article className={`glass-card p-4 sm:p-5 border-l-4 ${borderClass}`}>
@@ -31,7 +32,7 @@ export function FixtureCard({ fixture, availabilitySlot, useCalendarColors }: Fi
             {fixture.result!.goals_for > fixture.result!.goals_against ? 'Win' : fixture.result!.goals_for < fixture.result!.goals_against ? 'Loss' : 'Draw'}
           </span>
         )}
-        {fixture.status === 'postponed' && (
+        {postponed && (
           <span className="text-xs font-semibold px-2.5 py-1 rounded-pill bg-amber-100 text-amber-800">Postponed</span>
         )}
       </div>
@@ -46,13 +47,21 @@ export function FixtureCard({ fixture, availabilitySlot, useCalendarColors }: Fi
               {formatScore(fixture.result!.goals_for, fixture.result!.goals_against)}
             </p>
           ) : (
-            <p className="font-display text-lg font-semibold text-gray-400">vs</p>
+            <p className={`font-display text-lg font-semibold ${postponed ? 'text-amber-500' : 'text-gray-400'}`}>
+              {postponed ? 'P–P' : 'vs'}
+            </p>
           )}
         </div>
         <div className="flex-1 text-left">
           <p className={`font-semibold ${!isHome ? 'text-brand-navy' : 'text-gray-600'}`}>{!isHome ? us : them}</p>
         </div>
       </div>
+
+      {postponed && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-card px-3 py-2 mt-3 text-center">
+          {fixture.postponed_reason ? `${fixture.postponed_reason} · ` : ''}New date to be confirmed
+        </p>
+      )}
 
       {fixture.venue && (
         <p className="text-xs text-gray-500 mt-3 text-center">{fixture.venue}</p>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { fetchLineup, setLineupSubsConfirmedNone, submitMatchResult } from '../../lib/clubApi'
+import { fetchLineup, setFixturePostponed, setLineupSubsConfirmedNone, submitMatchResult } from '../../lib/clubApi'
 import type { FixtureWithResult, Lineup, MatchEventType, SquadMember } from '../../types'
 
 interface ResultEntryFormProps {
@@ -22,6 +22,8 @@ type EventRow = {
 function isBenchToggleEvent(e: { event_type: MatchEventType; player_id: string; related_player_id?: string | null }) {
   return e.event_type === 'substitution' && e.related_player_id === e.player_id
 }
+
+const POSTPONE_REASONS = ['Waterlogged pitch', 'Frozen pitch', 'Opposition couldn\'t raise a team', 'Not enough players'] as const
 
 const SCORING_TYPES: MatchEventType[] = ['goal', 'assist', 'motm', 'yellow_card', 'red_card']
 
@@ -70,6 +72,9 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
   const [lineup, setLineup] = useState<Lineup | null>(null)
   const [saving, setSaving] = useState(false)
   const [confirmingNoSubs, setConfirmingNoSubs] = useState(false)
+  const [postponePanelOpen, setPostponePanelOpen] = useState(false)
+  const [postponeReason, setPostponeReason] = useState('')
+  const [postponing, setPostponing] = useState(false)
   const [startedOn, setStartedOn] = useState<Set<string>>(() => seedStartedOn(fixture.events))
   const [unusedSubsOn, setUnusedSubsOn] = useState<Set<string>>(
     () => new Set((fixture.events ?? []).filter((e) => e.event_type === 'unused_sub').map((e) => e.player_id)),
@@ -229,6 +234,23 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
     setEvents((prev) => [...prev, { player_id: squad[0]?.player_id ?? '', event_type: 'goal', minute: '' }])
   }
 
+  const hasSavedScore = fixture.result != null
+
+  const handlePostpone = async () => {
+    setPostponing(true)
+    try {
+      await setFixturePostponed(fixture.id, true, postponeReason)
+      toast.success('Marked as postponed')
+      setPostponePanelOpen(false)
+      setPostponeReason('')
+      onSaved()
+    } catch {
+      toast.error("Couldn't mark as postponed")
+    } finally {
+      setPostponing(false)
+    }
+  }
+
   const handleSave = async () => {
     const gf = parseInt(goalsFor, 10)
     const ga = parseInt(goalsAgainst, 10)
@@ -318,6 +340,61 @@ export function ResultEntryForm({ fixture, squad, onSaved }: ResultEntryFormProp
       <h3 className="font-semibold text-brand-navy">
         {fixture.opponent} · {new Date(fixture.match_date).toLocaleDateString('en-GB')}
       </h3>
+
+      {postponePanelOpen ? (
+        <div className="rounded-card border border-amber-200 bg-amber-50 p-3 space-y-3">
+          <p className="text-sm font-semibold text-amber-900">Mark this game as postponed</p>
+          <p className="text-xs text-amber-800">
+            No score is recorded and it won't count towards results, stats or the table.
+            {hasSavedScore && ' The score and player stats already saved for this game will be removed.'}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {POSTPONE_REASONS.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setPostponeReason(postponeReason === r ? '' : r)}
+                className={`min-h-[40px] px-4 rounded-pill text-sm font-semibold border transition-colors ${
+                  postponeReason === r
+                    ? 'bg-brand-gold text-brand-navy border-brand-gold'
+                    : 'bg-white/80 text-gray-600 border-brand-blue/15'
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <input
+            type="text"
+            value={postponeReason}
+            onChange={(e) => setPostponeReason(e.target.value)}
+            className="input-field w-full"
+            placeholder="Reason (optional)"
+            aria-label="Postponement reason"
+          />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={handlePostpone} disabled={postponing} className="btn-primary">
+              {postponing ? 'Saving...' : 'Mark as postponed'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPostponePanelOpen(false)}
+              disabled={postponing}
+              className="min-h-[44px] px-4 text-sm font-semibold text-gray-600"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setPostponePanelOpen(true)}
+          className="w-full min-h-[44px] rounded-card border border-dashed border-amber-300 bg-amber-50/60 text-sm font-semibold text-amber-900"
+        >
+          Game didn't go ahead? Mark as postponed
+        </button>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>

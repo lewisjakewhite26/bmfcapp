@@ -1,4 +1,4 @@
-import { isUpcomingScheduledFixture } from './fixtureFilters'
+import { isUpcomingScheduledFixture, isVisiblePostponedFixture } from './fixtureFilters'
 import { supabase, isSupabaseConfigured } from './supabase'
 import { findClubTableRow } from './clubTeams'
 import { aggregatePlayerStats } from './playerStats'
@@ -20,6 +20,8 @@ import {
   getMockAllAvailability,
   getMockAvailability,
   getMockCompletedFixtures,
+  getMockPostponedFixtures,
+  setMockFixturePostponed,
   getMockFixturesWithResults,
   getMockLeagueTable,
   getMockPlayerStats,
@@ -226,6 +228,47 @@ export async function fetchCompletedFixtures(): Promise<FixtureWithResult[]> {
   return all
     .filter((f) => f.status === 'completed')
     .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())
+}
+
+/** Postponed games still worth showing (future, or recent and awaiting a new date). */
+export async function fetchPostponedFixtures(): Promise<FixtureWithResult[]> {
+  if (isMockDataMode()) {
+    await delay()
+    return getMockPostponedFixtures()
+  }
+  const all = await fetchFixturesWithResults()
+  return all
+    .filter((f) => isVisiblePostponedFixture(f))
+    .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
+}
+
+/** Mark a game postponed (clearing any score saved for it), or put it back on the calendar. */
+export async function setFixturePostponed(
+  fixtureId: string,
+  postponed: boolean,
+  reason?: string | null,
+): Promise<void> {
+  if (isMockDataMode()) {
+    await delay()
+    setMockFixturePostponed(fixtureId, postponed, reason ?? null)
+  } else {
+    const session = getClubSession()
+    if (!session) throw new Error('Not signed in')
+
+    const { error } = await supabase.rpc('admin_set_fixture_postponed', {
+      p_admin_id: session.userId,
+      p_session_token: session.sessionToken,
+      p_fixture_id: fixtureId,
+      p_postponed: postponed,
+      p_reason: postponed ? (reason?.trim() || null) : null,
+    })
+    if (error) throw error
+  }
+  void recordAdminAudit(postponed ? 'fixture_postponed' : 'fixture_unpostponed', {
+    entityType: 'fixture',
+    entityId: fixtureId,
+    details: postponed && reason ? { reason } : undefined,
+  })
 }
 
 /** Manually added matches (friendlies, cups, etc.) — not from DDSFL sync. */

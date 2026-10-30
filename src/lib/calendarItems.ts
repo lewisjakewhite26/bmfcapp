@@ -1,4 +1,4 @@
-import { isUpcomingScheduledFixture } from './fixtureFilters'
+import { isUpcomingScheduledFixture, isVisiblePostponedFixture } from './fixtureFilters'
 
 import type {
   CalendarItem,
@@ -46,12 +46,17 @@ export function buildCalendarItems(input: {
     .filter((f) => isUpcomingScheduledFixture(f))
     .map((data) => ({ type: 'fixture' as const, data }))
 
+  const postponedFixtures = fixtures
+    .filter((f) => isVisiblePostponedFixture(f))
+    .map((data) => ({ type: 'fixture' as const, data }))
+
   const completedFixtures = fixtures
     .filter(isCompletedFixture)
     .map((data) => ({ type: 'fixture' as const, data }))
 
   const all: CalendarItem[] = [
     ...upcomingFixtures,
+    ...postponedFixtures,
     ...completedFixtures,
     ...training.map((data) => ({ type: 'training' as const, data })),
     ...activeEvents.map((data) => ({ type: 'event' as const, data })),

@@ -38,13 +38,14 @@ export function CalendarList({ items, availability, onAvailabilityChange, showAv
         if (item.type === 'fixture') {
           const entry = getEntry(item.data.id)
           const completed = isCompletedFixtureItem(item)
+          const postponed = item.data.status === 'postponed'
           return (
             <FixtureCard
               key={`f-${item.data.id}`}
               fixture={item.data}
               useCalendarColors
               availabilitySlot={
-                !completed && showAvailability && onAvailabilityChange ? (
+                !completed && !postponed && showAvailability && onAvailabilityChange ? (
                   <AvailabilityForm
                     value={entry?.status ?? null}
                     message={entry?.message}

@@ -20,7 +20,7 @@ import type {
 import type { LiveMatchDraft } from './liveMatchEvents'
 import { clearLocalLiveDraft, readLocalLiveDraft, writeLocalLiveDraft } from './liveMatchDraftStorage'
 import { buildDdsflMockState } from './ddsflMockImport'
-import { isUpcomingScheduledFixture } from './fixtureFilters'
+import { isUpcomingScheduledFixture, isVisiblePostponedFixture } from './fixtureFilters'
 import {
   allocateUniqueDisplayName,
   allocateUniqueLoginName,
@@ -317,6 +317,31 @@ export function getMockUpcomingFixtures(): FixtureWithResult[] {
   return getMockFixturesWithResults()
     .filter((f) => isUpcomingScheduledFixture(f))
     .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
+}
+
+export function getMockPostponedFixtures(): FixtureWithResult[] {
+  return getMockFixturesWithResults()
+    .filter((f) => isVisiblePostponedFixture(f))
+    .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
+}
+
+export function setMockFixturePostponed(fixtureId: string, postponed: boolean, reason: string | null) {
+  const fixture = fixtures.find((f) => f.id === fixtureId)
+  if (!fixture) throw new Error('Fixture not found')
+  if (postponed) {
+    const resultIdx = results.findIndex((r) => r.fixture_id === fixtureId)
+    if (resultIdx >= 0) results.splice(resultIdx, 1)
+    for (let i = matchEvents.length - 1; i >= 0; i--) {
+      if (matchEvents[i].fixture_id === fixtureId) matchEvents.splice(i, 1)
+    }
+    mockLiveDrafts.delete(fixtureId)
+    fixture.status = 'postponed'
+    fixture.postponed_reason = reason?.trim() || null
+  } else {
+    if (fixture.status !== 'postponed') throw new Error('Fixture is not postponed')
+    fixture.status = 'scheduled'
+    fixture.postponed_reason = null
+  }
 }
 
 export function getMockCompletedFixtures(): FixtureWithResult[] {

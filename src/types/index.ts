@@ -96,6 +96,7 @@ export interface Fixture {
   kickoff_time: string | null
   ddsfl_fixture_id: string | null
   status: FixtureStatus
+  postponed_reason?: string | null
   created_at: string
 }
 
