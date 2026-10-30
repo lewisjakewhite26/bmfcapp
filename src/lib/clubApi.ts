@@ -1,4 +1,4 @@
-import { isUpcomingScheduledFixture, isVisiblePostponedFixture } from './fixtureFilters'
+import { hasOriginalDatePassed, isUpcomingScheduledFixture, isVisiblePostponedFixture } from './fixtureFilters'
 import { supabase, isSupabaseConfigured } from './supabase'
 import { findClubTableRow } from './clubTeams'
 import { aggregatePlayerStats } from './playerStats'
@@ -450,9 +450,10 @@ export async function fetchPlayerProfile(playerId: string, scope: StatsScope): P
 }
 
 export async function fetchDashboardSummary(): Promise<DashboardSummary> {
-  const [upcoming, completed, table, training] = await Promise.all([
+  const [upcoming, completed, postponed, table, training] = await Promise.all([
     fetchUpcomingFixtures(),
     fetchCompletedFixtures(),
+    fetchPostponedFixtures(),
     fetchLeagueTable(),
     fetchTrainingSessions(),
   ])
@@ -460,9 +461,16 @@ export async function fetchDashboardSummary(): Promise<DashboardSummary> {
   const clubRow = findClubTableRow(table)
   const now = Date.now()
 
+  // The latest finished game, or a postponed one whose date has passed
+  // (shown as P–P), whichever came most recently.
+  const lastResult =
+    [completed[0], ...postponed.filter((f) => hasOriginalDatePassed(f, now))]
+      .filter((f): f is FixtureWithResult => Boolean(f))
+      .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())[0] ?? null
+
   return {
     nextFixture: upcoming[0] ?? null,
-    lastResult: completed[0] ?? null,
+    lastResult,
     leaguePosition: clubRow?.position ?? null,
     leaguePoints: clubRow?.points ?? null,
     upcomingTraining: training.find((t) => new Date(t.session_date).getTime() > now) ?? null,

@@ -20,7 +20,7 @@ export const CALENDAR_DOT = {
   other: 'bg-slate-500',
 } as const
 
-export type MatchResultTint = 'win' | 'draw' | 'loss'
+export type MatchResultTint = 'win' | 'draw' | 'loss' | 'postponed'
 
 export function completedMatchResultTint(items: CalendarItem[]): MatchResultTint | null {
   for (const item of items) {
@@ -32,6 +32,8 @@ export function completedMatchResultTint(items: CalendarItem[]): MatchResultTint
     if (goals_for < goals_against) return 'loss'
     return 'draw'
   }
+  // No finished match on this day: a postponed one gets a light grey square.
+  if (items.some((item) => item.type === 'fixture' && item.data.status === 'postponed')) return 'postponed'
   return null
 }
 
@@ -48,6 +50,8 @@ export function matchResultDayBackground(
       return 'bg-amber-500/15'
     case 'loss':
       return 'bg-red-500/15'
+    case 'postponed':
+      return 'bg-slate-400/25'
   }
 }
 

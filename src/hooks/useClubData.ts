@@ -18,6 +18,7 @@ import {
   saveAvailability,
 } from '../lib/clubApi'
 import { buildCalendarItems } from '../lib/calendarItems'
+import { hasOriginalDatePassed } from '../lib/fixtureFilters'
 import { getErrorMessage } from '../lib/errors'
 import type {
   Availability,
@@ -91,10 +92,10 @@ export function useFixtures() {
         fetchPostponedFixtures(),
         fetchCompletedFixtures(),
       ])
-      setUpcoming(
-        [...u, ...p].sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime()),
-      )
-      setCompleted(c)
+      const byDateAsc = (a: FixtureWithResult, b: FixtureWithResult) =>
+        new Date(a.match_date).getTime() - new Date(b.match_date).getTime()
+      setUpcoming([...u, ...p.filter((f) => !hasOriginalDatePassed(f))].sort(byDateAsc))
+      setCompleted([...c, ...p.filter((f) => hasOriginalDatePassed(f))].sort((a, b) => byDateAsc(b, a)))
     } catch (err) {
       setError(getErrorMessage(err, "Couldn't load fixtures"))
     } finally {

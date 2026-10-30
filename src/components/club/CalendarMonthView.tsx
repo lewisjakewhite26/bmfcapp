@@ -165,6 +165,7 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                   const entry = getEntry(f.id)
                   const dot = availColor(f.id)
                   const completed = f.status === 'completed' && f.result
+                  const postponed = f.status === 'postponed'
                   return (
                     <article key={f.id} className={`border-t border-brand-blue/10 pt-4 first:border-t-0 first:pt-0 border-l-4 pl-3 ${CALENDAR_BORDER.match}`}>
                       <div className="flex items-start justify-between gap-2">
@@ -181,8 +182,17 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                               {formatScore(f.result!.goals_for, f.result!.goals_against)}
                             </p>
                           )}
+                          {postponed && (
+                            <p className="text-sm text-amber-800 mt-1">
+                              {f.postponed_reason ? `${f.postponed_reason} · ` : ''}New date to be confirmed
+                            </p>
+                          )}
                         </div>
-                        {dot ? (
+                        {postponed ? (
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-pill shrink-0 bg-amber-100 text-amber-800">
+                            Postponed
+                          </span>
+                        ) : dot ? (
                           <span className={`w-3 h-3 rounded-full shrink-0 mt-1 ${dot}`} title={entry?.status} />
                         ) : completed ? (
                           <span
@@ -196,7 +206,7 @@ export function CalendarMonthView({ items, availability, onAvailabilityChange, a
                           </span>
                         ) : null}
                       </div>
-                      {!completed && onAvailabilityChange && (
+                      {!completed && !postponed && onAvailabilityChange && (
                         <div className="mt-3">
                           <AvailabilityForm
                             value={entry?.status ?? null}

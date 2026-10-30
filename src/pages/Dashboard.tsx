@@ -118,7 +118,7 @@ export default function Dashboard() {
           </section>
         )}
 
-        {summary?.lastResult?.result && (
+        {summary?.lastResult && (
           <section className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg text-brand-navy">Last result</h2>
@@ -131,9 +131,16 @@ export default function Dashboard() {
                   {summary.lastResult.home_away === 'home' ? 'vs' : '@'} {summary.lastResult.opponent.replace(' FC', '')}
                 </p>
               </div>
-              <p className="font-display text-2xl font-bold text-brand-navy">
-                {formatScore(summary.lastResult.result.goals_for, summary.lastResult.result.goals_against)}
-              </p>
+              {summary.lastResult.status === 'postponed' || !summary.lastResult.result ? (
+                <div className="text-right">
+                  <p className="font-display text-2xl font-bold text-amber-500">P–P</p>
+                  <p className="text-xs font-semibold text-amber-800">Postponed</p>
+                </div>
+              ) : (
+                <p className="font-display text-2xl font-bold text-brand-navy">
+                  {formatScore(summary.lastResult.result.goals_for, summary.lastResult.result.goals_against)}
+                </p>
+              )}
             </div>
           </section>
         )}
