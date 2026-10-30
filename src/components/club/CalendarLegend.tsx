@@ -20,6 +20,9 @@ export function CalendarLegend() {
         <span className="text-amber-600">amber</span> (draw), or{' '}
         <span className="text-red-600">red</span> (loss) in the month view.
       </p>
+      <p className="text-center text-[10px] text-gray-400 leading-snug">
+        A <span className="text-slate-500 font-semibold">grey</span> day is a postponed match.
+      </p>
     </div>
   )
 }
