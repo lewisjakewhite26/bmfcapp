@@ -14,6 +14,7 @@ import {
   fetchPlayerStats,
   fetchTrainingSessions,
   fetchUpcomingFixtures,
+  fetchPostponedFixtures,
   saveAvailability,
 } from '../lib/clubApi'
 import { buildCalendarItems } from '../lib/calendarItems'
@@ -85,8 +86,14 @@ export function useFixtures() {
     setLoading(true)
     setError(null)
     try {
-      const [u, c] = await Promise.all([fetchUpcomingFixtures(), fetchCompletedFixtures()])
-      setUpcoming(u)
+      const [u, p, c] = await Promise.all([
+        fetchUpcomingFixtures(),
+        fetchPostponedFixtures(),
+        fetchCompletedFixtures(),
+      ])
+      setUpcoming(
+        [...u, ...p].sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime()),
+      )
       setCompleted(c)
     } catch (err) {
       setError(getErrorMessage(err, "Couldn't load fixtures"))

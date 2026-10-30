@@ -93,8 +93,21 @@ function linkUpdateFromScraped(fixtureRow) {
 /** Never let the scrape revert a fixture an admin already completed with a
  * real result — DDSFL's own site can lag a day or more behind the app, and
  * blindly copying its status silently un-completes an already-scored match. */
-function statusForUpdate(currentStatus, scrapedStatus) {
-  return currentStatus === 'completed' ? 'completed' : scrapedStatus
+function statusForUpdate(currentStatus, scrapedStatus, currentDate, scrapedDate) {
+  if (currentStatus === 'completed') return 'completed'
+  // DDSFL never reports postponements, so the scrape would otherwise flip an
+  // admin-postponed game straight back to "scheduled". Keep it postponed until
+  // the league publishes a result or moves it to a new date.
+  if (
+    currentStatus === 'postponed' &&
+    scrapedStatus === 'scheduled' &&
+    currentDate &&
+    scrapedDate &&
+    new Date(currentDate).getTime() === new Date(scrapedDate).getTime()
+  ) {
+    return 'postponed'
+  }
+  return scrapedStatus
 }
 
 async function main() {
@@ -288,7 +301,7 @@ async function main() {
         .from('fixtures')
         .update({
           ...linkUpdateFromScraped(fixtureRow),
-          status: statusForUpdate(manualMatch.status, fixtureRow.status),
+          status: statusForUpdate(manualMatch.status, fixtureRow.status, manualMatch.match_date, fixtureRow.match_date),
         })
         .eq('id', manualMatch.id)
         .select('id, ddsfl_fixture_id')
@@ -318,7 +331,7 @@ async function main() {
     } else if (existingById) {
       const { data, error: updateErr } = await supabase
         .from('fixtures')
-        .update({ ...fixtureRow, status: statusForUpdate(existingById.status, fixtureRow.status) })
+        .update({ ...fixtureRow, status: statusForUpdate(existingById.status, fixtureRow.status, existingById.match_date, fixtureRow.match_date) })
         .eq('id', existingById.id)
         .select('id, ddsfl_fixture_id')
         .single()
@@ -339,7 +352,7 @@ async function main() {
         .from('fixtures')
         .update({
           ...linkUpdateFromScraped(fixtureRow),
-          status: statusForUpdate(manualMatch.status, fixtureRow.status),
+          status: statusForUpdate(manualMatch.status, fixtureRow.status, manualMatch.match_date, fixtureRow.match_date),
         })
         .eq('id', manualMatch.id)
         .select('id, ddsfl_fixture_id')

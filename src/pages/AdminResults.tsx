@@ -1,18 +1,29 @@
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
 import { ResultEntryForm } from '../components/admin/ResultEntryForm'
-import { fetchCleanSheetAudit, fetchSquad, fetchUpcomingFixtures, fetchCompletedFixtures } from '../lib/clubApi'
+import {
+  fetchCleanSheetAudit,
+  fetchSquad,
+  fetchUpcomingFixtures,
+  fetchCompletedFixtures,
+  fetchPostponedFixtures,
+  setFixturePostponed,
+} from '../lib/clubApi'
 import { pageContainerClass } from '../lib/layout'
 import type { CleanSheetAuditRow } from '../lib/cleanSheet'
 import type { FixtureWithResult, SquadMember } from '../types'
 
 export default function AdminResults() {
   const [searchParams] = useSearchParams()
-  const [tab, setTab] = useState<'pending' | 'completed'>(() =>
-    searchParams.get('tab') === 'completed' ? 'completed' : 'pending',
-  )
+  const [tab, setTab] = useState<'pending' | 'completed' | 'postponed'>(() => {
+    const t = searchParams.get('tab')
+    return t === 'completed' || t === 'postponed' ? t : 'pending'
+  })
+  const [postponed, setPostponed] = useState<FixtureWithResult[]>([])
+  const [restoringId, setRestoringId] = useState<string | null>(null)
   const [upcoming, setUpcoming] = useState<FixtureWithResult[]>([])
   const [completed, setCompleted] = useState<FixtureWithResult[]>([])
   const [squad, setSquad] = useState<SquadMember[]>([])
@@ -23,14 +34,16 @@ export default function AdminResults() {
   const reload = async () => {
     setLoading(true)
     try {
-      const [u, c, s, audit] = await Promise.all([
+      const [u, c, p, s, audit] = await Promise.all([
         fetchUpcomingFixtures(),
         fetchCompletedFixtures(),
+        fetchPostponedFixtures(),
         fetchSquad(),
         fetchCleanSheetAudit(),
       ])
       setUpcoming(u)
       setCompleted(c)
+      setPostponed(p)
       setSquad(s)
       setCleanSheetAudit(audit)
     } finally {
@@ -44,10 +57,23 @@ export default function AdminResults() {
     const fixture = searchParams.get('fixture')
     const tabParam = searchParams.get('tab')
     if (fixture) setSelectedId(fixture)
-    if (tabParam === 'completed' || tabParam === 'pending') setTab(tabParam)
+    if (tabParam === 'completed' || tabParam === 'pending' || tabParam === 'postponed') setTab(tabParam)
   }, [searchParams])
 
-  const list = tab === 'pending' ? upcoming : completed
+  const list = tab === 'pending' ? upcoming : tab === 'completed' ? completed : postponed
+
+  const restore = async (fixtureId: string) => {
+    setRestoringId(fixtureId)
+    try {
+      await setFixturePostponed(fixtureId, false)
+      toast.success('Back on the calendar')
+      await reload()
+    } catch {
+      toast.error("Couldn't update fixture")
+    } finally {
+      setRestoringId(null)
+    }
+  }
   const selected = list.find((f) => f.id === selectedId) ?? list[0]
   const missingCleanSheetGoalkeepers = cleanSheetAudit.filter((row) => row.missingGoalkeeperData)
 
@@ -89,14 +115,14 @@ export default function AdminResults() {
         )}
 
         <div className="flex gap-2 p-1 glass-card">
-          {(['pending', 'completed'] as const).map((t) => (
+          {(['pending', 'completed', 'postponed'] as const).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => { setTab(t); setSelectedId(null) }}
               className={`flex-1 min-h-[44px] rounded-pill text-sm font-semibold ${tab === t ? 'bg-brand-blue text-white' : 'text-gray-600'}`}
             >
-              {t === 'pending' ? 'Needs result' : 'Edit completed'}
+              {t === 'pending' ? 'Needs result' : t === 'completed' ? 'Edit completed' : 'Postponed'}
             </button>
           ))}
         </div>
@@ -104,7 +130,34 @@ export default function AdminResults() {
         {loading ? (
           <div className="glass-card h-40 animate-pulse" />
         ) : list.length === 0 ? (
-          <div className="glass-card p-8 text-center text-gray-500">No fixtures in this list.</div>
+          <div className="glass-card p-8 text-center text-gray-500">
+            {tab === 'postponed' ? 'No postponed games.' : 'No fixtures in this list.'}
+          </div>
+        ) : tab === 'postponed' ? (
+          <div className="space-y-3">
+            {postponed.map((f) => (
+              <div key={f.id} className="glass-card border-l-4 border-amber-400 p-4 space-y-3">
+                <div>
+                  <p className="font-semibold text-brand-navy">{f.opponent}</p>
+                  <p className="text-sm text-gray-500">
+                    Was {new Date(f.match_date).toLocaleDateString('en-GB')}
+                    {f.postponed_reason ? ` · ${f.postponed_reason}` : ''}
+                  </p>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Once it's rearranged, update the date{f.ddsfl_fixture_id ? ' (it comes through from DDSFL on the next sync)' : ' in Admin → Fixtures'}, then put it back on the calendar.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => restore(f.id)}
+                  disabled={restoringId === f.id}
+                  className="btn-primary w-full sm:w-auto"
+                >
+                  {restoringId === f.id ? 'Saving...' : 'Put back on calendar'}
+                </button>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="space-y-4">
             <select
