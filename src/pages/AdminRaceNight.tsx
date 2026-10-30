@@ -399,7 +399,7 @@ function RaceEditor({
                 ✕
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-2 pl-10">
+            <div className="grid grid-cols-2 gap-2 sm:pl-10">
               <input
                 type="text"
                 list="race-night-people"
@@ -558,8 +558,8 @@ function PrintProgramme({ programme }: { programme: Programme }) {
                   {race.runners.map((r) => (
                     <tr key={r.id} className="border-t border-gray-200">
                       <td className="py-1 font-semibold">{r.number}</td>
-                      <td className="py-1">{r.horse}</td>
-                      <td className="py-1">{r.owner}</td>
+                      <td className="py-1 pr-2">{r.horse}</td>
+                      <td className="py-1 pr-2">{r.owner}</td>
                       <td className="py-1">{r.jockey}</td>
                     </tr>
                   ))}

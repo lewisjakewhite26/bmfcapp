@@ -113,7 +113,9 @@ export function RaceNightTv({ programme, onClose, startIndex = 0 }: RaceNightTvP
             {programme.title}
           </p>
           <div className="flex items-end justify-between gap-[3vw] mt-[1vh]">
-            <h1 className="font-display font-bold leading-none text-[8vw]">Race {index + 1}</h1>
+            <h1 className="font-display font-bold leading-none text-[8vw]" style={{ color: '#fff' }}>
+              Race {index + 1}
+            </h1>
             {race.sponsor.trim() && (
               <div className="text-right pb-[1vh]">
                 <p className="text-[1.5vw] uppercase tracking-widest text-white/60">Sponsored by</p>
@@ -197,7 +199,7 @@ function RunnerRow({ runner }: { runner: Runner }) {
   const name = runner.horse.trim()
   const people = [runner.owner.trim() && `Owner: ${runner.owner.trim()}`, runner.jockey.trim() && `Jockey: ${runner.jockey.trim()}`]
     .filter(Boolean)
-    .join('   ')
+    .join('  ·  ')
   const placed = runner.position !== null
   return (
     <li className="flex items-center gap-[1.6vw]">
