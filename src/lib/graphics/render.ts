@@ -1,5 +1,5 @@
-import type { GraphicData, GraphicSide, MatchdayGraphicData, ResultGraphicData } from './data'
-import { teamInitials } from './data'
+import type { GraphicData, GraphicSide, GraphicSponsor, MatchdayGraphicData, ResultGraphicData } from './data'
+import { isResultData, teamInitials } from './data'
 import { imageSize } from './assets'
 import { baselineFor, drawText, fitFontSize, measureText, wrapLines, type TextStyle } from './text'
 
@@ -370,16 +370,21 @@ function drawFooterText(
   }
 }
 
-function drawSponsorBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData, images: GraphicImages) {
-  const sponsor = data.sponsor
+function drawSponsorBlock(
+  ctx: CanvasRenderingContext2D,
+  sponsor: GraphicSponsor | null | undefined,
+  images: GraphicImages,
+  heading = 'Sponsored by',
+  emptyHeading = 'Sponsor this player',
+) {
   if (!sponsor) {
-    // Free advert for the sponsorship slot every time the player features.
-    drawFooterText(ctx, 'Sponsor this player', 'Get in touch', null, MARGIN, FOOTER_SPLIT - MARGIN - 40, 'left')
+    // Free advert for the sponsorship slot every time the player or game features.
+    drawFooterText(ctx, emptyHeading, 'Get in touch', null, MARGIN, FOOTER_SPLIT - MARGIN - 40, 'left')
     return
   }
   const logo = images.sponsorLogo
   if (!logo) {
-    drawFooterText(ctx, 'Sponsored by', sponsor.name || 'Our sponsor', null, MARGIN, FOOTER_SPLIT - MARGIN - 40, 'left')
+    drawFooterText(ctx, heading, sponsor.name || 'Our sponsor', null, MARGIN, FOOTER_SPLIT - MARGIN - 40, 'left')
     return
   }
 
@@ -393,7 +398,7 @@ function drawSponsorBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData
   const blockH = 21 + 16 + logoH + tilePad * 2
   const top = FOOTER_MID - blockH / 2
 
-  drawText(ctx, upper('Sponsored by'), MARGIN, baselineFor(top, 21), label(21))
+  drawText(ctx, upper(heading), MARGIN, baselineFor(top, 21), label(21))
   const logoTop = top + 21 + 16
   if (images.sponsorLogoOnTile) {
     ctx.fillStyle = TILE_WHITE
@@ -409,6 +414,47 @@ function drawSponsorBlock(ctx: CanvasRenderingContext2D, data: ResultGraphicData
     return
   }
   ctx.drawImage(logo, MARGIN + tilePad, logoTop + tilePad, logoW, logoH)
+}
+
+/** Home game sponsor posts: the sponsor's logo big in the middle, where the club crest sits on a matchday post. */
+function drawSponsorHero(ctx: CanvasRenderingContext2D, sponsor: GraphicSponsor | null | undefined, images: GraphicImages) {
+  const logo = images.sponsorLogo
+  const centreY = 690
+  if (!sponsor || (!logo && !sponsor.name.trim())) {
+    // No sponsor chosen: an advert for the slot, with the crest.
+    drawPlayer(ctx, null, images.crest)
+    return
+  }
+  const labelSize = 26
+  const labelTop = 478
+  drawText(ctx, upper('Home game sponsor'), GRAPHIC_WIDTH / 2, baselineFor(labelTop, labelSize), label(labelSize), 'center')
+
+  const box = { x: MARGIN + 40, y: labelTop + labelSize + 34, width: CONTENT_WIDTH - 80, height: 400 }
+  if (!logo) {
+    const name = upper(sponsor.name)
+    const size = fitFontSize((s) => measureText(ctx, name, { family: 'display', weight: 900, size: s, color: T.text }), box.width, 150, 50)
+    drawText(ctx, name, GRAPHIC_WIDTH / 2, baselineFor(centreY - size / 2 + 20, size, size), { family: 'display', weight: 900, size, color: T.text }, 'center')
+    return
+  }
+  const { width, height } = imageSize(logo)
+  const scale = Math.min(box.width / width, box.height / height)
+  const w = width * scale
+  const h = height * scale
+  const x = (GRAPHIC_WIDTH - w) / 2
+  const y = box.y + (box.height - h) / 2
+  ctx.save()
+  ctx.shadowColor = T.shadow
+  ctx.shadowBlur = 48
+  ctx.shadowOffsetY = 28
+  if (images.sponsorLogoBoxed) {
+    roundRect(ctx, x, y, w, h, Math.min(28, h * 0.1))
+    ctx.fillStyle = TILE_WHITE
+    ctx.fill()
+    ctx.shadowColor = 'transparent'
+    ctx.clip()
+  }
+  ctx.drawImage(logo, x, y, w, h)
+  ctx.restore()
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -484,7 +530,7 @@ function renderResult(ctx: CanvasRenderingContext2D, data: ResultGraphicData, im
   drawFade(ctx)
   drawNameBlock(ctx, data)
   drawFooterFrame(ctx)
-  drawSponsorBlock(ctx, data, images)
+  drawSponsorBlock(ctx, data.sponsor, images)
   drawResultBlock(ctx, data, images)
 }
 
@@ -547,11 +593,16 @@ function renderMatchday(ctx: CanvasRenderingContext2D, data: MatchdayGraphicData
   drawKnight(ctx, images.knight)
   drawFixtureHeader(ctx, data, images)
   drawBigWord(ctx, ['Matchday'], 270, 128, 0.9)
-  drawPlayer(ctx, images.player, images.crest, images.playerFraming)
-  drawFade(ctx)
+  if (data.kind === 'homesponsor') {
+    // After the fade, so it can't wash out the bottom of the logo.
+    drawFade(ctx)
+    drawSponsorHero(ctx, data.sponsor, images)
+  } else {
+    drawPlayer(ctx, images.player, images.crest, images.playerFraming)
+    drawFade(ctx)
+  }
   drawInfoRow(ctx, data)
   drawFooterFrame(ctx)
-  // No sponsor on matchday posts: competition left, venue right.
   drawFooterText(ctx, 'Competition', data.competition, null, MARGIN, FOOTER_SPLIT - MARGIN - 40, 'left')
   drawFooterText(ctx, 'Venue', data.venueName, data.venueDetail, GRAPHIC_WIDTH - MARGIN, GRAPHIC_WIDTH - MARGIN - FOOTER_SPLIT - 8, 'right')
 }
@@ -566,8 +617,8 @@ export function renderGraphic(canvas: HTMLCanvasElement, data: GraphicData, imag
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
   T = THEMES[images.theme ?? 'dark']
-  if (data.kind === 'matchday') renderMatchday(ctx, data, images)
-  else renderResult(ctx, data, images)
+  if (isResultData(data)) renderResult(ctx, data, images)
+  else renderMatchday(ctx, data, images)
 }
 
 export function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {

@@ -1,7 +1,7 @@
 import type { FixtureWithResult, SquadMember } from '../../types'
 
-/** The three weekly social posts. */
-export type GraphicKind = 'matchday' | 'goalscorer' | 'motm'
+/** The weekly social posts. 'homesponsor' is the matchday post with the home game sponsor in the footer. */
+export type GraphicKind = 'matchday' | 'homesponsor' | 'goalscorer' | 'motm'
 
 export const CLUB_NAME = 'Bishop Middleham FC'
 export const CLUB_SHORT_NAME = 'Bishop Middleham'
@@ -32,7 +32,9 @@ interface GraphicBase {
 }
 
 export interface MatchdayGraphicData extends GraphicBase {
-  kind: 'matchday'
+  kind: 'matchday' | 'homesponsor'
+  /** Home game sponsor (homesponsor posts only); null draws a "sponsor this game" prompt. */
+  sponsor?: GraphicSponsor | null
   dayLabel: string
   dateLabel: string
   kickoffLabel: string
@@ -52,6 +54,11 @@ export interface ResultGraphicData extends GraphicBase {
 }
 
 export type GraphicData = MatchdayGraphicData | ResultGraphicData
+
+/** Goalscorer and MOTM posts (they have a player and a score). */
+export function isResultData(data: GraphicData): data is ResultGraphicData {
+  return data.kind === 'goalscorer' || data.kind === 'motm'
+}
 
 export interface ScorerSummary {
   playerId: string
@@ -151,9 +158,16 @@ export interface BuildOptions {
   playerImageUrl: string | null
 }
 
-export function buildMatchdayData(fixture: FixtureWithResult, options: BuildOptions): MatchdayGraphicData {
+export interface MatchdayBuildOptions extends BuildOptions {
+  /** 'homesponsor' puts the sponsor in the footer in place of the competition. */
+  kind?: 'matchday' | 'homesponsor'
+  sponsor?: GraphicSponsor | null
+}
+
+export function buildMatchdayData(fixture: FixtureWithResult, options: MatchdayBuildOptions): MatchdayGraphicData {
   return {
-    kind: 'matchday',
+    kind: options.kind ?? 'matchday',
+    ...(options.kind === 'homesponsor' ? { sponsor: options.sponsor ?? null } : {}),
     seasonLabel: seasonLabelFor(fixture.match_date),
     competition: fixture.competition,
     ...sides(fixture, options.opponentBadgeUrl),
@@ -209,6 +223,6 @@ export function graphicFileName(kind: GraphicKind, fixture: FixtureWithResult, p
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
   const date = new Date(fixture.match_date).toISOString().slice(0, 10)
-  const parts = [kind, playerName ? slug(playerName) : slug(fixture.opponent), date]
+  const parts = [kind === 'homesponsor' ? 'home-game-sponsor' : kind, playerName ? slug(playerName) : slug(fixture.opponent), date]
   return `${parts.filter(Boolean).join('-')}.png`
 }
