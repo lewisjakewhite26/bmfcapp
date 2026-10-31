@@ -90,7 +90,7 @@ export async function listSharedImages(bucket: string, folder: string): Promise<
  * isn't in Supabase yet. A file of the same name in Supabase always wins.
  * Add a file there and list its name here.
  */
-export const BUNDLED_SPONSOR_LOGOS = ['Three Horseshoes.png']
+export const BUNDLED_SPONSOR_LOGOS = ['Sqew.png', 'Three Horseshoes.png']
 
 export function bundledSponsorLogos(origin: string, base = '/'): SharedLogoFile[] {
   return BUNDLED_SPONSOR_LOGOS.map((name) => ({
@@ -141,4 +141,26 @@ export function withSharedSponsorLogos(squad: SquadMember[], files: SharedLogoFi
     if (!file) return lightUrl ? { ...p, sponsor_logo_light_url: lightUrl } : p
     return { ...p, sponsor_logo_url: file.path, sponsor_logo_shared_file: file.name, sponsor_logo_light_url: lightUrl }
   })
+}
+
+export interface SponsorChoice {
+  /** "Sqew" — the file name without its extension. */
+  name: string
+  logoPath: string
+  /** The sponsor's light-design file, when the folder has one. */
+  lightLogoPath: string | null
+}
+
+/** Every sponsor with a logo file, for choosing a home game sponsor. */
+export function sponsorChoices(files: SharedLogoFile[]): SponsorChoice[] {
+  const light = files
+    .filter((f) => isLightVariant(f.name))
+    .map((f) => ({ ...f, name: f.name.replace(LIGHT_VARIANT, '.png') }))
+  return files
+    .filter((f) => !isLightVariant(f.name))
+    .map((f) => {
+      const name = f.name.replace(/\.[a-z0-9]+$/i, '')
+      return { name, logoPath: f.path, lightLogoPath: matchSharedLogo(name, light)?.path ?? null }
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'en-GB'))
 }

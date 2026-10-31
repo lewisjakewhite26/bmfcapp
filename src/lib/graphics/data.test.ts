@@ -120,6 +120,18 @@ describe('graphics data', () => {
     })
   })
 
+  it('builds a home game sponsor post from the matchday data', () => {
+    const sponsor = { name: 'Sqew', logoUrl: 'https://x/sponsors/Sqew.png' }
+    const data = buildMatchdayData(fixture({ status: 'scheduled', result: undefined }), {
+      kind: 'homesponsor',
+      sponsor,
+      opponentBadgeUrl: null,
+      playerImageUrl: null,
+    })
+    expect(data).toMatchObject({ kind: 'homesponsor', sponsor, dayLabel: 'Sunday', fixtureLabel: 'Home' })
+    expect(buildMatchdayData(fixture(), { opponentBadgeUrl: null, playerImageUrl: null })).not.toHaveProperty('sponsor')
+  })
+
   it('falls back sensibly for away games without a venue', () => {
     const data = buildMatchdayData(fixture({ home_away: 'away', venue: null, kickoff_time: null }), { opponentBadgeUrl: null, playerImageUrl: null })
     expect(data.fixtureLabel).toBe('Away')
@@ -138,5 +150,6 @@ describe('graphics data', () => {
   it('names downloads clearly', () => {
     expect(graphicFileName('goalscorer', fixture(), 'Jack Marley')).toBe('goalscorer-jack-marley-2026-09-20.png')
     expect(graphicFileName('matchday', fixture())).toBe('matchday-ferryhill-ivorson-2026-09-20.png')
+    expect(graphicFileName('homesponsor', fixture())).toBe('home-game-sponsor-ferryhill-ivorson-2026-09-20.png')
   })
 })

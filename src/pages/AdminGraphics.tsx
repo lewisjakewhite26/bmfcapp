@@ -10,7 +10,13 @@ import { LibraryPanel } from '../components/graphics/LibraryPanel'
 import { SponsorsPanel } from '../components/graphics/SponsorsPanel'
 import { fetchAdminUsers, fetchFixturesWithResults, fetchSquad } from '../lib/clubApi'
 import { withFullNames } from '../lib/graphics/names'
-import { listSharedSponsorLogos, withSharedSponsorLogos, type SharedLogoFile } from '../lib/sharedSponsorLogos'
+import {
+  listSharedSponsorLogos,
+  sponsorChoices,
+  withSharedSponsorLogos,
+  type SharedLogoFile,
+  type SponsorChoice,
+} from '../lib/sharedSponsorLogos'
 import { formatMatchDate } from '../lib/format'
 import { pageContainerClass } from '../lib/layout'
 import { resolveSponsorLogoUrl } from '../lib/sponsorLogoUrl'
@@ -22,6 +28,7 @@ import {
   scorersForFixture,
   type GraphicData,
   type GraphicKind,
+  type GraphicSponsor,
 } from '../lib/graphics/data'
 import { canShareFiles, downloadGraphics, shareGraphics, type ExportFile } from '../lib/graphics/exportImage'
 import { DEFAULT_FRAMING, type GraphicTheme, type PlayerFraming } from '../lib/graphics/render'
@@ -36,6 +43,7 @@ import type { FixtureWithResult, SquadMember } from '../types'
 
 const KINDS: { id: GraphicKind; label: string }[] = [
   { id: 'matchday', label: 'Matchday' },
+  { id: 'homesponsor', label: 'Home game sponsor' },
   { id: 'goalscorer', label: 'Goalscorer' },
   { id: 'motm', label: 'MOTM' },
 ]
@@ -57,13 +65,16 @@ interface PostCardProps {
   fixture: FixtureWithResult
   player: PostPlayer | null
   squadMember: SquadMember | null
+  /** Home game sponsor (homesponsor posts only). */
+  homeSponsor: SponsorChoice | null
   library: GraphicsLibrary
   onLibraryChanged: () => void
   register: (key: string, handle: GraphicCanvasHandle | null, fileName: string) => void
   theme: GraphicTheme
 }
 
-function PostCard({ kind, fixture, player, squadMember, library, onLibraryChanged, register, theme }: PostCardProps) {
+function PostCard({ kind, fixture, player, squadMember, homeSponsor, library, onLibraryChanged, register, theme }: PostCardProps) {
+  const isMatchPost = kind === 'matchday' || kind === 'homesponsor'
   const photos = useMemo(() => (player ? photosForPlayer(library.photos, player.playerId) : []), [library.photos, player])
   const [photoId, setPhotoId] = useState<string | null>(null)
   const [logoOnTile, setLogoOnTile] = useState(false)
@@ -86,7 +97,9 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
   const badgeUrl = resolveGraphicsUrl(badge?.badge_path)
   const playerImageUrl = resolveGraphicsUrl(chosen?.cutout_path)
   const sponsorLogoUrl =
-    kind === 'matchday'
+    kind === 'homesponsor'
+      ? resolveSponsorLogoUrl((theme === 'light' && homeSponsor?.lightLogoPath) || homeSponsor?.logoPath)
+      : kind === 'matchday'
       ? null
       : resolveSponsorLogoUrl(
           (theme === 'light' && squadMember?.sponsor_logo_light_url) || squadMember?.sponsor_logo_url,
@@ -94,8 +107,9 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
 
   const data = useMemo<GraphicData | null>(() => {
     try {
-      if (kind === 'matchday') {
-        return buildMatchdayData(fixture, { opponentBadgeUrl: badgeUrl, playerImageUrl })
+      if (isMatchPost) {
+        const sponsor: GraphicSponsor | null = homeSponsor ? { name: homeSponsor.name, logoUrl: sponsorLogoUrl } : null
+        return buildMatchdayData(fixture, { kind, sponsor, opponentBadgeUrl: badgeUrl, playerImageUrl })
       }
       if (!player) return null
       return buildResultData(fixture, {
@@ -112,9 +126,9 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
     } catch {
       return null
     }
-  }, [kind, fixture, player, squadMember?.sponsor_name, sponsorLogoUrl, badgeUrl, playerImageUrl])
+  }, [kind, isMatchPost, fixture, player, squadMember?.sponsor_name, homeSponsor, sponsorLogoUrl, badgeUrl, playerImageUrl])
 
-  const fileName = graphicFileName(kind, fixture, kind === 'matchday' ? null : player?.name)
+  const fileName = graphicFileName(kind, fixture, isMatchPost ? null : player?.name)
   const key = `${kind}-${fixture.id}-${player?.playerId ?? 'none'}`
 
   const setHandle = useCallback(
@@ -207,7 +221,7 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
         </div>
       )}
 
-      {kind !== 'matchday' && sponsorLogoUrl && theme === 'dark' && (
+      {!isMatchPost && sponsorLogoUrl && theme === 'dark' && (
         <label className="flex items-center gap-2 text-sm text-brand-navy">
           <input type="checkbox" className="accent-brand-blue" checked={logoOnTile} onChange={(e) => setLogoOnTile(e.target.checked)} />
           Show sponsor logo on a white tile
@@ -219,6 +233,7 @@ function PostCard({ kind, fixture, player, squadMember, library, onLibraryChange
         data={data}
         sponsorLogoUrl={sponsorLogoUrl}
         logoOnTile={logoOnTile}
+        keepLogoColours={kind === 'homesponsor'}
         framing={chosen ? framing : undefined}
         onFramingChange={chosen && moving ? setFraming : undefined}
         theme={theme}
@@ -396,7 +411,28 @@ export default function AdminGraphics() {
     [fixtures],
   )
 
-  const fixtureOptions = kind === 'matchday' ? upcoming : played
+  const isMatchPost = kind === 'matchday' || kind === 'homesponsor'
+  // Home game sponsor posts are only for home games.
+  const homeUpcoming = useMemo(() => upcoming.filter((f) => f.home_away === 'home'), [upcoming])
+  const fixtureOptions = kind === 'homesponsor' ? homeUpcoming : kind === 'matchday' ? upcoming : played
+
+  const sponsors = useMemo(() => sponsorChoices(sharedLogos), [sharedLogos])
+  const [sponsorName, setSponsorName] = useState<string>(() => {
+    try {
+      return localStorage.getItem('bmfc-graphics-home-sponsor') ?? ''
+    } catch {
+      return ''
+    }
+  })
+  const homeSponsor = sponsors.find((s) => s.name === sponsorName) ?? sponsors[0] ?? null
+  const chooseSponsor = (name: string) => {
+    setSponsorName(name)
+    try {
+      localStorage.setItem('bmfc-graphics-home-sponsor', name)
+    } catch {
+      // Not saved; the choice still applies on this visit.
+    }
+  }
 
   // Default to the next match (matchday) or the last result (goalscorer/MOTM).
   useEffect(() => {
@@ -455,7 +491,7 @@ export default function AdminGraphics() {
         </Link>
         <div>
           <h1 className="font-display text-2xl text-brand-navy">Matchday graphics</h1>
-          <p className="text-sm text-gray-500 mt-1">Matchday, goalscorer and MOTM posts, ready to share.</p>
+          <p className="text-sm text-gray-500 mt-1">Matchday, home game sponsor, goalscorer and MOTM posts, ready to share.</p>
         </div>
 
         <div className="flex gap-2 p-1 glass-card" role="tablist" aria-label="Graphics sections">
@@ -492,14 +528,14 @@ export default function AdminGraphics() {
             <div className="glass-card p-4 space-y-4">
               <fieldset>
                 <legend className="text-sm font-semibold text-brand-navy mb-2">Post</legend>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {KINDS.map((k) => (
                     <button
                       key={k.id}
                       type="button"
                       aria-pressed={kind === k.id}
                       onClick={() => setKind(k.id)}
-                      className={`flex-1 min-h-[44px] rounded-pill text-sm font-semibold border transition-colors ${
+                      className={`min-h-[44px] rounded-pill text-sm font-semibold border transition-colors ${
                         kind === k.id ? 'bg-brand-navy text-white border-brand-navy' : 'border-brand-blue/20 text-brand-navy bg-white/70'
                       }`}
                     >
@@ -535,11 +571,15 @@ export default function AdminGraphics() {
 
               <div>
                 <label htmlFor="graphics-fixture" className="text-sm font-semibold text-brand-navy block mb-2">
-                  {kind === 'matchday' ? (includePast ? 'Match' : 'Upcoming match') : 'Match (newest first)'}
+                  {isMatchPost ? (includePast ? (kind === 'homesponsor' ? 'Home match' : 'Match') : kind === 'homesponsor' ? 'Upcoming home match' : 'Upcoming match') : 'Match (newest first)'}
                 </label>
                 {fixtureOptions.length === 0 ? (
                   <p className="text-sm text-gray-500">
-                    {kind === 'matchday' ? 'No upcoming matches in the fixture list.' : 'No results entered yet.'}
+                    {kind === 'homesponsor'
+                      ? 'No upcoming home matches in the fixture list.'
+                      : kind === 'matchday'
+                        ? 'No upcoming matches in the fixture list.'
+                        : 'No results entered yet.'}
                   </p>
                 ) : (
                   <select id="graphics-fixture" className="input-field" value={fixtureId} onChange={(e) => setFixtureId(e.target.value)}>
@@ -550,7 +590,7 @@ export default function AdminGraphics() {
                     ))}
                   </select>
                 )}
-                {kind === 'matchday' && (
+                {isMatchPost && (
                   <label className="mt-2 flex items-center gap-2 text-sm text-brand-navy">
                     <input
                       type="checkbox"
@@ -563,7 +603,31 @@ export default function AdminGraphics() {
                 )}
               </div>
 
-              {kind === 'matchday' && fixture && (
+              {kind === 'homesponsor' && (
+                <div>
+                  <label htmlFor="graphics-home-sponsor" className="text-sm font-semibold text-brand-navy block mb-2">
+                    Home game sponsor
+                  </label>
+                  {sponsors.length === 0 ? (
+                    <p className="text-sm text-gray-500">No sponsor logos yet. Add one in the Sponsors tab or the sponsors folder.</p>
+                  ) : (
+                    <select
+                      id="graphics-home-sponsor"
+                      className="input-field"
+                      value={homeSponsor?.name ?? ''}
+                      onChange={(e) => chooseSponsor(e.target.value)}
+                    >
+                      {sponsors.map((s) => (
+                        <option key={s.name} value={s.name}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+
+              {isMatchPost && fixture && (
                 <div>
                   <label htmlFor="graphics-poster" className="text-sm font-semibold text-brand-navy block mb-2">
                     Poster player
@@ -576,7 +640,7 @@ export default function AdminGraphics() {
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">Matchday posts don't show a sponsor.</p>
+                  {kind === 'matchday' && <p className="text-xs text-gray-500 mt-1">Matchday posts don't show a sponsor.</p>}
                 </div>
               )}
 
@@ -606,13 +670,14 @@ export default function AdminGraphics() {
               </p>
             )}
 
-            {fixture && kind === 'matchday' && (
+            {fixture && isMatchPost && (
               <PostCard
-                key={`matchday-${fixture.id}-${posterPlayerId}`}
-                kind="matchday"
+                key={`${kind}-${fixture.id}-${posterPlayerId}`}
+                kind={kind}
                 fixture={fixture}
                 player={posts?.[0] ?? null}
                 squadMember={squadById.get(posterPlayerId) ?? null}
+                homeSponsor={kind === 'homesponsor' ? homeSponsor : null}
                 library={library}
                 onLibraryChanged={() => void refreshLibrary()}
                 register={register}
@@ -621,7 +686,7 @@ export default function AdminGraphics() {
             )}
 
             {fixture &&
-              kind !== 'matchday' &&
+              !isMatchPost &&
               posts?.map((p) => (
                 <PostCard
                   key={`${kind}-${fixture.id}-${p.playerId}`}
@@ -629,6 +694,7 @@ export default function AdminGraphics() {
                   fixture={fixture}
                   player={p}
                   squadMember={squadById.get(p.playerId) ?? null}
+                  homeSponsor={null}
                   library={library}
                   onLibraryChanged={() => void refreshLibrary()}
                   register={register}

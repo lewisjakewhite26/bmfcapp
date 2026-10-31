@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bundledSponsorLogos, isLightVariant, matchSharedLogo, mergeSharedLogos, withSharedSponsorLogos, type SharedLogoFile } from './sharedSponsorLogos'
+import { bundledSponsorLogos, isLightVariant, matchSharedLogo, mergeSharedLogos, sponsorChoices, withSharedSponsorLogos, type SharedLogoFile } from './sharedSponsorLogos'
 import type { SquadMember } from '../types'
 
 const file = (name: string): SharedLogoFile => ({ name, path: `sponsors/${encodeURIComponent(name)}` })
@@ -100,5 +100,21 @@ describe('bundled sponsor logos', () => {
   it('lets a sponsor with no logo pick up the bundled file', () => {
     const files = mergeSharedLogos([], bundledSponsorLogos('https://x'))
     expect(matchSharedLogo('Three Horseshoes', files)?.name).toBe('Three Horseshoes.png')
+  })
+})
+
+describe('home game sponsor choices', () => {
+  it('lists each sponsor once, A to Z, with its light logo when there is one', () => {
+    const choices = sponsorChoices(['Three Horseshoes.png', 'Sqew.png', 'Sqew light.png', 'Lines Valeting.png'].map(file))
+    expect(choices.map((c) => c.name)).toEqual(['Lines Valeting', 'Sqew', 'Three Horseshoes'])
+    expect(choices.find((c) => c.name === 'Sqew')).toMatchObject({
+      logoPath: 'sponsors/Sqew.png',
+      lightLogoPath: 'sponsors/Sqew%20light.png',
+    })
+    expect(choices.find((c) => c.name === 'Lines Valeting')?.lightLogoPath).toBeNull()
+  })
+
+  it('ships the Sqew logo with the app', () => {
+    expect(bundledSponsorLogos('https://x').map((f) => f.name)).toContain('Sqew.png')
   })
 })

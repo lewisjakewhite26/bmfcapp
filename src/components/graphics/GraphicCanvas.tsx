@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type PointerEvent } from 'react'
-import type { GraphicData } from '../../lib/graphics/data'
+import { isResultData, type GraphicData } from '../../lib/graphics/data'
 import { clubCrestUrl, ensureGraphicsFonts, knightWatermarkUrl, lightLogo, loadImage, whiteLogo } from '../../lib/graphics/assets'
 import { renderGraphic, type GraphicTheme, type PlayerFraming } from '../../lib/graphics/render'
 
@@ -13,6 +13,8 @@ interface GraphicCanvasProps {
   /** Sponsor logo URL (goalscorer/MOTM only). */
   sponsorLogoUrl?: string | null
   logoOnTile?: boolean
+  /** Logos that carry their own background colour keep it (drawn as a rounded tile) on the navy look too. */
+  keepLogoColours?: boolean
   onReadyChange?: (ready: boolean) => void
   /** Size/position of the player photo for this post. */
   framing?: PlayerFraming
@@ -41,7 +43,7 @@ async function tryLoad(url: string | null | undefined): Promise<HTMLImageElement
 
 /** Draws one post. The on-screen canvas is the export — what you see is what downloads. */
 export const GraphicCanvas = forwardRef<GraphicCanvasHandle, GraphicCanvasProps>(function GraphicCanvas(
-  { data, sponsorLogoUrl, logoOnTile = false, onReadyChange, framing, onFramingChange, theme = 'dark' },
+  { data, sponsorLogoUrl, logoOnTile = false, keepLogoColours = false, onReadyChange, framing, onFramingChange, theme = 'dark' },
   ref,
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -79,7 +81,9 @@ export const GraphicCanvas = forwardRef<GraphicCanvasHandle, GraphicCanvasProps>
         if (opponentBadgeUrl && !badge) gaps.push("opponent badge couldn't load")
         if (sponsorLogoUrl && !logo) gaps.push("sponsor logo couldn't load")
         setMissing(gaps)
-        const prepared = logo && theme === 'light' ? lightLogo(logo) : null
+        let prepared = logo && (theme === 'light' || keepLogoColours) ? lightLogo(logo) : null
+        // On navy, only logos with their own background keep their colours; the rest are whitened as usual.
+        if (prepared && theme === 'dark' && !prepared.boxed) prepared = null
         setImages({
           crest,
           knight,
@@ -95,7 +99,7 @@ export const GraphicCanvas = forwardRef<GraphicCanvasHandle, GraphicCanvasProps>
     return () => {
       cancelled = true
     }
-  }, [data.playerImageUrl, opponentBadgeUrl, sponsorLogoUrl, logoOnTile, theme])
+  }, [data.playerImageUrl, opponentBadgeUrl, sponsorLogoUrl, logoOnTile, keepLogoColours, theme])
 
   // Drawing is quick once the images are loaded, so moving the player redraws live.
   useEffect(() => {
@@ -154,7 +158,13 @@ export const GraphicCanvas = forwardRef<GraphicCanvasHandle, GraphicCanvasProps>
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
           role="img"
-          aria-label={data.kind === 'matchday' ? 'Matchday post preview' : `${data.playerName} post preview`}
+          aria-label={
+            isResultData(data)
+              ? `${data.playerName} post preview`
+              : data.kind === 'homesponsor'
+                ? 'Home game sponsor post preview'
+                : 'Matchday post preview'
+          }
         />
         {!ready && !error && (
           <div className="absolute inset-0 grid place-items-center text-sm text-white/70">Drawing…</div>
