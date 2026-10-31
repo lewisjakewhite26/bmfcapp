@@ -461,6 +461,8 @@ export default function AdminGraphics() {
       if (!motmId) return []
       return [{ playerId: motmId, name: member?.display_name ?? fromEvent?.player_name ?? 'Player' }]
     }
+    // Home game sponsor posts have the sponsor in the middle, not a player.
+    if (kind === 'homesponsor') return []
     const poster = squadById.get(posterPlayerId)
     return poster ? [{ playerId: poster.player_id, name: poster.display_name }] : []
   }, [fixture, kind, motmId, posterPlayerId, squadById])
@@ -627,7 +629,7 @@ export default function AdminGraphics() {
                 </div>
               )}
 
-              {isMatchPost && fixture && (
+              {kind === 'matchday' && fixture && (
                 <div>
                   <label htmlFor="graphics-poster" className="text-sm font-semibold text-brand-navy block mb-2">
                     Poster player
