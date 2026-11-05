@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { isRunnerFilled, ordinal, placedRunners, type Programme, type Runner } from '../../lib/raceNight'
+import { isRunnerFilled, type Programme, type Runner } from '../../lib/raceNight'
 
 interface RaceNightTvProps {
   programme: Programme
@@ -91,8 +91,6 @@ export function RaceNightTv({ programme, onClose, startIndex = 0 }: RaceNightTvP
   }, [showControls])
 
   const race = races[index]
-  const placed = race ? placedRunners(race) : []
-  const hasResults = placed.length > 0
   const runners = race ? race.runners.filter(isRunnerFilled) : []
   const half = Math.ceil(runners.length / 2)
 
@@ -146,15 +144,6 @@ export function RaceNightTv({ programme, onClose, startIndex = 0 }: RaceNightTvP
             )}
           </div>
 
-          {hasResults && (
-            <p className="text-[1.8vw] text-white/70 pb-[1vh]">
-              Result:{' '}
-              {placed
-                .map((r) => `${ordinal(r.position ?? 0)} ${r.horse.trim() || r.owner.trim() || `Runner ${r.number}`}`)
-                .join('  ·  ')}
-            </p>
-          )}
-
           <div className="flex items-center justify-center gap-[0.8vw] pb-[0.5vh]">
             {races.map((r, i) => (
               <span
@@ -205,14 +194,14 @@ function RunnerRow({ runner }: { runner: Runner }) {
   const people = [runner.owner.trim() && `Owner: ${runner.owner.trim()}`, runner.jockey.trim() && `Jockey: ${runner.jockey.trim()}`]
     .filter(Boolean)
     .join('  ·  ')
-  const placed = runner.position !== null
+  // Finishing positions are never shown here: results are only revealed by the race night show, after the race.
   return (
     <li className="flex items-center gap-[1.6vw]">
       <span
         className="shrink-0 rounded-full flex items-center justify-center font-bold text-[2.2vw] w-[4.2vw] h-[4.2vw]"
-        style={placed ? { background: GOLD, color: NAVY } : { background: 'rgba(255,255,255,0.15)' }}
+        style={{ background: 'rgba(255,255,255,0.15)' }}
       >
-        {placed ? ordinal(runner.position ?? 0) : runner.number}
+        {runner.number}
       </span>
       <div className="min-w-0">
         <p className="font-display font-semibold leading-tight truncate text-[2.6vw]">

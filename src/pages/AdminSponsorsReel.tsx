@@ -544,7 +544,8 @@ function PlayerSponsorSlide({ sponsor }: { sponsor: ReelSlide }) {
   )
 }
 
-export default function AdminSponsorsReel() {
+/** The reel. Embedded in the race night show it has no buttons or keys of its own. */
+export function SponsorsReel({ embedded = false }: { embedded?: boolean }) {
   const scale = useStageScale()
   const portrait = useIsPortrait()
   const [fullscreenOk] = useState(canFullscreen)
@@ -635,6 +636,7 @@ export default function AdminSponsorsReel() {
   }
 
   useEffect(() => {
+    if (embedded) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'f' || e.key === 'F') toggleFullscreen()
       if (count > 1 && e.key === 'ArrowRight') setIndex((i) => (i + 1) % count)
@@ -642,15 +644,15 @@ export default function AdminSponsorsReel() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [count])
+  }, [count, embedded])
 
   const current = sponsors && count ? sponsors[index % count] : null
 
   return (
     <div
       className="fixed inset-0 z-[300] overflow-hidden"
-      style={{ background: NAVY, cursor: idle ? 'none' : 'default' }}
-      onDoubleClick={toggleFullscreen}
+      style={{ background: NAVY, cursor: idle || embedded ? 'none' : 'default' }}
+      onDoubleClick={embedded ? undefined : toggleFullscreen}
     >
       <style>{`
         @keyframes reel-drift-a { 0%,100% { transform: translate(-8%, -6%) scale(1); } 50% { transform: translate(6%, 4%) scale(1.15); } }
@@ -741,6 +743,7 @@ export default function AdminSponsorsReel() {
       </div>
 
       {/* Controls: only visible while the mouse moves or after a tap. */}
+      {embedded ? null : (
       <div
         className="absolute top-4 right-4 left-4 flex flex-col items-end gap-2 transition-opacity duration-500"
         style={{ opacity: idle ? 0 : 1, pointerEvents: idle ? 'none' : 'auto' }}
@@ -773,6 +776,11 @@ export default function AdminSponsorsReel() {
           </p>
         ) : null}
       </div>
+      )}
     </div>
   )
+}
+
+export default function AdminSponsorsReel() {
+  return <SponsorsReel />
 }
