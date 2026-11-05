@@ -126,11 +126,12 @@ describe('home game sponsor choices', () => {
 
   it('ships the race night logos and finds them by the programme and Finance names', () => {
     const files = mergeSharedLogos([], bundledSponsorLogos('https://x'))
-    expect(matchSharedLogo("Turnbull's FC Clothing", files)?.name).toBe("Turnbull's FC Clothing.png")
+    expect(matchSharedLogo("Turnbull's FC Clothing", files)?.name).toBe('Turnbulls FC Clothing.png')
     expect(matchSharedLogo('Hockings Butchery', files)?.name).toBe('Hockings Butchery.png')
     expect(matchSharedLogo('DGS', files)?.name).toBe('DGS Limited.png')
     expect(matchSharedLogo('DGS Limited', files)?.name).toBe('DGS Limited.png')
     expect(matchSharedLogo('SQEW Limited', files)?.name).toBe('Sqew.png')
     expect(matchSharedLogo('Post Office', files)?.name).toBe('Post Office.jpg')
+    expect(matchSharedLogo("Lew & Al's Mobile Mince & Dumplings", files)?.name).toBe('Lew and Als Mobile Mince and Dumplings.png')
   })
 })

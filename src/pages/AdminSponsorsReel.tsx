@@ -409,8 +409,8 @@ function NamedSlide({ slide }: { slide: ReelSlide }) {
     slide.kind === 'main' ? 'Main club sponsor' : slide.kind === 'thanks' ? 'Thank you' : `Race ${slide.race} · sponsored by`
   const big = slide.kind === 'main'
   // Room for the "supported by" row on race slides that have one.
-  const logoW = big ? 1000 : support ? 760 : 880
-  const logoH = big ? 500 : support ? 360 : 440
+  const logoW = big ? 1000 : support ? 820 : 880
+  const logoH = big ? 500 : support ? 420 : 440
 
   return (
     <motion.div
@@ -424,9 +424,9 @@ function NamedSlide({ slide }: { slide: ReelSlide }) {
         {label}
       </motion.p>
       {showLogo ? (
-        <div style={{ marginTop: 52 }}>
+        <div style={{ marginTop: support ? 40 : 52 }}>
           {slide.photo ? (
-            <PhotoCard url={slide.logoUrl!} width={big ? 1000 : 900} height={big ? 560 : 500} onError={() => setLogoFailed(true)} />
+            <PhotoCard url={slide.logoUrl!} width={big ? 600 : 500} height={big ? 600 : 500} onError={() => setLogoFailed(true)} />
           ) : (
             <LogoCard url={slide.logoUrl!} backdrop={slide.backdrop} width={logoW} height={logoH} padding={big ? 64 : 52} onError={() => setLogoFailed(true)} />
           )}
@@ -436,9 +436,9 @@ function NamedSlide({ slide }: { slide: ReelSlide }) {
         {...rise(showLogo ? 0.8 : 0.5)}
         style={{
           ...NAME_STYLE,
-          fontSize: Math.round(nameSize(slide.name) * (showLogo ? (support ? 0.85 : 1) : 1.5)),
+          fontSize: Math.round(nameSize(slide.name) * (showLogo ? 1 : 1.5)),
           maxWidth: 1600,
-          marginTop: showLogo ? 44 : 40,
+          marginTop: showLogo ? (support ? 36 : 44) : 40,
         }}
       >
         {slide.name}
