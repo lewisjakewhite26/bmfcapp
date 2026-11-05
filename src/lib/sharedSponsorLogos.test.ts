@@ -33,6 +33,12 @@ describe('shared sponsor logo matching', () => {
     expect(matchSharedLogo('Lines Valeting', [file('lines-valeting-north-east.jpg')])?.name).toBe('lines-valeting-north-east.jpg')
   })
 
+  it('treats an initial as the word it stands for', () => {
+    expect(pick('D Redfern Building Services')).toBe('david-redfern-building-services_logo.jpg')
+    expect(matchSharedLogo('D Redfern', [file('DGS Limited.png')])).toBeNull()
+    expect(matchSharedLogo('J Smith Joinery', [file('Jane Smith Joinery.png'), file('Smith Brothers.png')])?.name).toBe('Jane Smith Joinery.png')
+  })
+
   it('prefers the closest file when several fit', () => {
     const two = [file('lines-valeting-north-east.png'), file('lines-valeting.png')]
     expect(matchSharedLogo('Lines Valeting', two)?.name).toBe('lines-valeting.png')
@@ -116,5 +122,16 @@ describe('home game sponsor choices', () => {
 
   it('ships the Sqew logo with the app', () => {
     expect(bundledSponsorLogos('https://x').map((f) => f.name)).toContain('Sqew.png')
+  })
+
+  it('ships the race night logos and finds them by the programme and Finance names', () => {
+    const files = mergeSharedLogos([], bundledSponsorLogos('https://x'))
+    expect(matchSharedLogo("Turnbull's FC Clothing", files)?.name).toBe('Turnbulls FC Clothing.png')
+    expect(matchSharedLogo('Hockings Butchery', files)?.name).toBe('Hockings Butchery.png')
+    expect(matchSharedLogo('DGS', files)?.name).toBe('DGS Limited.png')
+    expect(matchSharedLogo('DGS Limited', files)?.name).toBe('DGS Limited.png')
+    expect(matchSharedLogo('SQEW Limited', files)?.name).toBe('Sqew.png')
+    expect(matchSharedLogo('Post Office', files)?.name).toBe('Post Office.jpg')
+    expect(matchSharedLogo("Lew & Al's Mobile Mince & Dumplings", files)?.name).toBe('Lew and Als Mobile Mince and Dumplings.png')
   })
 })

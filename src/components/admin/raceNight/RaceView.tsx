@@ -51,6 +51,8 @@ export function RaceView({ programme, race, raceIndex, mode, onMode, edit, onSho
   const [sheetRunnerId, setSheetRunnerId] = useState<string | null>(null)
   const [editingSponsor, setEditingSponsor] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState(false)
+  // Entered results stay hidden until deliberately revealed, so nobody sees a winner by accident.
+  const [revealed, setRevealed] = useState(false)
   const tableRef = useRef<HTMLTableElement>(null)
 
   // Moving to another race closes any open editor.
@@ -58,6 +60,7 @@ export function RaceView({ programme, race, raceIndex, mode, onMode, edit, onSho
     setSheetRunnerId(null)
     setEditingSponsor(false)
     setConfirmRemove(false)
+    setRevealed(false)
   }, [race.id, mode])
 
   const summary = raceSummary(race)
@@ -97,6 +100,7 @@ export function RaceView({ programme, race, raceIndex, mode, onMode, edit, onSho
         </div>
 
         {editingSponsor ? (
+          <div className="space-y-2">
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -118,6 +122,16 @@ export function RaceView({ programme, race, raceIndex, mode, onMode, edit, onSho
               Done
             </button>
           </div>
+          <input
+            type="text"
+            value={race.supportedBy}
+            onChange={(e) => edit((p) => updateRace(p, race.id, { supportedBy: e.target.value }))}
+            onKeyDown={(e) => e.key === 'Enter' && setEditingSponsor(false)}
+            className="input-field text-sm w-full"
+            placeholder="Supported by (optional), e.g. who sponsors the sponsor"
+            aria-label="Race sponsor supported by"
+          />
+          </div>
         ) : (
           <button
             type="button"
@@ -129,6 +143,7 @@ export function RaceView({ programme, race, raceIndex, mode, onMode, edit, onSho
                 <>
                   Sponsored by <b className="text-brand-navy">{race.sponsor}</b>
                   <PaidDot paid={race.sponsorPaid} />
+                  {race.supportedBy.trim() && <> · supported by <b className="text-brand-navy">{race.supportedBy}</b></>}
                 </>
               ) : (
                 'No sponsor yet'
@@ -266,6 +281,20 @@ export function RaceView({ programme, race, raceIndex, mode, onMode, edit, onSho
         </>
       ) : (
         <>
+          {placed.length > 0 && !revealed ? (
+            <div className="glass-card p-5 text-center space-y-3">
+              <p className="font-semibold text-brand-navy">
+                Result entered ({placed.length === 1 ? '1st' : `1st–${ordinal(placed.length)}`}) and hidden
+              </p>
+              <p className="text-sm text-gray-600">
+                It stays hidden here and only shows on the TV after this race's video has played.
+              </p>
+              <button type="button" onClick={() => setRevealed(true)} className="btn-primary">
+                Reveal to change it
+              </button>
+            </div>
+          ) : (
+          <>
           <p className="text-sm bg-amber-50 border border-amber-200 text-amber-900 rounded-card px-3 py-2">
             Tap runners in the order they finish. Tap again to take a place off.
           </p>
@@ -323,6 +352,8 @@ export function RaceView({ programme, race, raceIndex, mode, onMode, edit, onSho
               Done
             </button>
           </div>
+          </>
+          )}
         </>
       )}
 

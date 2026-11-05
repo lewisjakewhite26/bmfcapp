@@ -100,6 +100,19 @@ export default function AdminRaceNight() {
           )}
 
           {programme && !printing && !race && (
+            <Link
+              to="/admin/race-night/show"
+              className="glass-card flex items-center justify-between gap-3 p-4 border border-brand-gold/40"
+            >
+              <span>
+                <b className="block text-brand-navy">Run the night on the TV</b>
+                <span className="text-sm text-gray-600">Reel, countdowns, race videos and results, on the laptop</span>
+              </span>
+              <span className="text-brand-blue font-semibold shrink-0">Open →</span>
+            </Link>
+          )}
+
+          {programme && !printing && !race && (
             <Overview
               programme={programme}
               onOpenRace={openRace}

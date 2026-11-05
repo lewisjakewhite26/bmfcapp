@@ -25,7 +25,12 @@ export function PrintProgramme({ programme }: { programme: Programme }) {
             <section key={race.id} className="break-inside-avoid">
               <div className="border-b-2 border-brand-navy pb-1 mb-1">
                 <h3 className="font-display text-lg font-bold">Race {i + 1}</h3>
-                {race.sponsor.trim() && <p className="text-xs text-gray-600">Sponsored by {race.sponsor}</p>}
+                {race.sponsor.trim() && (
+                  <p className="text-xs text-gray-600">
+                    Sponsored by {race.sponsor}
+                    {race.supportedBy.trim() && <>, supported by {race.supportedBy}</>}
+                  </p>
+                )}
               </div>
               <table className="w-full text-xs">
                 <thead>
