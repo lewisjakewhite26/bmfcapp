@@ -40,6 +40,18 @@ export function logoFileWords(fileName: string, ignored: Set<string> = IGNORED_W
   return words
 }
 
+/** Same word, or an initial standing for it ("D Redfern" = "David Redfern"). */
+function sameWord(a: string, b: string): boolean {
+  if (a === b) return true
+  if (a.length === 1 && /[a-z]/.test(a)) return b.startsWith(a)
+  if (b.length === 1 && /[a-z]/.test(b)) return a.startsWith(b)
+  return false
+}
+
+function hasWord(list: string[], word: string): boolean {
+  return list.some((w) => sameWord(w, word))
+}
+
 /**
  * Finds the file for a sponsor. Exact matches win; otherwise one name must
  * contain all the words of the other ("mess.png" → "Mess Sedgefield",
@@ -57,11 +69,12 @@ export function matchSharedLogo(
   for (const file of files) {
     const words = logoFileWords(file.name, ignored)
     if (!words.length) continue
-    const fileInSponsor = words.every((w) => sponsor.includes(w))
-    const sponsorInFile = sponsor.every((w) => words.includes(w))
+    const fileInSponsor = words.every((w) => hasWord(sponsor, w))
+    const sponsorInFile = sponsor.every((w) => hasWord(words, w))
     if (!fileInSponsor && !sponsorInFile) continue
-    const shared = words.filter((w) => sponsor.includes(w))
-    if (shared.join('').length < 3) continue
+    const shared = words.filter((w) => hasWord(sponsor, w))
+    // Initials alone never make a match: "D Redfern" mustn't pick up "DGS".
+    if (words.filter((w) => sponsor.includes(w)).join('').length < 3) continue
     const extra = Math.abs(words.length - sponsor.length)
     const score = (fileInSponsor && sponsorInFile ? 1000 : 0) + shared.length * 10 - extra
     if (!best || score > best.score || (score === best.score && file.name < best.file.name)) best = { file, score }
@@ -90,7 +103,21 @@ export async function listSharedImages(bucket: string, folder: string): Promise<
  * isn't in Supabase yet. A file of the same name in Supabase always wins.
  * Add a file there and list its name here.
  */
-export const BUNDLED_SPONSOR_LOGOS = ['Sqew.png', 'Three Horseshoes.png']
+export const BUNDLED_SPONSOR_LOGOS = [
+  'DGS Limited.png',
+  'Hockings Butchery.png',
+  'Post Office.jpg',
+  'Sqew.png',
+  'Three Horseshoes.png',
+  "Turnbull's FC Clothing.png",
+]
+
+/** Bundled files that are photos (a shopfront, say) rather than logos: shown full-bleed, not on a logo card. */
+export const BUNDLED_SPONSOR_PHOTOS = new Set(['Post Office.jpg'])
+
+export function isSponsorPhoto(fileName: string | null | undefined): boolean {
+  return !!fileName && BUNDLED_SPONSOR_PHOTOS.has(fileName)
+}
 
 export function bundledSponsorLogos(origin: string, base = '/'): SharedLogoFile[] {
   return BUNDLED_SPONSOR_LOGOS.map((name) => ({
@@ -117,6 +144,15 @@ const LIGHT_VARIANT = /[\s_-]+light(\s*\(\d+\)|[\s_-]*\d+)?\.[a-z0-9]+$/i
 
 export function isLightVariant(fileName: string): boolean {
   return LIGHT_VARIANT.test(fileName)
+}
+
+/** Finds a sponsor's main and light logo files by name (for sponsors that aren't on a player). */
+export function sponsorLogoFiles(name: string, files: SharedLogoFile[]): { main: SharedLogoFile | null; light: SharedLogoFile | null } {
+  const main = files.filter((f) => !isLightVariant(f.name))
+  const light = files
+    .filter((f) => isLightVariant(f.name))
+    .map((f) => ({ name: f.name.replace(LIGHT_VARIANT, '.png'), path: f.path }))
+  return { main: matchSharedLogo(name, main), light: matchSharedLogo(name, light) }
 }
 
 /**

@@ -19,6 +19,8 @@ export type PaidField = 'horsePaid' | 'ownerPaid' | 'jockeyPaid'
 export interface Race {
   id: string
   sponsor: string
+  /** Who backs the race sponsor, shown as "Supported by …" (e.g. 13 Apparel behind Lew & Al's). */
+  supportedBy: string
   sponsorPaid: boolean
   runners: Runner[]
 }
@@ -55,11 +57,12 @@ export function normaliseProgramme(raw: unknown): Programme {
   return {
     title: str(obj.title) || 'Race Night',
     races: races.map((r, ri) => {
-      const race = (r && typeof r === 'object' ? r : {}) as { id?: unknown; sponsor?: unknown; sponsorPaid?: unknown; runners?: unknown }
+      const race = (r && typeof r === 'object' ? r : {}) as { id?: unknown; sponsor?: unknown; supportedBy?: unknown; sponsorPaid?: unknown; runners?: unknown }
       const runners = Array.isArray(race.runners) ? race.runners : []
       return {
         id: str(race.id) || `race-${ri + 1}`,
         sponsor: str(race.sponsor),
+        supportedBy: str(race.supportedBy),
         sponsorPaid: bool(race.sponsorPaid),
         runners: runners.map((x, xi) => {
           const runner = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>
@@ -125,6 +128,7 @@ export function addRace(p: Programme): Programme {
       {
         id,
         sponsor: '',
+        supportedBy: '',
         sponsorPaid: false,
         runners: Array.from({ length: DEFAULT_RUNNERS_PER_RACE }, (_, i) => emptyRunner(id, i + 1)),
       },
@@ -136,7 +140,7 @@ export function removeRace(p: Programme, raceId: string): Programme {
   return { ...p, races: p.races.filter((r) => r.id !== raceId) }
 }
 
-export function updateRace(p: Programme, raceId: string, patch: Partial<Pick<Race, 'sponsor' | 'sponsorPaid'>>): Programme {
+export function updateRace(p: Programme, raceId: string, patch: Partial<Pick<Race, 'sponsor' | 'supportedBy' | 'sponsorPaid'>>): Programme {
   return { ...p, races: p.races.map((r) => (r.id === raceId ? { ...r, ...patch } : r)) }
 }
 

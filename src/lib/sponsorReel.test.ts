@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SquadMember } from '../types'
-import { logoBackdrop, reelSponsors, splitPlayers } from './sponsorReel'
+import { clubBackers, logoBackdrop, reelOrder, reelSponsors, splitPlayers } from './sponsorReel'
 
 let nextId = 0
 const player = (
@@ -108,5 +108,47 @@ describe('logoBackdrop', () => {
 
   it('uses the blue card for clear logos mixing white and black', () => {
     expect(logoBackdrop(image(CLEAR, [WHITE, BLACK]), 10, 10)).toBe('blue')
+  })
+})
+
+describe('club backers', () => {
+  it('picks the biggest backer as main sponsor and thanks everyone else on £100 or more', () => {
+    const { main, thanks } = clubBackers([
+      { name: 'Three Horseshoes', amount: 350 },
+      { name: 'DGS', amount: 200 },
+      { name: 'Post Office', amount: 100 },
+      { name: 'Kev Brown', amount: 100 },
+      { name: 'Lines Valeting', amount: 40 },
+      { name: 'JSC Locum', amount: 20 },
+    ])
+    expect(main).toBe('Three Horseshoes')
+    expect(thanks).toEqual(['DGS', 'Kev Brown', 'Post Office'])
+  })
+
+  it('adds up a sponsor logged more than once', () => {
+    const { thanks } = clubBackers([
+      { name: 'Big One', amount: 500 },
+      { name: 'Walker Tyres', amount: 60 },
+      { name: 'walker tyres ltd', amount: 60 },
+    ])
+    expect(thanks).toEqual(['Walker Tyres'])
+  })
+
+  it('copes with nothing logged', () => {
+    expect(clubBackers([])).toEqual({ main: null, thanks: [] })
+  })
+})
+
+describe('reel order', () => {
+  it('opens with the main sponsor and brings it back every few slides', () => {
+    expect(reelOrder('M', ['a', 'b', 'c', 'd', 'e'], 2)).toEqual(['M', 'a', 'b', 'M', 'c', 'd', 'M', 'e'])
+  })
+
+  it("doesn't end on a repeat of the main sponsor", () => {
+    expect(reelOrder('M', ['a', 'b'], 2)).toEqual(['M', 'a', 'b'])
+  })
+
+  it('leaves the reel alone with no main sponsor', () => {
+    expect(reelOrder(null, ['a', 'b'])).toEqual(['a', 'b'])
   })
 })

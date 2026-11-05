@@ -103,3 +103,51 @@ export function logoBackdrop(data: Uint8ClampedArray, width: number, height: num
   if (lightShare < 0.2) return 'white'
   return darkShare < 0.15 ? 'none' : 'blue'
 }
+
+/** A Finance → Sponsorships entry, as far as the reel cares. */
+export interface Backer {
+  name: string
+  amount: number
+}
+
+/** Smallest total that earns a club backer a thank-you slide. */
+export const THANK_YOU_MIN = 100
+
+/**
+ * The club's biggest backer (main sponsor slide) and everyone else giving
+ * £100 or more in total (thank-you slides). The same sponsor logged more
+ * than once is added up under one name.
+ */
+export function clubBackers(entries: Backer[], min = THANK_YOU_MIN): { main: string | null; thanks: string[] } {
+  const totals = new Map<string, Backer>()
+  for (const e of entries) {
+    const name = e.name.trim()
+    if (!name || !(e.amount > 0)) continue
+    const key = sponsorWords(name).join(' ') || name.toLowerCase()
+    const existing = totals.get(key)
+    if (existing) existing.amount += e.amount
+    else totals.set(key, { name, amount: e.amount })
+  }
+  const ranked = [...totals.values()].sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name, 'en-GB'))
+  const main = ranked[0]?.name ?? null
+  const thanks = ranked
+    .slice(1)
+    .filter((b) => b.amount >= min)
+    .map((b) => b.name)
+    .sort((a, b) => a.localeCompare(b, 'en-GB', { sensitivity: 'base' }))
+  return { main, thanks }
+}
+
+/** The main sponsor comes back after this many other slides. */
+export const MAIN_EVERY = 6
+
+/** Main sponsor first and every few slides; then the race sponsors, club backers and player sponsors in turn. */
+export function reelOrder<T>(main: T | null, rest: T[], every = MAIN_EVERY): T[] {
+  if (!main) return rest
+  const out: T[] = [main]
+  rest.forEach((slide, i) => {
+    out.push(slide)
+    if ((i + 1) % every === 0 && i + 1 < rest.length) out.push(main)
+  })
+  return out
+}

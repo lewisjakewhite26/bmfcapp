@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { fetchAdminUsers, fetchSquad } from '../lib/clubApi'
+import { fetchAdminUsers, fetchRaceNight, fetchSponsorships, fetchSquad } from '../lib/clubApi'
 import { fetchGraphicsLibrary, resolveGraphicsUrl, type GraphicPlayerPhoto } from '../lib/graphicsApi'
 import { withFullNames } from '../lib/graphics/names'
 import { resolvePlayerPhotoUrl } from '../lib/playerPhotoUrl'
 import { ensureGraphicsFonts, imageToCanvas, loadImage } from '../lib/graphics/assets'
 import { DISPLAY_FONT, TEXT_FONT } from '../lib/graphics/text'
-import { listSharedSponsorLogos, withSharedSponsorLogos } from '../lib/sharedSponsorLogos'
+import { isSponsorPhoto, listSharedSponsorLogos, sponsorLogoFiles, withSharedSponsorLogos, type SharedLogoFile } from '../lib/sharedSponsorLogos'
 import { resolveSponsorLogoUrl } from '../lib/sponsorLogoUrl'
-import { logoBackdrop, reelSponsors, splitPlayers, type LogoBackdrop, type ReelSponsor } from '../lib/sponsorReel'
+import { clubBackers, logoBackdrop, reelOrder, reelSponsors, splitPlayers, type LogoBackdrop, type ReelSponsor } from '../lib/sponsorReel'
 
 /**
  * Sponsors reel: a full-screen, looping background for the TVs at club
- * events (race night). One sponsor at a time under "Proudly sponsored by",
- * slow crossfades in club colours. Picks up new sponsors every few minutes.
+ * events (race night). Slow crossfades in club colours, one slide at a time:
+ *  - the main club sponsor (biggest backer in Finance), first and every few slides
+ *  - each race's sponsor from the Race night programme
+ *  - thank-you slides for club backers on £100 or more
+ *  - player sponsors with their players
+ * Picks up changes every few minutes.
  */
 
 const SLIDE_MS = 8000
@@ -80,14 +84,23 @@ interface SlidePlayer {
   photoUrl: string | null
 }
 
+type SlideKind = 'player' | 'race' | 'main' | 'thanks'
+
 interface ReelSlide {
   /** Unique per slide (a sponsor with lots of players spans several). */
   key: string
+  kind: SlideKind
   name: string
   /** Resolved URL of the logo to show, or null for a name-only slide. */
   logoUrl: string | null
   backdrop: LogoBackdrop
+  /** The "logo" is a photo (a shopfront): shown full-bleed rather than on a card. */
+  photo: boolean
   players: SlidePlayer[]
+  /** Race slides: the race number. */
+  race?: number
+  /** Race slides: who backs the race sponsor ("supported by 13 Apparel"). */
+  support?: { name: string; logoUrl: string | null; backdrop: LogoBackdrop } | null
 }
 
 interface SponsorLogo {
@@ -119,6 +132,22 @@ async function prepareLogo(s: ReelSponsor): Promise<SponsorLogo> {
   }
 }
 
+/** A sponsor named outside the squad (race night, Finance): its logo from the sponsors folder, if any. */
+function logoSource(name: string, files: SharedLogoFile[]): ReelSponsor & { file: string | null } {
+  const { main, light } = sponsorLogoFiles(name, files)
+  return { name, logo: main?.path ?? null, logoLight: light?.path ?? null, players: [], file: main?.name ?? null }
+}
+
+async function namedSlide(kind: SlideKind, key: string, name: string, files: SharedLogoFile[]): Promise<ReelSlide> {
+  const source = logoSource(name, files)
+  const photo = isSponsorPhoto(source.file)
+  const logo = photo
+    ? { logoUrl: resolveSponsorLogoUrl(source.logo), backdrop: 'none' as LogoBackdrop }
+    : await prepareLogo(source)
+  if (logo.logoUrl) void loadImage(logo.logoUrl).catch(() => {})
+  return { key, kind, name, ...logo, photo, players: [] }
+}
+
 /** Each player's default Matchday graphics cut-out (or their first one). */
 function defaultCutouts(photos: GraphicPlayerPhoto[]): Map<string, string> {
   const byPlayer = new Map<string, GraphicPlayerPhoto>()
@@ -135,17 +164,19 @@ function defaultCutouts(photos: GraphicPlayerPhoto[]): Map<string, string> {
 }
 
 async function buildSlides(): Promise<ReelSlide[]> {
-  const [squad, logos, users, library] = await Promise.all([
+  const [squad, logos, users, library, raceNight, sponsorships] = await Promise.all([
     fetchSquad(),
     listSharedSponsorLogos(),
-    // Full names and cut-outs are admin-only; committee members still get a reel without them.
+    // Full names, cut-outs, race night and Finance are admin-only; committee members still get a reel without them.
     fetchAdminUsers().catch(() => []),
     fetchGraphicsLibrary().catch(() => ({ photos: [] as GraphicPlayerPhoto[] })),
+    fetchRaceNight().catch(() => null),
+    fetchSponsorships().catch(() => []),
   ])
   const cutouts = defaultCutouts(library.photos)
   const sponsors = reelSponsors(withSharedSponsorLogos(withFullNames(squad, users), logos))
   const prepared = await Promise.all(sponsors.map(prepareLogo))
-  const slides: ReelSlide[] = []
+  const playerSlides: ReelSlide[] = []
   sponsors.forEach((sponsor, i) => {
     const players: SlidePlayer[] = sponsor.players.map((p) => ({
       playerId: p.playerId,
@@ -159,10 +190,34 @@ async function buildSlides(): Promise<ReelSlide[]> {
       if (url) void loadImage(url).catch(() => {})
     }
     splitPlayers(players).forEach((group, g) => {
-      slides.push({ key: `${sponsor.name}-${g}`, name: sponsor.name, ...prepared[i], players: group })
+      playerSlides.push({ key: `${sponsor.name}-${g}`, kind: 'player', name: sponsor.name, ...prepared[i], photo: false, players: group })
     })
   })
-  return slides
+
+  const raceSlides = await Promise.all(
+    (raceNight?.programme.races ?? []).flatMap((race, i) => {
+      const name = race.sponsor.trim()
+      if (!name) return []
+      return [
+        (async (): Promise<ReelSlide> => {
+          const slide = await namedSlide('race', `race-${race.id}`, name, logos)
+          const backer = race.supportedBy.trim()
+          const support = backer ? await namedSlide('race', `race-${race.id}-support`, backer, logos) : null
+          return {
+            ...slide,
+            race: i + 1,
+            support: support ? { name: support.name, logoUrl: support.photo ? null : support.logoUrl, backdrop: support.backdrop } : null,
+          }
+        })(),
+      ]
+    }),
+  )
+
+  const backers = clubBackers(sponsorships.map((s) => ({ name: s.sponsor_name, amount: Number(s.amount) || 0 })))
+  const mainSlide = backers.main ? await namedSlide('main', 'main', backers.main, logos) : null
+  const thanksSlides = await Promise.all(backers.thanks.map((name) => namedSlide('thanks', `thanks-${name}`, name, logos)))
+
+  return reelOrder(mainSlide, [...raceSlides, ...thanksSlides, ...playerSlides])
 }
 
 const CARD_STYLE: Record<LogoBackdrop, React.CSSProperties> = {
@@ -321,7 +376,110 @@ function PlayerTile({ player, slotWidth, photoHeight, index, count }: {
   )
 }
 
+const THANKS_LINE = 'for their continued support of Bishop Middleham Football Club'
+
+/** A shopfront or similar photo, framed in gold. */
+function PhotoCard({ url, width, height, onError }: { url: string; width: number; height: number; onError: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 1.6, delay: 0.5, ease: 'easeOut' }}
+      style={{ width, height, borderRadius: 36, overflow: 'hidden', border: `8px solid ${GOLD}`, boxShadow: '0 30px 80px rgba(0, 0, 0, 0.4)', boxSizing: 'border-box' }}
+    >
+      <img src={url} alt="" onError={onError} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+    </motion.div>
+  )
+}
+
+/** Main sponsor, race sponsor and thank-you slides: one name, its logo (or photo), and a line of words. */
+function NamedSlide({ slide }: { slide: ReelSlide }) {
+  const [logoFailed, setLogoFailed] = useState(false)
+  const [supportFailed, setSupportFailed] = useState(false)
+  const showLogo = !!slide.logoUrl && !logoFailed
+  const support = slide.support ?? null
+  const supportLogo = support?.logoUrl && !supportFailed ? support.logoUrl : null
+  const rise = (delay: number) => ({
+    initial: { opacity: 0, y: 16 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 1.2, delay, ease: 'easeOut' as const },
+  })
+
+  const label =
+    slide.kind === 'main' ? 'Main club sponsor' : slide.kind === 'thanks' ? 'Thank you' : `Race ${slide.race} · sponsored by`
+  const big = slide.kind === 'main'
+  // Room for the "supported by" row on race slides that have one.
+  const logoW = big ? 1000 : support ? 760 : 880
+  const logoH = big ? 500 : support ? 360 : 440
+
+  return (
+    <motion.div
+      className="absolute inset-0 flex flex-col items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.8, ease: 'easeIn' } }}
+      transition={{ duration: 1, ease: 'easeOut' }}
+    >
+      <motion.p {...rise(0.3)} style={{ ...LABEL_STYLE, fontSize: slide.kind === 'thanks' ? 48 : 40 }}>
+        {label}
+      </motion.p>
+      {showLogo ? (
+        <div style={{ marginTop: 52 }}>
+          {slide.photo ? (
+            <PhotoCard url={slide.logoUrl!} width={big ? 1000 : 900} height={big ? 560 : 500} onError={() => setLogoFailed(true)} />
+          ) : (
+            <LogoCard url={slide.logoUrl!} backdrop={slide.backdrop} width={logoW} height={logoH} padding={big ? 64 : 52} onError={() => setLogoFailed(true)} />
+          )}
+        </div>
+      ) : null}
+      <motion.h1
+        {...rise(showLogo ? 0.8 : 0.5)}
+        style={{
+          ...NAME_STYLE,
+          fontSize: Math.round(nameSize(slide.name) * (showLogo ? (support ? 0.85 : 1) : 1.5)),
+          maxWidth: 1600,
+          marginTop: showLogo ? 44 : 40,
+        }}
+      >
+        {slide.name}
+      </motion.h1>
+      {support ? (
+        <motion.div {...rise(1.1)} style={{ marginTop: 36, display: 'flex', alignItems: 'center', gap: 28 }}>
+          <span style={{ ...LABEL_STYLE, fontSize: 30, letterSpacing: '0.24em', color: 'rgba(255,255,255,0.7)' }}>Supported by</span>
+          {supportLogo ? (
+            <div style={{ width: 260, height: 110, borderRadius: 20, ...CARD_STYLE[support.backdrop], display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, boxSizing: 'border-box' }}>
+              <img src={supportLogo} alt="" onError={() => setSupportFailed(true)} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }} />
+            </div>
+          ) : null}
+          <span style={{ ...NAME_STYLE, fontSize: 52, color: GOLD }}>{support.name}</span>
+        </motion.div>
+      ) : null}
+      {slide.kind === 'thanks' ? (
+        <motion.p
+          {...rise(1.1)}
+          style={{
+            fontFamily: `'${TEXT_FONT}', Inter, system-ui, sans-serif`,
+            fontSize: 40,
+            fontWeight: 500,
+            color: 'rgba(255,255,255,0.85)',
+            textAlign: 'center',
+            maxWidth: 1400,
+            marginTop: 28,
+          }}
+        >
+          {THANKS_LINE}
+        </motion.p>
+      ) : null}
+    </motion.div>
+  )
+}
+
 function SponsorSlide({ sponsor }: { sponsor: ReelSlide }) {
+  if (sponsor.kind !== 'player') return <NamedSlide slide={sponsor} />
+  return <PlayerSponsorSlide sponsor={sponsor} />
+}
+
+function PlayerSponsorSlide({ sponsor }: { sponsor: ReelSlide }) {
   const { logoUrl, players } = sponsor
   const [logoFailed, setLogoFailed] = useState(false)
   const showLogo = !!logoUrl && !logoFailed
@@ -550,7 +708,7 @@ export default function AdminSponsorsReel() {
             count <= 40 &&
             sponsors!.map((s, i) => (
               <span
-                key={s.key}
+                key={`${i}-${s.key}`}
                 style={{
                   width: i === index % count ? 34 : 10,
                   height: 10,

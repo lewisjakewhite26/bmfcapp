@@ -97,6 +97,7 @@ export function RaceView({ programme, race, raceIndex, mode, onMode, edit, onSho
         </div>
 
         {editingSponsor ? (
+          <div className="space-y-2">
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -118,6 +119,16 @@ export function RaceView({ programme, race, raceIndex, mode, onMode, edit, onSho
               Done
             </button>
           </div>
+          <input
+            type="text"
+            value={race.supportedBy}
+            onChange={(e) => edit((p) => updateRace(p, race.id, { supportedBy: e.target.value }))}
+            onKeyDown={(e) => e.key === 'Enter' && setEditingSponsor(false)}
+            className="input-field text-sm w-full"
+            placeholder="Supported by (optional), e.g. who sponsors the sponsor"
+            aria-label="Race sponsor supported by"
+          />
+          </div>
         ) : (
           <button
             type="button"
@@ -129,6 +140,7 @@ export function RaceView({ programme, race, raceIndex, mode, onMode, edit, onSho
                 <>
                   Sponsored by <b className="text-brand-navy">{race.sponsor}</b>
                   <PaidDot paid={race.sponsorPaid} />
+                  {race.supportedBy.trim() && <> · supported by <b className="text-brand-navy">{race.supportedBy}</b></>}
                 </>
               ) : (
                 'No sponsor yet'

@@ -122,6 +122,11 @@ export function RaceNightTv({ programme, onClose, startIndex = 0 }: RaceNightTvP
                 <p className="font-display font-semibold leading-tight text-[3.4vw]" style={{ color: GOLD }}>
                   {race.sponsor}
                 </p>
+                {race.supportedBy.trim() && (
+                  <p className="text-[1.5vw] text-white/70 mt-[0.4vh]">
+                    supported by <span className="font-semibold text-white">{race.supportedBy}</span>
+                  </p>
+                )}
               </div>
             )}
           </div>
