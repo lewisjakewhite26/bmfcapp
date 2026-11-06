@@ -7,8 +7,6 @@ import {
   addRaceNightBet,
   fetchRaceNight,
   fetchRaceNightBook,
-  payRaceNightBet,
-  saveRaceNightMoney,
   setRaceNightRun,
   voidRaceNightBet,
   type RaceNightBook,
@@ -17,13 +15,11 @@ import { pageContainerClass } from '../lib/layout'
 import { isRunnerFilled, type Programme, type Race } from '../lib/raceNight'
 import {
   WINNERS_SHARE,
-  checkTicket,
   money,
   nightSummary,
   parseAmount,
   stakesByRunner,
   type Bet,
-  type MoneySettings,
 } from '../lib/raceNightBets'
 
 /**
@@ -169,10 +165,12 @@ function TakeBets({
 
       {taken ? (
         <div className="rounded-card p-4 text-white text-center shadow-lg" style={{ background: '#0D1B4B' }}>
-          <p className="text-xs uppercase tracking-[0.2em] text-brand-gold font-bold">Write on the slip</p>
-          <p className="font-display text-5xl mt-1">Ticket {taken.ticket}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-brand-gold font-bold">Bet taken ✓</p>
+          <p className="font-display text-4xl mt-1">
+            {money(taken.amount)} on #{taken.runner}
+          </p>
           <p className="text-lg mt-1">
-            Race {raceIndex + 1} · #{taken.runner} {runnerLabel(race, taken.runner)} · <b>{money(taken.amount)}</b>
+            {runnerLabel(race, taken.runner)} · hand over {taken.amount === 1 ? '1 ticket' : `${Math.round(taken.amount)} tickets`}
           </p>
           <button type="button" onClick={() => setTaken(null)} className="mt-3 text-sm underline text-white/80 min-h-[44px]">
             Next bet
@@ -225,7 +223,7 @@ function TakeBets({
                 inputMode="decimal"
                 value={amountText}
                 onChange={(e) => setAmountText(e.target.value)}
-                placeholder="Stake"
+                placeholder="£1 per ticket"
                 className="input-field text-2xl flex-1"
                 aria-label="Stake in pounds"
               />
@@ -275,7 +273,7 @@ function TakeBets({
             {recent.map((b) => (
               <li key={b.ticket} className={`flex items-center justify-between gap-2 py-2 text-sm ${b.voided ? 'opacity-50 line-through' : ''}`}>
                 <span className="min-w-0 truncate">
-                  <b>#{b.ticket}</b> · {b.runner} {runnerLabel(race, b.runner)}
+                  <b>#{b.runner}</b> {runnerLabel(race, b.runner)}
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
                   <b>{money(b.amount)}</b>
@@ -351,59 +349,19 @@ function Stat({ label, value, note, strong }: { label: string; value: string; no
   )
 }
 
-function MoneyField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
-  const [text, setText] = useState(value ? String(value) : '')
-  useEffect(() => setText(value ? String(value) : ''), [value])
-  return (
-    <label className="flex items-center justify-between gap-3 text-sm">
-      <span>{label}</span>
-      <span className="flex items-center gap-1">
-        £
-        <input
-          inputMode="decimal"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onBlur={() => {
-            const n = Number(text.replace(/[£,\s]/g, ''))
-            onChange(Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0)
-          }}
-          className="input-field w-24 text-right"
-          placeholder="0"
-        />
-      </span>
-    </label>
-  )
-}
-
 function MoneyTab({
   programme,
   book,
   refresh,
-  setBook,
 }: {
   programme: Programme
   book: RaceNightBook
   refresh: () => Promise<void>
-  setBook: (b: RaceNightBook) => void
 }) {
   const runs = useMemo(() => new Set(book.runs), [book.runs])
   const summary = useMemo(() => nightSummary(programme, book.bets, runs, book.money), [programme, book, runs])
-  const [ticketText, setTicketText] = useState('')
   const [confirmRun, setConfirmRun] = useState<string | null>(null)
-  const [showSettings, setShowSettings] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
-
-  const ticket = Number(ticketText)
-  const check = ticketText && Number.isInteger(ticket) && ticket > 0 ? checkTicket(ticket, programme, book.bets, runs) : null
-
-  const pay = async (t: number, paid: boolean) => {
-    try {
-      await payRaceNightBet(t, paid)
-      void refresh()
-    } catch {
-      setProblem("Couldn't save that. Try again.")
-    }
-  }
 
   const markRun = async (raceId: string, run: boolean) => {
     setConfirmRun(null)
@@ -415,24 +373,13 @@ function MoneyTab({
     }
   }
 
-  const saveMoney = async (m: MoneySettings) => {
-    setBook({ ...book, money: m })
-    try {
-      await saveRaceNightMoney(m)
-    } catch {
-      setProblem("Couldn't save the fees. Try again.")
-    }
-  }
-
   return (
     <div className="space-y-4">
       {problem ? <p className="text-sm text-red-700 font-semibold">{problem}</p> : null}
 
       <div className="grid grid-cols-2 gap-2">
-        <Stat label="Bets taken" value={money(summary.betsTaken)} note={`${book.bets.filter((b) => !b.voided).length} bets`} />
-        <Stat label="Entries & sponsors" value={money(summary.entries)} note="marked as paid" />
-        <Stat label="Paid to punters" value={money(summary.toPunters)} note={summary.outstanding ? `${money(summary.outstanding)} still to hand over` : 'races run so far'} />
-        <Stat label="Owner & jockey prizes" value={money(summary.prizes)} note="races run so far" />
+        <Stat label="Bets taken" value={money(summary.betsTaken)} note={`${book.bets.filter((b) => !b.voided).length} sales`} />
+        <Stat label="To winning punters" value={money(summary.toPunters)} note="races run so far" />
         <div className="col-span-2">
           <Stat
             strong
@@ -443,62 +390,12 @@ function MoneyTab({
         </div>
       </div>
 
-      <div className="glass-card p-4 space-y-3">
-        <p className="font-semibold text-brand-navy">Pay out a ticket</p>
-        <input
-          inputMode="numeric"
-          value={ticketText}
-          onChange={(e) => setTicketText(e.target.value.replace(/\D/g, ''))}
-          placeholder="Ticket number"
-          className="input-field text-2xl w-full"
-          aria-label="Ticket number"
-        />
-        {check ? (
-          check.kind === 'unknown' ? (
-            <p className="text-sm text-gray-600">No ticket with that number.</p>
-          ) : check.kind === 'voided' ? (
-            <p className="text-sm text-gray-600">That bet was cancelled.</p>
-          ) : check.kind === 'not-run' ? (
-            <p className="text-sm text-gray-600">Race {check.raceNumber} hasn't been run yet.</p>
-          ) : check.kind === 'no-result' ? (
-            <p className="text-sm text-gray-600">Race {check.raceNumber} has run but its winner isn't entered yet.</p>
-          ) : check.kind === 'lost' ? (
-            <p className="text-sm font-semibold text-gray-700">
-              Not a winner. Race {check.raceNumber}, #{check.bet.runner}, {money(check.bet.amount)}.
-            </p>
-          ) : (
-            <div className="rounded-card p-3 bg-emerald-50 border border-emerald-300 space-y-2">
-              <p className="text-emerald-900">
-                <b className="text-2xl font-display">Pay {money(check.payout)}</b>
-                <br />
-                <span className="text-sm">
-                  Race {check.raceNumber}, #{check.bet.runner}, staked {money(check.bet.amount)}
-                </span>
-              </p>
-              {check.bet.paidOut ? (
-                <p className="text-sm font-semibold text-emerald-900">
-                  Already paid.{' '}
-                  <button type="button" className="underline" onClick={() => void pay(check.bet.ticket, false)}>
-                    Undo
-                  </button>
-                </p>
-              ) : (
-                <button type="button" onClick={() => void pay(check.bet.ticket, true)} className="btn-primary w-full min-h-[48px]">
-                  Mark as paid
-                </button>
-              )}
-            </div>
-          )
-        ) : null}
-      </div>
-
       <div className="space-y-2">
         <p className="font-semibold text-brand-navy px-1">Race by race</p>
         {programme.races.map((race, i) => {
           const s = summary.races[i]
           const run = runs.has(race.id)
           const winner = s.winners.length ? race.runners.find((r) => r.number === s.winners[0]) : null
-          const winningBets = book.bets.filter((b) => s.payouts.has(b.ticket))
           return (
             <div key={race.id} className="glass-card p-4 space-y-2">
               <div className="flex items-center justify-between gap-2">
@@ -532,44 +429,19 @@ function MoneyTab({
                   <p className="text-sm">
                     Winner <b>#{winner.number} {winner.horse.trim() || winner.owner.trim()}</b>
                   </p>
-                  {winningBets.length ? (
-                    <ul className="text-sm divide-y divide-gray-100">
-                      {winningBets.map((b) => (
-                        <li key={b.ticket} className="flex items-center justify-between gap-2 py-1.5">
-                          <span>
-                            Ticket <b>{b.ticket}</b> · staked {money(b.amount)}
-                          </span>
-                          <span className="flex items-center gap-2">
-                            <b>{money(s.payouts.get(b.ticket) ?? 0)}</b>
-                            <button
-                              type="button"
-                              onClick={() => void pay(b.ticket, !b.paidOut)}
-                              className={`rounded-pill px-3 min-h-[36px] text-xs font-bold ${b.paidOut ? 'bg-emerald-100 text-emerald-800' : 'bg-brand-blue text-white'}`}
-                            >
-                              {b.paidOut ? 'Paid ✓' : 'Pay'}
-                            </button>
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                  {s.winningStakes > 0 ? (
+                    <div className="rounded-card p-3 bg-emerald-50 border border-emerald-300 text-emerald-900">
+                      <p className="font-display text-3xl leading-tight">Pays {money(s.perPound)} per ticket</p>
+                      <p className="text-sm mt-1">
+                        {Math.round(s.winningStakes)} winning ticket{Math.round(s.winningStakes) === 1 ? '' : 's'} sold · {money(s.paidToPunters)} to pay out in total
+                      </p>
+                    </div>
                   ) : (
                     <p className="text-sm text-gray-600">Nobody backed the winner: the club keeps the pot.</p>
                   )}
-                  <div className="text-sm text-gray-700 space-y-0.5">
-                    {book.money.ownerPrize && winner.owner.trim() ? (
-                      <p>
-                        Owner {winner.owner.trim()}: <b>{money(book.money.ownerPrize)}</b>
-                      </p>
-                    ) : null}
-                    {book.money.jockeyPrize && winner.jockey.trim() ? (
-                      <p>
-                        Jockey {winner.jockey.trim()}: <b>{money(book.money.jockeyPrize)}</b>
-                      </p>
-                    ) : null}
-                    <p>
-                      Club keeps <b>{money(s.clubKeeps)}</b> of the pot
-                    </p>
-                  </div>
+                  <p className="text-sm text-gray-700">
+                    Club keeps <b>{money(s.clubKeeps)}</b> of the pot
+                  </p>
                   <button type="button" onClick={() => void markRun(race.id, false)} className="text-xs text-gray-400 underline">
                     Not run after all? Undo
                   </button>
@@ -580,24 +452,6 @@ function MoneyTab({
         })}
       </div>
 
-      <div className="glass-card p-4 space-y-3">
-        <button type="button" onClick={() => setShowSettings((v) => !v)} className="w-full flex items-center justify-between font-semibold text-brand-navy min-h-[40px]">
-          Entry fees and prizes
-          <span className="text-brand-blue text-sm">{showSettings ? 'Hide' : 'Edit'}</span>
-        </button>
-        {showSettings ? (
-          <div className="space-y-2">
-            <p className="text-xs text-gray-500">Money in, per entry marked as paid in the programme:</p>
-            <MoneyField label="Horse name" value={book.money.horseFee} onChange={(v) => void saveMoney({ ...book.money, horseFee: v })} />
-            <MoneyField label="Owner" value={book.money.ownerFee} onChange={(v) => void saveMoney({ ...book.money, ownerFee: v })} />
-            <MoneyField label="Jockey" value={book.money.jockeyFee} onChange={(v) => void saveMoney({ ...book.money, jockeyFee: v })} />
-            <MoneyField label="Race sponsor" value={book.money.sponsorFee} onChange={(v) => void saveMoney({ ...book.money, sponsorFee: v })} />
-            <p className="text-xs text-gray-500 pt-2">Money out, per race won:</p>
-            <MoneyField label="Winning owner gets" value={book.money.ownerPrize} onChange={(v) => void saveMoney({ ...book.money, ownerPrize: v })} />
-            <MoneyField label="Winning jockey gets" value={book.money.jockeyPrize} onChange={(v) => void saveMoney({ ...book.money, jockeyPrize: v })} />
-          </div>
-        ) : null}
-      </div>
     </div>
   )
 }
@@ -605,7 +459,7 @@ function MoneyTab({
 /* ------------------------------------------------------------------ */
 
 export default function AdminRaceNightBets() {
-  const { programme, book, error, refresh, setBook } = useRaceNightData()
+  const { programme, book, error, refresh } = useRaceNightData()
   const [tab, setTab] = useState<Tab>('bets')
   const [raceIndex, setRaceIndex] = useState(0)
 
@@ -656,7 +510,7 @@ export default function AdminRaceNightBets() {
           ) : tab === 'bets' ? (
             <TakeBets programme={programme} book={book} raceIndex={raceIndex} setRaceIndex={setRaceIndex} refresh={refresh} />
           ) : (
-            <MoneyTab programme={programme} book={book} refresh={refresh} setBook={setBook} />
+            <MoneyTab programme={programme} book={book} refresh={refresh} />
           )}
         </div>
       </div>

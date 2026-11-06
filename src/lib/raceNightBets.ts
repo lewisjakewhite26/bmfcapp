@@ -99,6 +99,8 @@ export interface RaceSettlement {
   /** Known only once the race has run and its winner is entered. */
   winners: number[]
   winningStakes: number
+  /** What each £1 staked on the winner gets back (each £1 printed ticket). */
+  perPound: number
   /** Ticket → amount to hand over. */
   payouts: Map<number, number>
   paidToPunters: number
@@ -116,13 +118,14 @@ export function settleRace(race: Race, bets: Bet[], run: boolean): RaceSettlemen
   const winning = live.filter((b) => winners.includes(b.runner))
   const winStakeP = winning.reduce((s, b) => s + p(b.amount), 0)
 
+  // Pay per £1 staked, rounded down to the penny; any odd pennies stay with the club.
+  const perPoundP = winStakeP > 0 ? Math.floor((shareP * 100) / winStakeP) : 0
   const payouts = new Map<number, number>()
   let paidP = 0
   let outstandingP = 0
   if (winStakeP > 0) {
     for (const b of winning) {
-      // Rounded down to the penny; any odd pennies stay with the club.
-      const amt = Math.floor((shareP * p(b.amount)) / winStakeP)
+      const amt = Math.round((perPoundP * p(b.amount)) / 100)
       payouts.set(b.ticket, pounds(amt))
       paidP += amt
       if (!b.paidOut) outstandingP += amt
@@ -137,6 +140,7 @@ export function settleRace(race: Race, bets: Bet[], run: boolean): RaceSettlemen
     run,
     winners,
     winningStakes: pounds(winStakeP),
+    perPound: pounds(perPoundP),
     payouts,
     paidToPunters: pounds(paidP),
     outstanding: pounds(outstandingP),

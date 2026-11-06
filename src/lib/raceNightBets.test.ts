@@ -46,6 +46,7 @@ describe('settling a race', () => {
     expect(s.pot).toBe(20)
     expect(s.winnersShare).toBe(10)
     expect(s.winners).toEqual([3])
+    expect(s.perPound).toBe(1.25)
     expect(s.payouts.get(bets[0].ticket)).toBe(2.5)
     expect(s.payouts.get(bets[1].ticket)).toBe(7.5)
     expect(s.payouts.has(bets[2].ticket)).toBe(false)
@@ -56,6 +57,7 @@ describe('settling a race', () => {
   it('rounds payouts down to the penny and the club keeps the odd pennies', () => {
     const bets = [bet(3, 1), bet(3, 1), bet(3, 1), bet(1, 7)] // pot £10, share £5 over 3 tickets
     const s = settleRace(programme().races[0], bets, true)
+    expect(s.perPound).toBe(1.66)
     expect([...s.payouts.values()]).toEqual([1.66, 1.66, 1.66])
     expect(s.paidToPunters).toBe(4.98)
     expect(s.clubKeeps).toBe(5.02)
