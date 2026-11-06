@@ -102,6 +102,19 @@ export default function AdminRaceNight() {
 
           {programme && !printing && !race && (
             <Link
+              to="/admin/race-night/bets"
+              className="glass-card flex items-center justify-between gap-3 p-4 border border-brand-blue/30"
+            >
+              <span>
+                <b className="block text-brand-navy">Betting desk</b>
+                <span className="text-sm text-gray-600">Take bets on phones, pay out tickets, see the money</span>
+              </span>
+              <span className="text-brand-blue font-semibold shrink-0">Open →</span>
+            </Link>
+          )}
+
+          {programme && !printing && !race && (
+            <Link
               to="/admin/race-night/show"
               className="glass-card flex items-center justify-between gap-3 p-4 border border-brand-gold/40"
             >

@@ -105,12 +105,14 @@ export async function listSharedImages(bucket: string, folder: string): Promise<
  */
 export const BUNDLED_SPONSOR_LOGOS = [
   'DGS Limited.png',
+  'Hallimond and Sons Plastering and Rendering.png',
   'Hockings Butchery.png',
   'Lew and Als Mobile Mince and Dumplings.png',
   'Post Office.jpg',
   'Sqew.png',
   'Three Horseshoes.png',
   'Turnbulls FC Clothing.png',
+  'Village Dairy Farm.png',
 ]
 
 /** Bundled files that are photos (a shopfront, say) rather than logos: shown full-bleed, not on a logo card. */

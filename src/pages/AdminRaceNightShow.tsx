@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { fetchRaceNight } from '../lib/clubApi'
+import { fetchRaceNight, setRaceNightRun } from '../lib/clubApi'
 import { ensureGraphicsFonts } from '../lib/graphics/assets'
 import { DISPLAY_FONT, TEXT_FONT } from '../lib/graphics/text'
 import { isRunnerFilled, ordinal, placedRunners, type Programme, type Race, type Runner } from '../lib/raceNight'
@@ -483,9 +483,11 @@ export default function AdminRaceNightShow() {
   }, [stage, goTo])
 
   const onVideoEnded = useCallback(() => {
+    // Closes betting on this race for good and lets the betting desk show payouts.
+    if (race) void setRaceNightRun(race.id, true).catch(() => {})
     void load()
     goTo('result')
-  }, [load, goTo])
+  }, [race, load, goTo])
 
   const togglePause = useCallback(() => {
     const v = videoRef.current
