@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { fetchRaceNight } from '../lib/clubApi'
 import { ensureGraphicsFonts } from '../lib/graphics/assets'
@@ -379,7 +379,12 @@ export default function AdminRaceNightShow() {
   const [programme, setProgramme] = useState<Programme | null>(null)
   const [loadError, setLoadError] = useState(false)
   const [logos, setLogos] = useState<SharedLogoFile[]>([])
-  const [nextRace, setNextRace] = useState(readProgress)
+  const [params] = useSearchParams()
+  // "Show on TV" from a race opens the show ready to run that race.
+  const [nextRace, setNextRace] = useState(() => {
+    const asked = Number(params.get('race'))
+    return Number.isInteger(asked) && asked > 0 ? asked - 1 : readProgress()
+  })
   const [current, setCurrent] = useState<number | null>(null)
   const [stage, setStage] = useState<ShowStage>('reel')
   const [stageEndsAt, setStageEndsAt] = useState<number | null>(null)
