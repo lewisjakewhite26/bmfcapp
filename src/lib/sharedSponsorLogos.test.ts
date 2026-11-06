@@ -132,6 +132,8 @@ describe('home game sponsor choices', () => {
     expect(matchSharedLogo('DGS Limited', files)?.name).toBe('DGS Limited.png')
     expect(matchSharedLogo('SQEW Limited', files)?.name).toBe('Sqew.png')
     expect(matchSharedLogo('Post Office', files)?.name).toBe('Post Office.jpg')
+    expect(matchSharedLogo('Hallimond & Sons Plastering & Rendering', files)?.name).toBe('Hallimond and Sons Plastering and Rendering.png')
+    expect(matchSharedLogo('Village Dairy Farm', files)?.name).toBe('Village Dairy Farm.png')
     expect(matchSharedLogo("Lew & Al's Mobile Mince & Dumplings", files)?.name).toBe('Lew and Als Mobile Mince and Dumplings.png')
   })
 })

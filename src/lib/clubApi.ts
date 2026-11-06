@@ -1,4 +1,5 @@
 import { defaultProgramme, normaliseProgramme, type Programme } from './raceNight'
+import { normaliseMoney, type Bet, type MoneySettings } from './raceNightBets'
 import { hasOriginalDatePassed, isUpcomingScheduledFixture, isVisiblePostponedFixture } from './fixtureFilters'
 import { supabase, isSupabaseConfigured } from './supabase'
 import { findClubTableRow } from './clubTeams'
@@ -2709,4 +2710,117 @@ export async function saveRaceNight(programme: Programme, expectedVersion: numbe
   })
   if (error) throw error
   return (data as { version: number }).version
+}
+
+
+/* ---------------- Race night bets ---------------- */
+
+export interface RaceNightBook {
+  bets: Bet[]
+  /** Race ids whose video has played: payouts show only for these. */
+  runs: string[]
+  money: MoneySettings
+}
+
+export const RACE_ALREADY_RUN = 'Race already run'
+
+const mockBook: { bets: Bet[]; runs: string[]; money: MoneySettings; next: number } = {
+  bets: [],
+  runs: [],
+  money: normaliseMoney({}),
+  next: 1,
+}
+
+function raceNightSession() {
+  const session = getClubSession()
+  if (!session) throw new Error('Not signed in')
+  return { p_admin_id: session.userId, p_session_token: session.sessionToken }
+}
+
+export async function fetchRaceNightBook(): Promise<RaceNightBook> {
+  if (isMockDataMode()) {
+    await delay(40)
+    return structuredClone({ bets: mockBook.bets, runs: mockBook.runs, money: mockBook.money })
+  }
+  const { data, error } = await supabase.rpc('admin_get_race_night_bets', raceNightSession())
+  if (error) throw error
+  const row = (data ?? {}) as { bets?: unknown[]; runs?: unknown[]; money?: unknown }
+  return {
+    bets: (row.bets ?? []).map((b) => {
+      const o = b as Record<string, unknown>
+      return {
+        ticket: Number(o.ticket),
+        raceId: String(o.raceId ?? ''),
+        runner: Number(o.runner),
+        amount: Number(o.amount),
+        voided: o.voided === true,
+        paidOut: o.paidOut === true,
+        createdAt: String(o.createdAt ?? ''),
+      }
+    }),
+    runs: (row.runs ?? []).map(String),
+    money: normaliseMoney(row.money),
+  }
+}
+
+/** Takes a bet and returns its ticket number. Throws RACE_ALREADY_RUN once the race has run. */
+export async function addRaceNightBet(raceId: string, runner: number, amount: number): Promise<number> {
+  if (isMockDataMode()) {
+    await delay(40)
+    if (mockBook.runs.includes(raceId)) throw new Error(RACE_ALREADY_RUN)
+    const ticket = mockBook.next++
+    mockBook.bets.push({ ticket, raceId, runner, amount, voided: false, paidOut: false, createdAt: new Date().toISOString() })
+    return ticket
+  }
+  const { data, error } = await supabase.rpc('admin_add_race_night_bet', {
+    ...raceNightSession(),
+    p_race_id: raceId,
+    p_runner: runner,
+    p_amount: amount,
+  })
+  if (error) {
+    if (error.message?.includes(RACE_ALREADY_RUN)) throw new Error(RACE_ALREADY_RUN)
+    throw error
+  }
+  return Number((data as { ticket: number }).ticket)
+}
+
+export async function voidRaceNightBet(ticket: number, voided: boolean): Promise<void> {
+  if (isMockDataMode()) {
+    const b = mockBook.bets.find((x) => x.ticket === ticket && !x.paidOut)
+    if (b) b.voided = voided
+    return
+  }
+  const { error } = await supabase.rpc('admin_void_race_night_bet', { ...raceNightSession(), p_ticket: ticket, p_voided: voided })
+  if (error) throw error
+}
+
+export async function payRaceNightBet(ticket: number, paid: boolean): Promise<void> {
+  if (isMockDataMode()) {
+    const b = mockBook.bets.find((x) => x.ticket === ticket && !x.voided)
+    if (b) b.paidOut = paid
+    return
+  }
+  const { error } = await supabase.rpc('admin_pay_race_night_bet', { ...raceNightSession(), p_ticket: ticket, p_paid: paid })
+  if (error) throw error
+}
+
+/** Marks a race as run (its video has played), or undoes that. */
+export async function setRaceNightRun(raceId: string, run: boolean): Promise<void> {
+  if (isMockDataMode()) {
+    mockBook.runs = mockBook.runs.filter((r) => r !== raceId)
+    if (run) mockBook.runs.push(raceId)
+    return
+  }
+  const { error } = await supabase.rpc('admin_set_race_night_run', { ...raceNightSession(), p_race_id: raceId, p_run: run })
+  if (error) throw error
+}
+
+export async function saveRaceNightMoney(money: MoneySettings): Promise<void> {
+  if (isMockDataMode()) {
+    mockBook.money = { ...money }
+    return
+  }
+  const { error } = await supabase.rpc('admin_save_race_night_money', { ...raceNightSession(), p_data: money })
+  if (error) throw error
 }
