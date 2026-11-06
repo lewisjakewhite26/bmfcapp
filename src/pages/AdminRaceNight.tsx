@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Navbar } from '../components/ui/Navbar'
 import { PageShell } from '../components/ui/PageBackground'
-import { RaceNightTv } from '../components/admin/RaceNightTv'
 import { Overview } from '../components/admin/raceNight/Overview'
 import { PrintProgramme } from '../components/admin/raceNight/PrintProgramme'
 import { RaceStrip } from '../components/admin/raceNight/RaceStrip'
@@ -17,7 +16,9 @@ const SWIPE_PX = 70
 export default function AdminRaceNight() {
   const { programme, status, loadError, edit, reload, flush } = useRaceNightDoc()
   const [params, setParams] = useSearchParams()
-  const [tvStart, setTvStart] = useState<number | null>(null)
+  const navigate = useNavigate()
+  // The TV only ever runs the race night show, which keeps results hidden until each race has played.
+  const showOnTv = (raceIndex: number) => navigate(`/admin/race-night/show?race=${raceIndex + 1}`)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
 
   const raceId = params.get('race')
@@ -117,7 +118,7 @@ export default function AdminRaceNight() {
               programme={programme}
               onOpenRace={openRace}
               onAddRace={createRace}
-              onShowTv={() => setTvStart(0)}
+              onShowTv={() => showOnTv(0)}
               onPrint={() => setParams({ view: 'print' })}
             />
           )}
@@ -147,7 +148,7 @@ export default function AdminRaceNight() {
                 mode={mode}
                 onMode={(m) => openRace(race.id, m)}
                 edit={edit}
-                onShowTv={() => setTvStart(raceIndex)}
+                onShowTv={() => showOnTv(raceIndex)}
                 onRemoveRace={() => {
                   edit((p) => removeRace(p, race.id))
                   toOverview()
@@ -159,10 +160,6 @@ export default function AdminRaceNight() {
 
         {programme && printing && <PrintProgramme programme={programme} />}
       </div>
-
-      {programme && tvStart !== null && (
-        <RaceNightTv programme={programme} startIndex={tvStart} onClose={() => setTvStart(null)} />
-      )}
     </PageShell>
   )
 }

@@ -1,9 +1,16 @@
 /// <reference lib="webworker" />
-import { precacheAndRoute } from 'workbox-precaching'
+import { clientsClaim } from 'workbox-core'
+import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string; revision: string | null }>
 }
+
+// Take over as soon as a new version is downloaded, so nobody is left on an
+// old cached copy of the app (registerSW then reloads open pages onto it).
+void self.skipWaiting()
+clientsClaim()
+cleanupOutdatedCaches()
 
 precacheAndRoute(self.__WB_MANIFEST)
 
